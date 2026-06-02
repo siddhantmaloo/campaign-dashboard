@@ -590,6 +590,13 @@ function initOverview(){
   });
   const doOpts=(d)=>({type:'doughnut',data:{labels:['Green','Yellow','Red'],datasets:[{data:d,backgroundColor:[G,Y,R],borderWidth:0}]},
     options:{responsive:true,maintainAspectRatio:false,cutout:'68%',plugins:{legend:{position:'bottom',labels:{color:'#7b8499',font:{size:9,family:'IBM Plex Mono'},boxWidth:8,padding:5}}}}});
+
+  // Destroy existing charts before recreating
+  ['cplDonut','roasDonut'].forEach(id => {
+    const existing = Chart.getChart(id);
+    if (existing) existing.destroy();
+  });
+
   new Chart(document.getElementById('cplDonut'),doOpts([cplT.G,cplT.Y,cplT.R]));
   new Chart(document.getElementById('roasDonut'),doOpts([roasT.G,roasT.Y,roasT.R]));
 }
@@ -895,9 +902,11 @@ function handleCSVUpload(input) {
     try {
       const data = processCSV(e.target.result);
       // Replace RAW data and re-render everything
+      // Update RAW data
       Object.assign(RAW, data);
+      // Sync C array in place (C is a reference to original RAW.creatives)
       C.length = 0;
-      RAW.creatives.forEach(c => C.push(c));
+      data.creatives.forEach(c => C.push(c));
       initOverview();
       updateActionMenuOptions();
       updateAllThemeLbl();
@@ -907,13 +916,15 @@ function handleCSVUpload(input) {
       const acts = RAW.creatives.filter(c => !c.paused_from).length;
       document.getElementById('dataInfo').textContent =
         `${dates[0]} – ${dates[dates.length-1]} · ${RAW.creatives.length} creatives`;
-      status.textContent = '✓ Loaded';
+      status.textContent = '✓ Loaded successfully';
       status.style.color = 'var(--green)';
-      setTimeout(() => status.textContent = '', 3000);
+      status.style.fontWeight = '700';
+      setTimeout(() => { status.textContent = ''; status.style.fontWeight = ''; }, 5000);
     } catch(err) {
-      status.textContent = '✗ Error: ' + err.message;
+      status.textContent = '✗ ' + err.message;
       status.style.color = 'var(--red)';
-      console.error(err);
+      status.style.fontWeight = '700';
+      console.error('CSV Upload Error:', err);
     }
   };
   reader.readAsText(file);
