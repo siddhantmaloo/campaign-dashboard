@@ -452,7 +452,7 @@ function initOverview(){
   const dhColors  = ['c-scale','c-watch','c-wind','c-drop','c-early'];
   const dhAll = C.filter(c=>c.theme==='Date Hook');
   const dhActive  = dhAll.filter(c=>!c.paused_from&&c.dh_phase!=='historical');
-  const dhHistorical = dhAll.filter(c=>c.dh_phase==='historical');
+  const dhHistorical = dhAll.filter(c=>c.dh_phase==='historical'&&!c.paused_from); // active + age > 14d only
   const noteEl = document.getElementById('dhTotalNote');
   if(noteEl) noteEl.textContent = `${dhAll.filter(c=>!c.paused_from).length} active · ${dhAll.filter(c=>!!c.paused_from).length} paused — ${dhAll.length} total`;
   const dhBuckets = {};
@@ -493,7 +493,6 @@ function initOverview(){
             <span style="font-size:11px;font-family:'IBM Plex Mono';color:var(--text);font-weight:600">${c.cpl_val!=null?'₹'+c.cpl_val:'—'}</span>
             ${tagH(c.cpl_tag)}
             <span style="font-size:10px;color:var(--text3);font-family:'IBM Plex Mono'">${c.age}d</span>
-            ${c.paused_from?`<span class="tag tpause" style="font-size:9px">⏸</span>`:''}
             ${c.is_ai?`<span class="tag tai">AI</span>`:''}
           </div>
         </div>`).join('')}
@@ -532,8 +531,11 @@ function initOverview(){
       ${evBuckets[act].length>6?`<div class="ab-more">+${evBuckets[act].length-6} more</div>`:''}
     </div>`).join('');
 
-  // Scorecard
+  // Scorecard — all creatives (historical record, not filtered)
   const SC = RAW.scorecard;
+
+  // Theme chart — active only
+  const activeC = C.filter(c => !c.paused_from);
   const months=[
     {label:'Current (Jun)',month:SC.cur_month,data:SC.current},
     {label:'May 2026',month:SC.prev1_month,data:SC.prev1},
@@ -554,21 +556,35 @@ function initOverview(){
   // Theme bars
   const TS = RAW.theme_summary;
   const tc = {'Date Hook':'#5b9cf6','Problem Statement':'#3ddc84','Generic':'#a78bfa','Social Proof':'#f5c842','AI Creative':'#fb923c'};
+
+  // Recompute theme summary from active creatives only
+  const activeTS = {};
+  activeC.forEach(c => {
+    if(!activeTS[c.theme]) activeTS[c.theme]={count:0,green:0,scores:[]};
+    activeTS[c.theme].count++;
+    activeTS[c.theme].scores.push(c.health_score);
+    if(c.cpl_tag==='Green') activeTS[c.theme].green++;
+  });
+
   document.getElementById('themeCard').innerHTML = `
     <div class="card-title">Avg Health Score · Active Creatives by Theme</div>
-    ${Object.entries(TS).sort((a,b)=>b[1].avg_score-a[1].avg_score).map(([n,v])=>`
-      <div class="theme-row">
-        <div class="theme-name">${n}</div>
-        <div class="theme-track"><div class="theme-fill" style="width:${v.avg_score}%;background:${tc[n]||'#5b9cf6'}"></div></div>
-        <div class="theme-val">${v.avg_score}</div>
-        <div class="theme-n">n=${v.count}</div>
-      </div>`).join('')}
-    <div style="margin-top:10px;font-size:10px;color:var(--text3);font-family:'IBM Plex Mono'">CPL Green rate — Date Hook: ${TS['Date Hook']?.green_rate||0}% · Problem Stmt: ${TS['Problem Statement']?.green_rate||0}% · Generic: ${TS['Generic']?.green_rate||0}%</div>`;
+    ${Object.entries(activeTS).sort((a,b)=>
+        (b[1].scores.reduce((s,v)=>s+v,0)/b[1].scores.length)-(a[1].scores.reduce((s,v)=>s+v,0)/a[1].scores.length)
+      ).map(([n,v])=>{
+        const avg = Math.round(v.scores.reduce((s,x)=>s+x,0)/v.scores.length);
+        return `<div class="theme-row">
+          <div class="theme-name">${n}</div>
+          <div class="theme-track"><div class="theme-fill" style="width:${avg}%;background:${tc[n]||'#5b9cf6'}"></div></div>
+          <div class="theme-val">${avg}</div>
+          <div class="theme-n">n=${v.count}</div>
+        </div>`;
+      }).join('')}
+    <div style="margin-top:10px;font-size:10px;color:var(--text3);font-family:'IBM Plex Mono'">CPL Green rate (active) — ${Object.entries(activeTS).map(([n,v])=>`${n.split(' ')[0]}: ${Math.round(v.green/v.count*100)}%`).join(' · ')}</div>`;
 
-  // Donuts
+  // Donuts — active only
   const G='#3ddc84',Y='#f5c842',R='#ff5f5f';
   const cplT={G:0,Y:0,R:0}, roasT={G:0,Y:0,R:0};
-  C.forEach(c=>{
+  activeC.forEach(c=>{
     if(c.cpl_tag==='Green')cplT.G++;else if(c.cpl_tag==='Yellow')cplT.Y++;else if(c.cpl_tag==='Red')cplT.R++;
     if(c.roas_tag==='Green')roasT.G++;else if(c.roas_tag==='Yellow')roasT.Y++;else if(c.roas_tag==='Red')roasT.R++;
   });
@@ -579,7 +595,7 @@ function initOverview(){
 }
 
 // ── TABLE STATES ──
-const allS={q:'',actions:new Set(),themes:new Set(['Date Hook','Problem Statement','Generic','Social Proof','AI Creative']),status:'active',sort:'health_score',dir:-1,p:1};
+const allS={q:'',actions:new Set(),themes:new Set(['Date Hook','Problem Statement','Generic','Social Proof','AI Creative']),status:'',sort:'health_score',dir:-1,p:1};
 const cplS={q:'',cpl_tag:'',_paused:'',status:'',themes:new Set(),sort:'age',dir:-1,p:1};
 const d3S={q:'',d3f:'',d7f:'',status:'',themes:new Set(),sort:'age',dir:-1,p:1};
 const roS={q:'',roas_tag:'',status:'',themes:new Set(),sort:'age',dir:-1,p:1};
@@ -887,8 +903,6 @@ function handleCSVUpload(input) {
       updateAllThemeLbl();
       // Re-render active tab tables
       renderAll(); renderCpl(); renderD3(); renderRo();
-      document.getElementById('btnActive').classList.toggle('active', allS.status==='active');
-      document.getElementById('btnPaused').classList.toggle('active', allS.status==='paused');
       const dates = RAW.creatives.map(c => c.go_live).sort();
       const acts = RAW.creatives.filter(c => !c.paused_from).length;
       document.getElementById('dataInfo').textContent =
