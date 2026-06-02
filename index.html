@@ -143,6 +143,37 @@ body{background:var(--bg);color:var(--text);font-family:'Manrope',sans-serif;fon
 .tt-label{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);font-family:'IBM Plex Mono',monospace;margin-bottom:4px}
 .tt-id{font-size:11px;font-family:'IBM Plex Mono',monospace;color:var(--blue);line-height:1.8}
 #global-tt{display:none;position:fixed;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--rs);padding:8px 10px;z-index:99999;min-width:230px;box-shadow:0 8px 24px rgba(0,0,0,.7);pointer-events:none;white-space:normal}
+#creativePopup{display:none;position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.7);backdrop-filter:blur(4px);align-items:center;justify-content:center}
+#creativePopup.open{display:flex}
+.popup-box{background:var(--bg2);border:1px solid var(--border2);border-radius:12px;width:min(860px,95vw);max-height:88vh;overflow-y:auto;position:relative}
+.popup-hdr{padding:18px 22px 14px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between;position:sticky;top:0;background:var(--bg2);z-index:10}
+.popup-title{font-size:15px;font-weight:800;color:var(--text);max-width:600px;line-height:1.3}
+.popup-sub{font-size:11px;color:var(--text3);font-family:'IBM Plex Mono',monospace;margin-top:3px}
+.popup-close{background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text2);font-size:16px;cursor:pointer;padding:4px 10px;flex-shrink:0}
+.popup-close:hover{color:var(--text)}
+.popup-body{padding:18px 22px}
+.popup-metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px}
+.pm-card{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:12px 14px;text-align:center}
+.pm-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);font-family:'IBM Plex Mono',monospace;margin-bottom:5px}
+.pm-val{font-size:20px;font-weight:700;font-family:'IBM Plex Mono',monospace}
+.pm-sub{font-size:10px;color:var(--text3);font-family:'IBM Plex Mono',monospace;margin-top:2px}
+.popup-charts{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:18px}
+.popup-chart-card{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:12px 14px}
+.popup-chart-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text2);font-family:'IBM Plex Mono',monospace;margin-bottom:8px}
+.popup-chart-wrap{position:relative;height:130px}
+.popup-ids{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-bottom:18px}
+.popup-ids-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);font-family:'IBM Plex Mono',monospace;margin-bottom:8px}
+.popup-id-list{display:flex;flex-wrap:wrap;gap:6px}
+.popup-id-pill{background:var(--bg4);border:1px solid var(--border2);border-radius:4px;padding:3px 8px;font-size:11px;font-family:'IBM Plex Mono',monospace;color:var(--blue)}
+.popup-daily{background:var(--bg3);border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.popup-daily-title{padding:10px 14px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text2);font-family:'IBM Plex Mono',monospace;border-bottom:1px solid var(--border)}
+.pdt{width:100%;border-collapse:collapse;font-size:11px;font-family:'IBM Plex Mono',monospace}
+.pdt th{background:var(--bg4);padding:6px 12px;text-align:right;color:var(--text3);font-size:9px;text-transform:uppercase;letter-spacing:.06em;font-weight:700}
+.pdt th:first-child{text-align:left}
+.pdt td{padding:6px 12px;border-top:1px solid var(--border);text-align:right;color:var(--text2)}
+.pdt td:first-child{text-align:left;color:var(--text)}
+.pdt tr:hover td{background:var(--bg4)}
+.no-daily{padding:32px;text-align:center;color:var(--text3);font-size:12px}
 </style>
 </head>
 <body>
@@ -420,6 +451,19 @@ body{background:var(--bg);color:var(--text);font-family:'Manrope',sans-serif;fon
 
 </div>
 
+<div id="creativePopup" onclick="if(event.target===this)closePopup()">
+  <div class="popup-box">
+    <div class="popup-hdr">
+      <div>
+        <div class="popup-title" id="popupTitle"></div>
+        <div class="popup-sub" id="popupSub"></div>
+      </div>
+      <button class="popup-close" onclick="closePopup()">✕</button>
+    </div>
+    <div class="popup-body" id="popupBody"></div>
+  </div>
+</div>
+
 <div id="global-tt"><div class="tt-label" id="tt-label"></div><div class="tt-id" id="tt-ids"></div></div>
 
 <script>
@@ -427,6 +471,7 @@ const RAW = {"creatives":[{"key":"Kamya(FatBurnAI_2)V1","ad_name":"KW-Meta-Leads
 
 const C = RAW.creatives;
 const PS = 20;
+let DAILY_DATA = {}; // key → [{date, spend, leads, revenue, d3, d7}] populated on CSV upload
 
 // ── helpers ──
 const tagH = t => {
@@ -438,9 +483,9 @@ const spendH = n => '₹'+(n>=1000?(n/1000).toFixed(0)+'K':n);
 const nameCell = (c, maxLen=28) => {
   const ids = c.utm_ids ? c.utm_ids : [];
   const label = `Creative ID${ids.length>1?'s':''}`;
-  const idsHtml = ids.slice(0,5).join('&#10;') + (ids.length>5?`\n+${ids.length-5} more`:'');
   const idsDisplay = ids.slice(0,5).join('<br>') + (ids.length>5?`<br>+${ids.length-5} more`:'');
-  return `<div class="cr-tooltip" onmouseenter="showTT(event,'${label}','${idsDisplay}')" onmouseleave="hideTT()">${c.key.substring(0,maxLen)}${c.is_ai?` <span class="tag tai">AI</span>`:''}</div>`;
+  const keyEsc = c.key.replace(/'/g,"\\'");
+  return `<div class="cr-tooltip" style="cursor:pointer" onmouseenter="showTT(event,'${label}','${idsDisplay}')" onmouseleave="hideTT()" onclick="openPopup('${keyEsc}')">${c.key.substring(0,maxLen)}${c.is_ai?` <span class="tag tai">AI</span>`:''}</div>`;
 };
 const scorePill = s => `<span class="score-pill ${s>=70?'sp-h':s>=50?'sp-m':'sp-l'}">${s}</span>`;
 const confH = c => `<span class="conf-dot cd${c[0]}"></span><span style="font-size:10px;font-family:'IBM Plex Mono',monospace;color:${c==='High'?'var(--green)':c==='Medium'?'var(--yellow)':'var(--text3)'}">${c}</span>`;
@@ -960,6 +1005,129 @@ function switchTab(name){
   if(name==='roas') renderRo();
 }
 
+// ── CREATIVE POPUP ──
+function openPopup(key) {
+  const c = C.find(x => x.key === key);
+  if (!c) return;
+  document.getElementById('popupTitle').textContent = c.key;
+  document.getElementById('popupSub').textContent =
+    `${c.theme} · ${c.go_live} · Age ${c.age}d · ${c.paused_from ? '⏸ Paused '+c.paused_from : '● Active'} · ${c.confidence} confidence`;
+
+  const daily = DAILY_DATA[key] ? [...DAILY_DATA[key]].sort((a,b)=>a.date.localeCompare(b.date)) : [];
+  const hasDailyData = daily.length > 0;
+
+  const tagColor = t => t==='Green'?'var(--green)':t==='Yellow'?'var(--yellow)':t==='Red'?'var(--red)':'var(--text3)';
+
+  document.getElementById('popupBody').innerHTML = `
+    <div class="popup-metrics">
+      <div class="pm-card">
+        <div class="pm-label">CPL</div>
+        <div class="pm-val" style="color:${tagColor(c.cpl_tag)}">${c.cpl_val!=null?'₹'+c.cpl_val:'—'}</div>
+        <div class="pm-sub">${c.cpl_tag}</div>
+      </div>
+      <div class="pm-card">
+        <div class="pm-label">Cost D3</div>
+        <div class="pm-val" style="color:${tagColor(c.cost_d3_tag)}">${c.cost_d3_val!=null?'₹'+c.cost_d3_val:c.cost_d3_tag==='Not Eligible Yet'?'N/A':'—'}</div>
+        <div class="pm-sub">${c.cost_d3_tag==='Not Eligible Yet'?'Not Eligible':c.cost_d3_tag}</div>
+      </div>
+      <div class="pm-card">
+        <div class="pm-label">Cost D7</div>
+        <div class="pm-val" style="color:${tagColor(c.cost_d7_tag)}">${c.cost_d7_val!=null?'₹'+c.cost_d7_val:c.cost_d7_tag==='Not Eligible Yet'?'N/A':'—'}</div>
+        <div class="pm-sub">${c.cost_d7_tag==='Not Eligible Yet'?'Not Eligible':c.cost_d7_tag}</div>
+      </div>
+      <div class="pm-card">
+        <div class="pm-label">ROAS</div>
+        <div class="pm-val" style="color:${tagColor(c.roas_tag)}">${c.roas_val!=null?c.roas_val+'×':c.roas_tag==='Not Eligible Yet'?'N/A':'—'}</div>
+        <div class="pm-sub">${c.roas_tag==='Not Eligible Yet'?'Not Eligible':c.roas_tag}</div>
+      </div>
+    </div>
+
+    ${hasDailyData ? `
+    <div class="popup-charts">
+      <div class="popup-chart-card">
+        <div class="popup-chart-title">Daily Spend (₹)</div>
+        <div class="popup-chart-wrap"><canvas id="popSpendChart"></canvas></div>
+      </div>
+      <div class="popup-chart-card">
+        <div class="popup-chart-title">Daily Leads & CPL</div>
+        <div class="popup-chart-wrap"><canvas id="popCplChart"></canvas></div>
+      </div>
+    </div>` : ''}
+
+    <div class="popup-ids">
+      <div class="popup-ids-title">UTM Creative IDs (${c.utm_ids?c.utm_ids.length:0})</div>
+      <div class="popup-id-list">${(c.utm_ids||[]).map(id=>`<span class="popup-id-pill">${id}</span>`).join('')}</div>
+    </div>
+
+    ${hasDailyData ? `
+    <div class="popup-daily">
+      <div class="popup-daily-title">Daily Raw Data (${daily.length} days)</div>
+      <table class="pdt">
+        <thead><tr>
+          <th>Date</th><th>Spend ₹</th><th>Leads</th><th>CPL ₹</th><th>D3+</th><th>D7+</th><th>Revenue ₹</th>
+        </tr></thead>
+        <tbody>${daily.map(d=>`<tr>
+          <td>${d.date}</td>
+          <td>${d.spend>0?'₹'+d.spend.toFixed(0):'—'}</td>
+          <td>${d.leads>0?d.leads:'—'}</td>
+          <td>${d.spend>0&&d.leads>0?'₹'+(d.spend/d.leads).toFixed(2):'—'}</td>
+          <td>${d.d3>0?d.d3:'—'}</td>
+          <td>${d.d7>0?d.d7:'—'}</td>
+          <td>${d.revenue>0?'₹'+d.revenue.toFixed(0):'—'}</td>
+        </tr>`).join('')}</tbody>
+      </table>
+    </div>` : `<div class="no-daily">📂 Upload a CSV to see daily trend data</div>`}
+  `;
+
+  document.getElementById('creativePopup').classList.add('open');
+
+  // Render charts after DOM is ready
+  if (hasDailyData) {
+    requestAnimationFrame(() => {
+      const labels = daily.map(d => d.date.slice(5)); // MM-DD
+      const spends = daily.map(d => d.spend);
+      const leads = daily.map(d => d.leads);
+      const cpls = daily.map(d => d.leads > 0 ? +(d.spend/d.leads).toFixed(2) : null);
+
+      ['popSpendChart','popCplChart'].forEach(id => {
+        const ex = Chart.getChart(id); if(ex) ex.destroy();
+      });
+
+      new Chart(document.getElementById('popSpendChart'), {
+        type:'bar',
+        data:{ labels, datasets:[{ data:spends, backgroundColor:'rgba(91,156,246,.5)', borderColor:'var(--blue)', borderWidth:1, borderRadius:3 }] },
+        options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
+          scales:{ x:{ticks:{color:'#555b6e',font:{size:9}},grid:{display:false}},
+            y:{ticks:{color:'#555b6e',font:{size:9},callback:v=>'₹'+v},grid:{color:'rgba(255,255,255,0.05)'}} } }
+      });
+
+      new Chart(document.getElementById('popCplChart'), {
+        data:{
+          labels,
+          datasets:[
+            {type:'bar', label:'Leads', data:leads, backgroundColor:'rgba(167,139,250,.35)', borderColor:'rgba(167,139,250,.7)', borderWidth:1, borderRadius:3, yAxisID:'y'},
+            {type:'line', label:'CPL ₹', data:cpls, borderColor:'var(--yellow)', backgroundColor:'transparent', borderWidth:2, pointRadius:3, pointBackgroundColor:'var(--yellow)', tension:.3, yAxisID:'y2', spanGaps:true}
+          ]
+        },
+        options:{ responsive:true, maintainAspectRatio:false,
+          interaction:{mode:'index',intersect:false},
+          plugins:{legend:{display:false}},
+          scales:{
+            x:{ticks:{color:'#555b6e',font:{size:9}},grid:{display:false}},
+            y:{position:'left',ticks:{color:'#555b6e',font:{size:9}},grid:{color:'rgba(255,255,255,0.05)'}},
+            y2:{position:'right',ticks:{color:'var(--yellow)',font:{size:9},callback:v=>'₹'+v},grid:{display:false}}
+          } }
+      });
+    });
+  }
+}
+
+function closePopup() {
+  document.getElementById('creativePopup').classList.remove('open');
+}
+
+document.addEventListener('keydown', e => { if(e.key==='Escape') closePopup(); });
+
 // ── CSV UPLOAD ──
 function handleCSVUpload(input) {
   const file = input.files[0];
@@ -977,6 +1145,8 @@ function handleCSVUpload(input) {
       // Sync C array in place (C is a reference to original RAW.creatives)
       C.length = 0;
       data.creatives.forEach(c => C.push(c));
+      // Store daily data for popup
+      DAILY_DATA = data.dailyData || {};
       initOverview();
       updateActionMenuOptions();
       updateAllThemeLbl();
@@ -1115,7 +1285,6 @@ function processCSV(text) {
     c.days[dk].d7 += d7;
     c.totalSpend += spend;
     c.totalLeads += leads;
-
     if (!creativeIds[key]) creativeIds[key] = new Set();
     if (utmId) creativeIds[key].add(utmId);
   }
@@ -1321,8 +1490,22 @@ function processCSV(text) {
     };
   }
 
+  // Build dailyData for popup charts
+  const dailyData = {};
+  for (const [key, c] of Object.entries(creativeMap)) {
+    dailyData[key] = Object.entries(c.days).map(([date, v]) => ({
+      date,
+      spend: Math.round(v.spend * 100) / 100,
+      leads: Math.round(v.leads),
+      revenue: Math.round(v.revenue * 100) / 100,
+      d3: Math.round(v.d3),
+      d7: Math.round(v.d7),
+    })).sort((a, b) => a.date.localeCompare(b.date));
+  }
+
   return {
     creatives,
+    dailyData,
     scorecard: {current:scorecard(cur),prev1:scorecard(p1),prev2:scorecard(p2),
                 cur_month:cur,prev1_month:p1,prev2_month:p2},
     theme_summary
