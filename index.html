@@ -195,12 +195,12 @@ body{background:var(--bg);color:var(--text);font-family:'Manrope',sans-serif;fon
         <div class="theme-dd-wrap">
           <button class="theme-dd-btn" id="scGlobalBtn" onclick="toggleDD('scGlobalMenu','scGlobalBtn')">🏷 Theme <span id="scGlobalLbl">All</span> ▾</button>
           <div class="theme-dd-menu" id="scGlobalMenu" style="right:0;left:auto">
-            <div class="theme-dd-item" onclick="scGlobalPick('',this)"><input type="checkbox" checked> All themes</div>
-            <div class="theme-dd-item" onclick="scGlobalPick('Date Hook',this)"><input type="checkbox">📅 Date Hook</div>
-            <div class="theme-dd-item" onclick="scGlobalPick('Problem Statement',this)"><input type="checkbox">🩺 Problem Stmt</div>
-            <div class="theme-dd-item" onclick="scGlobalPick('Generic',this)"><input type="checkbox">💬 Generic</div>
-            <div class="theme-dd-item" onclick="scGlobalPick('Social Proof',this)"><input type="checkbox">⭐ Social Proof</div>
-            <div class="theme-dd-item" onclick="scGlobalPick('AI Creative',this)"><input type="checkbox">🤖 AI Creative</div>
+            <div class="theme-dd-item" onclick="scGlobalPick('',this)"><input type="checkbox"> All themes</div>
+            <div class="theme-dd-item checked" onclick="scGlobalPick('Date Hook',this)"><input type="checkbox" checked>📅 Date Hook</div>
+            <div class="theme-dd-item checked" onclick="scGlobalPick('Problem Statement',this)"><input type="checkbox" checked>🩺 Problem Stmt</div>
+            <div class="theme-dd-item checked" onclick="scGlobalPick('Generic',this)"><input type="checkbox" checked>💬 Generic</div>
+            <div class="theme-dd-item checked" onclick="scGlobalPick('Social Proof',this)"><input type="checkbox" checked>⭐ Social Proof</div>
+            <div class="theme-dd-item checked" onclick="scGlobalPick('AI Creative',this)"><input type="checkbox" checked>🤖 AI Creative</div>
           </div>
         </div>
       </div>
@@ -744,25 +744,56 @@ function hideTT(){
   document.getElementById('global-tt').style.display = 'none';
 }
 document.addEventListener('scroll', hideTT, true);
+const scSelectedThemes = new Set(['Date Hook','Problem Statement','Generic','Social Proof','AI Creative']);
+
 function scGlobalPick(theme, item) {
   event.stopPropagation();
-  // Update checkboxes
-  document.querySelectorAll('#scGlobalMenu input[type=checkbox]').forEach(cb => cb.checked = false);
-  item.querySelector('input[type=checkbox]').checked = true;
+  const cb = item.querySelector('input[type=checkbox]');
+  const allItem = document.querySelector('#scGlobalMenu .theme-dd-item:first-child');
+
+  if (theme === '') {
+    // Clicked "All" — clear all selections
+    scSelectedThemes.clear();
+    document.querySelectorAll('#scGlobalMenu input[type=checkbox]').forEach(c => c.checked = false);
+    cb.checked = true;
+    allItem.classList.add('checked');
+  } else {
+    // Uncheck "All"
+    allItem.querySelector('input').checked = false;
+    allItem.classList.remove('checked');
+    if (scSelectedThemes.has(theme)) {
+      scSelectedThemes.delete(theme);
+      cb.checked = false;
+      item.classList.remove('checked');
+    } else {
+      scSelectedThemes.add(theme);
+      cb.checked = true;
+      item.classList.add('checked');
+    }
+    // If nothing selected, revert to All
+    if (scSelectedThemes.size === 0) {
+      allItem.querySelector('input').checked = true;
+      allItem.classList.add('checked');
+    }
+  }
+
   // Update button label
   const lbl = document.getElementById('scGlobalLbl');
   const btn = document.getElementById('scGlobalBtn');
-  lbl.textContent = theme ? theme.split(' ')[0] : 'All';
-  btn.classList.toggle('has-sel', !!theme);
-  // Close dropdown
-  document.getElementById('scGlobalMenu').classList.remove('open');
+  if (scSelectedThemes.size === 0 || scSelectedThemes.size === 5) { lbl.textContent = 'All'; btn.classList.remove('has-sel'); }
+  else if (scSelectedThemes.size === 1) { lbl.textContent = [...scSelectedThemes][0].split(' ')[0]; btn.classList.add('has-sel'); }
+  else { lbl.textContent = scSelectedThemes.size + ' selected'; btn.classList.add('has-sel'); }
+
   // Update all 3 scorecard tables
   const months = [
     {month: RAW.scorecard.cur_month, id:'sc0'},
     {month: RAW.scorecard.prev1_month, id:'sc1'},
     {month: RAW.scorecard.prev2_month, id:'sc2'},
   ];
-  months.forEach(m => updateScorecard(m.month, 'scTbody'+m.id, theme));
+  months.forEach(m => {
+    const theme = scSelectedThemes.size === 0 ? null : [...scSelectedThemes];
+    updateScorecard(m.month, 'scTbody'+m.id, scSelectedThemes.size === 0 ? '' : [...scSelectedThemes]);
+  });
 }
 
 document.addEventListener('click', e => {
@@ -1298,9 +1329,13 @@ function processCSV(text) {
   };
 }
 
-function scorecardForMonth(monthStr, theme) {
+function scorecardForMonth(monthStr, themes) {
   let mc = C.filter(c => c.go_live.startsWith(monthStr));
-  if (theme) mc = mc.filter(c => c.theme === theme);
+  // themes can be: '' (all), a string, or an array
+  if (themes && themes.length > 0 && themes.length < 5) {
+    const arr = Array.isArray(themes) ? themes : [themes];
+    mc = mc.filter(c => arr.includes(c.theme));
+  }
   return [['CPL','cpl_tag'],['Cost D3','cost_d3_tag'],['Cost D7','cost_d7_tag'],['ROAS','roas_tag']].map(([metric,key]) => {
     const eligible = mc.filter(c => c[key] !== 'Not Eligible Yet');
     return {
@@ -1323,8 +1358,8 @@ function renderScorecardTable(rows) {
   </tr>`).join('');
 }
 
-function updateScorecard(monthStr, tbodyId, theme) {
-  const rows = scorecardForMonth(monthStr, theme);
+function updateScorecard(monthStr, tbodyId, themes) {
+  const rows = scorecardForMonth(monthStr, themes);
   document.getElementById(tbodyId).innerHTML = renderScorecardTable(rows);
 }
 
