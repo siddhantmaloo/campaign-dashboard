@@ -579,7 +579,7 @@ function initOverview(){
 }
 
 // ── TABLE STATES ──
-const allS={q:'',actions:new Set(),themes:new Set(['Date Hook','Problem Statement','Generic','Social Proof','AI Creative']),status:'',sort:'health_score',dir:-1,p:1};
+const allS={q:'',actions:new Set(),themes:new Set(['Date Hook','Problem Statement','Generic','Social Proof','AI Creative']),status:'active',sort:'health_score',dir:-1,p:1};
 const cplS={q:'',cpl_tag:'',_paused:'',status:'',themes:new Set(),sort:'age',dir:-1,p:1};
 const d3S={q:'',d3f:'',d7f:'',status:'',themes:new Set(),sort:'age',dir:-1,p:1};
 const roS={q:'',roas_tag:'',status:'',themes:new Set(),sort:'age',dir:-1,p:1};
@@ -887,6 +887,8 @@ function handleCSVUpload(input) {
       updateAllThemeLbl();
       // Re-render active tab tables
       renderAll(); renderCpl(); renderD3(); renderRo();
+      document.getElementById('btnActive').classList.toggle('active', allS.status==='active');
+      document.getElementById('btnPaused').classList.toggle('active', allS.status==='paused');
       const dates = RAW.creatives.map(c => c.go_live).sort();
       const acts = RAW.creatives.filter(c => !c.paused_from).length;
       document.getElementById('dataInfo').textContent =
