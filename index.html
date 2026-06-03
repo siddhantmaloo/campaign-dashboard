@@ -1402,7 +1402,10 @@ function openPopup(key) {
     ${isScaled ? `
     <div style="display:flex;flex-direction:column;gap:14px;margin-bottom:18px">
       <div>
-        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);font-family:'IBM Plex Mono',monospace;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--border)">🧪 Testing Window (28d)</div>
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);font-family:'IBM Plex Mono',monospace;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+          <span>🧪 Testing Window (28d)</span>
+          ${c.health_score!=null?`<span style="font-size:13px;font-weight:800;color:${c.health_score>=67?'var(--green)':c.health_score>=34?'var(--yellow)':'var(--red)'}">Score: ${c.health_score}</span>`:''}
+        </div>
         <div class="popup-metrics" style="margin-bottom:0">
           ${metricCard('CPL', c.cpl_val!=null?'₹'+c.cpl_val:'—', c.cpl_tag)}
           ${metricCard('Cost D3', c.cost_d3_val!=null?'₹'+c.cost_d3_val:c.cost_d3_tag==='Not Eligible Yet'?'N/A':'—', c.cost_d3_tag)}
