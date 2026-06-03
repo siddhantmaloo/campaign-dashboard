@@ -744,11 +744,8 @@ const tagH = t => {
 };
 const spendH = n => '₹'+(n>=1000?(n/1000).toFixed(0)+'K':n);
 const nameCell = (c, maxLen=28) => {
-  const ids = c.utm_ids ? c.utm_ids : [];
-  const label = `Creative ID${ids.length>1?'s':''}`;
-  const idsDisplay = ids.slice(0,5).join('<br>') + (ids.length>5?`<br>+${ids.length-5} more`:'');
   const keyEsc = c.key.replace(/'/g,"\\'");
-  return `<div class="cr-tooltip" style="cursor:pointer" onmouseenter="showTT(event,'${label}','${idsDisplay}')" onmouseleave="hideTT()" onclick="openPopup('${keyEsc}')">${c.key.substring(0,maxLen)}${c.is_ai?` <span class="tag tai">AI</span>`:''}</div>`;
+  return `<div style="cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" onclick="openPopup('${keyEsc}')">${c.key.substring(0,maxLen)}${c.is_ai?` <span class="tag tai">AI</span>`:''}</div>`;
 };
 const scorePill = s => `<span class="score-pill ${s>=70?'sp-h':s>=50?'sp-m':'sp-l'}">${s}</span>`;
 const confH = c => `<span class="conf-dot cd${c[0]}"></span><span style="font-size:10px;font-family:'IBM Plex Mono',monospace;color:${c==='High'?'var(--green)':c==='Medium'?'var(--yellow)':'var(--text3)'}">${c}</span>`;
