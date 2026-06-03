@@ -929,10 +929,10 @@ function initOverview(){
 
 // ── TABLE STATES ──
 const allS={q:'',actions:new Set(),themes:new Set(['Date Hook','Problem Statement','Generic','Social Proof','AI Creative']),status:'',month:'',sort:'health_score',dir:-1,p:1,notesOnly:false};
-const cplS={q:'',cpl_tag:'',_paused:'',status:'',themes:new Set(),month:'',sort:'age',dir:-1,p:1,notesOnly:false};
-const d3S={q:'',d3f:'',d7f:'',status:'',themes:new Set(),month:'',sort:'age',dir:-1,p:1,notesOnly:false};
-const roS={q:'',roas_tag:'',status:'',themes:new Set(),month:'',sort:'age',dir:-1,p:1,notesOnly:false};
-const scS={q:'',status:'',themes:new Set(),sort:'age',dir:-1,p:1,notesOnly:false};
+const cplS={q:'',cpl_tag:'',_paused:'',status:'active',themes:new Set(),month:'',sort:'age',dir:-1,p:1,notesOnly:false};
+const d3S={q:'',d3f:'',d7f:'',status:'active',themes:new Set(),month:'',sort:'age',dir:-1,p:1,notesOnly:false};
+const roS={q:'',roas_tag:'',status:'active',themes:new Set(),month:'',sort:'age',dir:-1,p:1,notesOnly:false};
+const scS={q:'',status:'active',themes:new Set(),sort:'age',dir:-1,p:1,notesOnly:false};
 
 function toggleF(state,val,key,btn,render){
   state[key]=state[key]===val?'':val; state.p=1;
@@ -1969,6 +1969,10 @@ function applyData(data) {
   renderAll(); renderCpl(); renderD3(); renderRo(); renderScaled();
   document.getElementById('btnActive').classList.toggle('active', allS.status==='active');
   document.getElementById('btnPaused').classList.toggle('active', allS.status==='paused');
+  document.getElementById('cplBtnActive').classList.toggle('active', cplS.status==='active');
+  document.getElementById('d3BtnActive').classList.toggle('active', d3S.status==='active');
+  document.getElementById('roBtnActive').classList.toggle('active', roS.status==='active');
+  document.getElementById('scBtnActive').classList.toggle('active', scS.status==='active');
   const goLiveDates = RAW.creatives.map(c => c.go_live).sort();
   const fmtD = s => { if(!s) return '—'; const [y,m,d] = s.split('-'); return new Date(+y,+m-1,+d).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}); };
   const activeCount = RAW.creatives.filter(c => !c.paused_from).length;
@@ -2500,6 +2504,10 @@ renderSupply();
 updateActionMenuOptions();
 updateAllThemeLbl();
 populateMonthBtns();
+// Highlight Active buttons by default across all tabs
+['cplBtnActive','d3BtnActive','roBtnActive','scBtnActive'].forEach(id => {
+  const el = document.getElementById(id); if (el) el.classList.add('active');
+});
 </script>
 </body>
 </html>
