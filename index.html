@@ -1670,8 +1670,10 @@ function applyData(data) {
   document.getElementById('btnActive').classList.toggle('active', allS.status==='active');
   document.getElementById('btnPaused').classList.toggle('active', allS.status==='paused');
   const dates = RAW.creatives.map(c => c.go_live).sort();
+  const fmtD = s => { const d = new Date(s); return d.toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}); };
+  const activeCount = RAW.creatives.filter(c => !c.paused_from).length;
   document.getElementById('dataInfo').textContent =
-    `${dates[0]} – ${dates[dates.length-1]} · ${RAW.creatives.length} creatives`;
+    `${fmtD(dates[0])} – ${fmtD(dates[dates.length-1])} · ${RAW.creatives.length} creatives (${activeCount} active)`;
 }
 
 async function loadFromGoogleSheets() {
