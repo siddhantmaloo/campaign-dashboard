@@ -1045,8 +1045,9 @@ const scSelectedThemes = new Set(['Date Hook','Problem Statement','Generic','Soc
 let scCardOffset = 0; // 0 = newest 3 months; positive = shifted older
 
 function getAllScorecardMonths() {
-  // All unique YYYY-MM from go_live dates, sorted newest first
-  return [...new Set(C.map(c => c.go_live.slice(0,7)))].sort().reverse();
+  // All unique YYYY-MM from go_live dates + current calendar month, sorted newest first
+  const curMonth = new Date().toISOString().slice(0,7);
+  return [...new Set([curMonth, ...C.map(c => c.go_live.slice(0,7))])].sort().reverse();
 }
 
 function shiftScorecard(dir) {
