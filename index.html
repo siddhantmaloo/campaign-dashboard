@@ -364,10 +364,10 @@ body{background:var(--bg);color:var(--text);font-family:'Manrope',sans-serif;fon
   </div>
   <div class="tbl-wrap">
     <table class="dtbl"><thead><tr>
+      <th>Status</th>
       <th onclick="sortC('key')">Creative</th>
       <th onclick="sortC('theme')">Theme</th>
       <th onclick="sortC('age')" class="srt">Age</th>
-      <th>Status</th>
       <th onclick="sortC('cpl_val')">CPL ₹</th>
       <th>CPL Tag</th>
       <th>D3</th><th>D7</th><th>ROAS</th>
@@ -987,10 +987,10 @@ function renderCpl(){
   const pages=Math.max(1,Math.ceil(rows.length/PS));s.p=Math.min(s.p,pages);
   document.getElementById('cpl-cnt').textContent=rows.length+' creatives';
   document.getElementById('cplBody').innerHTML=rows.slice((s.p-1)*PS,s.p*PS).map(c=>`<tr>
+    <td>${c.paused_from?`<span class="tag tpause">⏸ Paused</span>`:`<span class="tag" style="background:var(--gbg);color:var(--green);border:1px solid var(--gborder)">● Active</span>`}</td>
     <td class="nm">${nameCell(c)}</td>
     <td>${themeH(c.theme,c.theme==='Date Hook')}</td>
     <td>${c.age}d</td>
-    <td>${c.paused_from?`<span class="tag tpause">⏸ Paused</span>`:`<span class="tag" style="background:var(--gbg);color:var(--green);border:1px solid var(--gborder)">● Active</span>`}</td>
     <td class="nr" style="color:var(--text);font-weight:600">${c.cpl_val!=null?'₹'+c.cpl_val:'—'}</td>
     <td>${tagH(c.cpl_tag)}</td>
     <td>${tagH(c.cost_d3_tag)}</td>
