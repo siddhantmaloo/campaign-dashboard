@@ -2139,38 +2139,56 @@ function processCSV(text) {
     let sc_roas_val=null,sc_roas_tag='Not Eligible Yet';
 
     if (active_days > 28) {
-      // CPL — all days
-      let scS=0,scL=0,scD3=0,scD7=0,scRev=0;
+      // CPL — all days (no attribution lag concern for leads)
+      let scS=0,scL=0;
       for (const [dk,v] of Object.entries(c.days)) {
         const d = new Date(dk);
-        if (d < today) { scS+=v.spend; scL+=v.leads; scD3+=v.d3; scD7+=v.d7; scRev+=v.revenue; }
+        if (d < today) { scS+=v.spend; scL+=v.leads; }
       }
       sc_cpl_val = scL > 0 ? Math.round(scS/scL*100)/100 : null;
       sc_cpl_tag = sc_cpl_val == null ? 'Red' : sc_cpl_val < getThr().cplGreen ? 'Green' : sc_cpl_val <= getThr().cplYellow ? 'Yellow' : 'Red';
 
-      // D3 — min 14 active days
-      if (active_days >= 14) {
-        if (scD3 === 0) sc_d3_tag = 'Red';
-        else {
-          sc_d3_val = Math.round(scS/scD3*100)/100;
-          sc_d3_tag = sc_d3_val < getThr().d3Green ? 'Green' : sc_d3_val <= getThr().d3Yellow ? 'Yellow' : 'Red';
+      // helper: sum spend+metric for first `win` calendar days from go-live
+      const winSum = (metric) => {
+        let s=0,a=0;
+        for (const [dk,v] of Object.entries(c.days)) {
+          const d = new Date(dk);
+          if (d < today && d <= metric.cutoff) { s+=v.spend; a+=v[metric.key]; }
         }
+        return {s,a};
+      };
+
+      // D3 — tiered window: floor((active_days-7)/7)*7 days from go-live
+      // active_days 28-34→21d, 35-41→28d, 42-48→35d, ...
+      const d3Win = Math.floor((active_days - 7) / 7) * 7;
+      const d3Cutoff = new Date(goLive); d3Cutoff.setDate(d3Cutoff.getDate() + d3Win - 1);
+      const {s:d3S, a:d3A} = winSum({key:'d3', cutoff:d3Cutoff});
+      if (d3A === 0) sc_d3_tag = 'Red';
+      else {
+        sc_d3_val = Math.round(d3S/d3A*100)/100;
+        sc_d3_tag = sc_d3_val < getThr().d3Green ? 'Green' : sc_d3_val <= getThr().d3Yellow ? 'Yellow' : 'Red';
       }
-      // D7 — min 21 active days
-      if (active_days >= 21) {
-        if (scD7 === 0) sc_d7_tag = 'Red';
-        else {
-          sc_d7_val = Math.round(scS/scD7*100)/100;
-          sc_d7_tag = sc_d7_val < getThr().d7Green ? 'Green' : sc_d7_val <= getThr().d7Yellow ? 'Yellow' : 'Red';
-        }
+
+      // D7 — tiered window: floor((active_days-14)/7)*7 days from go-live
+      // active_days 28-34→14d, 35-41→21d, 42-48→28d, ...
+      const d7Win = Math.floor((active_days - 14) / 7) * 7;
+      const d7Cutoff = new Date(goLive); d7Cutoff.setDate(d7Cutoff.getDate() + d7Win - 1);
+      const {s:d7S, a:d7A} = winSum({key:'d7', cutoff:d7Cutoff});
+      if (d7A === 0) sc_d7_tag = 'Red';
+      else {
+        sc_d7_val = Math.round(d7S/d7A*100)/100;
+        sc_d7_tag = sc_d7_val < getThr().d7Green ? 'Green' : sc_d7_val <= getThr().d7Yellow ? 'Yellow' : 'Red';
       }
-      // ROAS — min 35 active days, exclude last 28 days to avoid attribution lag
+
+      // ROAS — min 35 active days, tiered window: floor((active_days-21)/7)*7 days from go-live
+      // active_days 35-41→14d, 42-48→21d, 49-55→28d, ...
       if (active_days >= 35) {
-        const roasCutoff = new Date(today); roasCutoff.setDate(roasCutoff.getDate() - 28);
+        const roasWin = Math.floor((active_days - 21) / 7) * 7;
+        const roasCutoff = new Date(goLive); roasCutoff.setDate(roasCutoff.getDate() + roasWin - 1);
         let roasS=0, roasRev=0;
         for (const [dk,v] of Object.entries(c.days)) {
           const d = new Date(dk);
-          if (d < roasCutoff) { roasS+=v.spend; roasRev+=v.revenue; }
+          if (d < today && d <= roasCutoff) { roasS+=v.spend; roasRev+=v.revenue; }
         }
         if (roasS === 0) sc_roas_tag = 'Red';
         else {
