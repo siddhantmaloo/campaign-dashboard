@@ -2164,11 +2164,17 @@ function processCSV(text) {
           sc_d7_tag = sc_d7_val < getThr().d7Green ? 'Green' : sc_d7_val <= getThr().d7Yellow ? 'Yellow' : 'Red';
         }
       }
-      // ROAS — min 28 active days
-      if (active_days >= 28) {
-        if (scS === 0) sc_roas_tag = 'Red';
+      // ROAS — min 35 active days, exclude last 28 days to avoid attribution lag
+      if (active_days >= 35) {
+        const roasCutoff = new Date(today); roasCutoff.setDate(roasCutoff.getDate() - 28);
+        let roasS=0, roasRev=0;
+        for (const [dk,v] of Object.entries(c.days)) {
+          const d = new Date(dk);
+          if (d < roasCutoff) { roasS+=v.spend; roasRev+=v.revenue; }
+        }
+        if (roasS === 0) sc_roas_tag = 'Red';
         else {
-          sc_roas_val = Math.round(scRev/scS*100)/100;
+          sc_roas_val = Math.round(roasRev/roasS*100)/100;
           sc_roas_tag = sc_roas_val >= getThr().roasGreen ? 'Green' : sc_roas_val > getThr().roasYellow ? 'Yellow' : 'Red';
         }
       }
