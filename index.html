@@ -667,8 +667,8 @@ body{background:var(--bg);color:var(--text);font-family:'Manrope',sans-serif;fon
       <th>Status</th>
       <th onclick="sortSc('key')">Creative</th>
       <th onclick="sortSc('theme')">Theme</th>
-      <th onclick="sortSc('age')" class="srt">Age</th>
-      <th>Scale Age</th>
+      <th onclick="sortSc('active_days')" class="srt">Active Days</th>
+      <th>Days Past 21</th>
       <th onclick="sortSc('sc_cpl_val')">CPL ₹</th><th>CPL Tag</th>
       <th onclick="sortSc('sc_d3_val')">D3 ₹</th><th>D3 Tag</th>
       <th onclick="sortSc('sc_d7_val')">D7 ₹</th><th>D7 Tag</th>
@@ -1312,7 +1312,7 @@ function sortR(col){if(roS.sort===col)roS.dir*=-1;else{roS.sort=col;roS.dir=-1;}
 
 // ── SCALED TAB ──
 function getScaled(){
-  let r=C.filter(c=>c.age>21);
+  let r=C.filter(c=>c.active_days>21);
   if(scS.q) r=r.filter(c=>c.key.toLowerCase().includes(scS.q.toLowerCase()));
   if(scS.status==='active') r=r.filter(c=>!c.paused_from);
   if(scS.status==='paused') r=r.filter(c=>!!c.paused_from);
@@ -1329,8 +1329,8 @@ function renderScaled(){
     <td>${c.paused_from?`<span class="tag tpause">⏸ Paused</span>`:`<span class="tag" style="background:var(--gbg);color:var(--green);border:1px solid var(--gborder)">● Active</span>`}</td>
     <td class="nm">${nameCell(c)}</td>
     <td>${themeH(c.theme,c.theme==='Date Hook')}</td>
-    <td style="font-family:'IBM Plex Mono'">${c.age}d</td>
-    <td style="font-family:'IBM Plex Mono';color:var(--blue)">${c.age-21}d</td>
+    <td style="font-family:'IBM Plex Mono'">${c.active_days}d <span style="color:var(--text3);font-size:10px">(${c.age}d cal)</span></td>
+    <td style="font-family:'IBM Plex Mono';color:var(--blue)">${c.active_days-21}d</td>
     <td class="nr" style="color:var(--text);font-weight:600">${c.sc_cpl_val!=null?'₹'+c.sc_cpl_val:'—'}</td>
     <td>${tagH(c.sc_cpl_tag)}</td>
     <td class="nr">${c.sc_d3_val!=null?'₹'+c.sc_d3_val:'—'}</td>
@@ -1728,11 +1728,11 @@ function downloadCSV(tab) {
       ]
     },
     sc: {
-      headers: ['Status','Creative','Theme','Age','Scale Age (d)','CPL ₹','CPL Tag','D3 ₹','D3 Tag','D7 ₹','D7 Tag','ROAS','ROAS Tag','Spend','Leads'],
+      headers: ['Status','Creative','Theme','Active Days','Calendar Age','Days Past 21','CPL ₹','CPL Tag','D3 ₹','D3 Tag','D7 ₹','D7 Tag','ROAS','ROAS Tag','Spend','Leads'],
       getData: () => getScaled(),
       row: c => [
         c.paused_from ? 'Paused' : 'Active',
-        c.key, c.theme, c.age, c.age-21,
+        c.key, c.theme, c.active_days, c.age, c.active_days-21,
         c.sc_cpl_val ?? '', c.sc_cpl_tag,
         c.sc_d3_val ?? '', c.sc_d3_tag,
         c.sc_d7_val ?? '', c.sc_d7_tag,
@@ -2006,6 +2006,7 @@ function processCSV(text) {
     const is_ai = /AI|_ai/i.test(key);
     const total_spend = Math.round(c.totalSpend);
     const total_leads = Math.round(c.totalLeads);
+    const active_days = Object.values(c.days).filter(v => v.spend >= MIN_SPEND).length;
 
     // CPL — first 21 days
     const goLive20 = new Date(goLive); goLive20.setDate(goLive20.getDate()+20);
@@ -2120,7 +2121,7 @@ function processCSV(text) {
     let sc_d7_val=null,  sc_d7_tag='Not Eligible Yet';
     let sc_roas_val=null,sc_roas_tag='Not Eligible Yet';
 
-    if (age > 21) {
+    if (active_days > 21) {
       // CPL — all days
       let scS=0,scL=0,scD3=0,scD7=0,scRev=0;
       for (const [dk,v] of Object.entries(c.days)) {
@@ -2130,24 +2131,24 @@ function processCSV(text) {
       sc_cpl_val = scL > 0 ? Math.round(scS/scL*100)/100 : null;
       sc_cpl_tag = sc_cpl_val == null ? 'Red' : sc_cpl_val < getThr().cplGreen ? 'Green' : sc_cpl_val <= getThr().cplYellow ? 'Yellow' : 'Red';
 
-      // D3 — min 14 days
-      if (age >= 14) {
+      // D3 — min 14 active days
+      if (active_days >= 14) {
         if (scD3 === 0) sc_d3_tag = 'Red';
         else {
           sc_d3_val = Math.round(scS/scD3*100)/100;
           sc_d3_tag = sc_d3_val < getThr().d3Green ? 'Green' : sc_d3_val <= getThr().d3Yellow ? 'Yellow' : 'Red';
         }
       }
-      // D7 — min 21 days
-      if (age >= 21) {
+      // D7 — min 21 active days
+      if (active_days >= 21) {
         if (scD7 === 0) sc_d7_tag = 'Red';
         else {
           sc_d7_val = Math.round(scS/scD7*100)/100;
           sc_d7_tag = sc_d7_val < getThr().d7Green ? 'Green' : sc_d7_val <= getThr().d7Yellow ? 'Yellow' : 'Red';
         }
       }
-      // ROAS — min 28 days
-      if (age >= 28) {
+      // ROAS — min 28 active days
+      if (active_days >= 28) {
         if (scS === 0) sc_roas_tag = 'Red';
         else {
           sc_roas_val = Math.round(scRev/scS*100)/100;
@@ -2161,7 +2162,7 @@ function processCSV(text) {
       paused_from, cpl_val, cpl_tag, cost_d3_val, cost_d3_tag,
       cost_d7_val, cost_d7_tag, roas_val, roas_tag,
       sc_cpl_val, sc_cpl_tag, sc_d3_val, sc_d3_tag, sc_d7_val, sc_d7_tag, sc_roas_val, sc_roas_tag,
-      total_spend, total_leads, is_ai, health_score, confidence, action,
+      total_spend, total_leads, active_days, is_ai, health_score, confidence, action,
       utm_ids: [...(creativeIds[key]||[])].sort()
     });
   }
