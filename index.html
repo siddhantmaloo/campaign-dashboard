@@ -1379,36 +1379,53 @@ function openPopup(key) {
   if (!c) return;
   document.getElementById('popupTitle').textContent = c.key;
   document.getElementById('popupSub').textContent =
-    `${c.theme} · ${c.go_live} · Age ${c.age}d · ${c.paused_from ? '⏸ Paused '+c.paused_from : '● Active'} · ${c.confidence} confidence`;
+    `${c.theme} · ${c.go_live} · ${c.active_days}d active (${c.age}d calendar) · ${c.paused_from ? '⏸ Paused '+c.paused_from : '● Active'} · ${c.confidence} confidence`;
 
   const daily = DAILY_DATA[key] ? [...DAILY_DATA[key]].sort((a,b)=>a.date.localeCompare(b.date)) : [];
   const hasDailyData = daily.length > 0;
 
   const tagColor = t => t==='Green'?'var(--green)':t==='Yellow'?'var(--yellow)':t==='Red'?'var(--red)':'var(--text3)';
 
+  const metricCard = (label, val, tag) => `
+    <div class="pm-card">
+      <div class="pm-label">${label}</div>
+      <div class="pm-val" style="color:${tagColor(tag)}">${val}</div>
+      <div class="pm-sub">${tag==='Not Eligible Yet'?'Not Eligible':tag}</div>
+    </div>`;
+
+  const isScaled = c.active_days > 21;
+
   document.getElementById('popupBody').innerHTML = `
-    <div class="popup-metrics">
-      <div class="pm-card">
-        <div class="pm-label">CPL</div>
-        <div class="pm-val" style="color:${tagColor(c.cpl_tag)}">${c.cpl_val!=null?'₹'+c.cpl_val:'—'}</div>
-        <div class="pm-sub">${c.cpl_tag}</div>
+
+    ${isScaled ? `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px">
+      <div>
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);font-family:'IBM Plex Mono',monospace;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--border)">🧪 Testing Window (21d)</div>
+        <div class="popup-metrics" style="margin-bottom:0">
+          ${metricCard('CPL', c.cpl_val!=null?'₹'+c.cpl_val:'—', c.cpl_tag)}
+          ${metricCard('Cost D3', c.cost_d3_val!=null?'₹'+c.cost_d3_val:c.cost_d3_tag==='Not Eligible Yet'?'N/A':'—', c.cost_d3_tag)}
+          ${metricCard('Cost D7', c.cost_d7_val!=null?'₹'+c.cost_d7_val:c.cost_d7_tag==='Not Eligible Yet'?'N/A':'—', c.cost_d7_tag)}
+          ${metricCard('ROAS', c.roas_val!=null?c.roas_val+'×':c.roas_tag==='Not Eligible Yet'?'N/A':'—', c.roas_tag)}
+        </div>
       </div>
-      <div class="pm-card">
-        <div class="pm-label">Cost D3</div>
-        <div class="pm-val" style="color:${tagColor(c.cost_d3_tag)}">${c.cost_d3_val!=null?'₹'+c.cost_d3_val:c.cost_d3_tag==='Not Eligible Yet'?'N/A':'—'}</div>
-        <div class="pm-sub">${c.cost_d3_tag==='Not Eligible Yet'?'Not Eligible':c.cost_d3_tag}</div>
-      </div>
-      <div class="pm-card">
-        <div class="pm-label">Cost D7</div>
-        <div class="pm-val" style="color:${tagColor(c.cost_d7_tag)}">${c.cost_d7_val!=null?'₹'+c.cost_d7_val:c.cost_d7_tag==='Not Eligible Yet'?'N/A':'—'}</div>
-        <div class="pm-sub">${c.cost_d7_tag==='Not Eligible Yet'?'Not Eligible':c.cost_d7_tag}</div>
-      </div>
-      <div class="pm-card">
-        <div class="pm-label">ROAS</div>
-        <div class="pm-val" style="color:${tagColor(c.roas_tag)}">${c.roas_val!=null?c.roas_val+'×':c.roas_tag==='Not Eligible Yet'?'N/A':'—'}</div>
-        <div class="pm-sub">${c.roas_tag==='Not Eligible Yet'?'Not Eligible':c.roas_tag}</div>
+      <div>
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--blue);font-family:'IBM Plex Mono',monospace;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--bborder)">⬆ Overall (All Time · ${c.active_days}d active)</div>
+        <div class="popup-metrics" style="margin-bottom:0">
+          ${metricCard('CPL', c.sc_cpl_val!=null?'₹'+c.sc_cpl_val:'—', c.sc_cpl_tag)}
+          ${metricCard('Cost D3', c.sc_d3_val!=null?'₹'+c.sc_d3_val:c.sc_d3_tag==='Not Eligible Yet'?'N/A':'—', c.sc_d3_tag)}
+          ${metricCard('Cost D7', c.sc_d7_val!=null?'₹'+c.sc_d7_val:c.sc_d7_tag==='Not Eligible Yet'?'N/A':'—', c.sc_d7_tag)}
+          ${metricCard('ROAS', c.sc_roas_val!=null?c.sc_roas_val+'×':c.sc_roas_tag==='Not Eligible Yet'?'N/A':'—', c.sc_roas_tag)}
+        </div>
       </div>
     </div>
+    ` : `
+    <div class="popup-metrics">
+      ${metricCard('CPL', c.cpl_val!=null?'₹'+c.cpl_val:'—', c.cpl_tag)}
+      ${metricCard('Cost D3', c.cost_d3_val!=null?'₹'+c.cost_d3_val:c.cost_d3_tag==='Not Eligible Yet'?'N/A':'—', c.cost_d3_tag)}
+      ${metricCard('Cost D7', c.cost_d7_val!=null?'₹'+c.cost_d7_val:c.cost_d7_tag==='Not Eligible Yet'?'N/A':'—', c.cost_d7_tag)}
+      ${metricCard('ROAS', c.roas_val!=null?c.roas_val+'×':c.roas_tag==='Not Eligible Yet'?'N/A':'—', c.roas_tag)}
+    </div>
+    `}
 
     ${hasDailyData ? `
     <div class="popup-charts">
