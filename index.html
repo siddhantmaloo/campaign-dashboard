@@ -362,26 +362,10 @@ body{background:var(--bg);color:var(--text);font-family:'Manrope',sans-serif;fon
 <!-- ══════ OVERVIEW ══════ -->
 <div class="panel active" id="panel-overview">
 
+  <!-- Monthly Scorecard -->
   <div class="sec">
-    <div class="sec-label">Action Board</div>
-
-    <!-- Date Hooks -->
-    <div class="ab-section">
-      <div class="ab-section-title dh">📅 Date Hook Creatives &nbsp;<span style="font-size:10px;font-weight:500;color:var(--text2)">Active this week · CPL-only signal · 1-week lifecycle · relaunch same angle next Monday if Green</span><span style="margin-left:auto;font-size:11px;font-family:'IBM Plex Mono',monospace;color:var(--text3)" id="dhTotalNote"></span></div>
-      <div class="ab-grid dh-grid" id="dhBoard"></div>
-    </div>
-
-    <!-- Evergreens -->
-    <div class="ab-section">
-      <div class="ab-section-title ev">🌿 Evergreen Creatives &nbsp;<span style="font-size:10px;font-weight:500;color:var(--text2)">Full funnel signal · CPL → D3/D7 → ROAS · stage-based health score</span></div>
-      <div class="ab-grid ev-grid" id="evBoard"></div>
-    </div>
-  </div>
-
-  <div class="two-col sec">
-    <div>
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-        <div class="sec-label" style="margin-bottom:0">Monthly Scorecard</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <div class="sec-label" style="margin-bottom:0">Monthly Scorecard</div>
         <div class="theme-dd-wrap">
           <button class="theme-dd-btn" id="scGlobalBtn" onclick="toggleDD('scGlobalMenu','scGlobalBtn')">🏷 Theme <span id="scGlobalLbl">All</span> ▾</button>
           <div class="theme-dd-menu" id="scGlobalMenu" style="right:0;left:auto">
@@ -414,6 +398,32 @@ body{background:var(--bg);color:var(--text);font-family:'Manrope',sans-serif;fon
         </div>
         Score ≥70 → Scale &nbsp;·&nbsp; 50–69 → Watch &nbsp;·&nbsp; &lt;50 → Pause
       </div>
+    </div>
+  </div>
+
+  <!-- Creative Supply -->
+  <div class="sec">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <div class="sec-label" style="margin-bottom:0">Creative Supply</div>
+      <div style="display:flex;gap:6px">
+        <button class="fi" id="supplyBtn7"  onclick="setSupplyWindow(7)"  style="background:var(--gbg);color:var(--green);border-color:var(--gborder)">Last 7d</button>
+        <button class="fi" id="supplyBtn14" onclick="setSupplyWindow(14)">Last 14d</button>
+        <button class="fi" id="supplyBtn30" onclick="setSupplyWindow(30)">Last 30d</button>
+      </div>
+    </div>
+    <div id="supplyGrid"></div>
+  </div>
+
+  <!-- Action Board -->
+  <div class="sec">
+    <div class="sec-label">Action Board</div>
+    <div class="ab-section">
+      <div class="ab-section-title dh">📅 Date Hook Creatives &nbsp;<span style="font-size:10px;font-weight:500;color:var(--text2)">Active this week · CPL-only signal · 1-week lifecycle · relaunch same angle next Monday if Green</span><span style="margin-left:auto;font-size:11px;font-family:'IBM Plex Mono',monospace;color:var(--text3)" id="dhTotalNote"></span></div>
+      <div class="ab-grid dh-grid" id="dhBoard"></div>
+    </div>
+    <div class="ab-section">
+      <div class="ab-section-title ev">🌿 Evergreen Creatives &nbsp;<span style="font-size:10px;font-weight:500;color:var(--text2)">Full funnel signal · CPL → D3/D7 → ROAS · stage-based health score</span></div>
+      <div class="ab-grid ev-grid" id="evBoard"></div>
     </div>
   </div>
 
@@ -1810,12 +1820,76 @@ function downloadCSV(tab) {
 // ── GOOGLE SHEETS LIVE SYNC ──
 const SHEETS_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRTXEI-U9nQeZlMUrLyyHoiTUAJEtD36fnQOKMJ3kjRjLf_8F2mbFXyWf4pOOlVby_GY0JviXr41ZZP/pub?gid=0&single=true&output=csv';
 
+let supplyWindow = 7;
+function setSupplyWindow(d) {
+  supplyWindow = d;
+  ['7','14','30'].forEach(n => {
+    const btn = document.getElementById('supplyBtn'+n);
+    if (btn) {
+      btn.style.background = ''; btn.style.color = ''; btn.style.borderColor = '';
+    }
+  });
+  const active = document.getElementById('supplyBtn'+d);
+  if (active) { active.style.background='var(--gbg)'; active.style.color='var(--green)'; active.style.borderColor='var(--gborder)'; }
+  renderSupply();
+}
+
+function renderSupply() {
+  const el = document.getElementById('supplyGrid'); if (!el) return;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const cutoff = new Date(today); cutoff.setDate(cutoff.getDate() - supplyWindow);
+  const themes = ['Problem Statement','Generic','Social Proof','Date Hook','AI Creative'];
+  const themeEmoji = {'Problem Statement':'🩺','Generic':'💬','Social Proof':'⭐','Date Hook':'📅','AI Creative':'🤖'};
+
+  const rows = themes.map(th => {
+    const launched = C.filter(c => {
+      if (!c.go_live) return false;
+      const [y,m,d] = c.go_live.split('-');
+      const gl = new Date(+y,+m-1,+d);
+      return gl >= cutoff && gl <= today && c.theme === th;
+    });
+    return { theme: th, count: launched.length, creatives: launched };
+  });
+  const total = rows.reduce((s,r) => s+r.count, 0);
+
+  el.innerHTML = `
+    <div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead>
+          <tr style="border-bottom:1px solid var(--border)">
+            <th style="text-align:left;padding:8px 12px;color:var(--text3);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.06em">Theme</th>
+            <th style="text-align:center;padding:8px 12px;color:var(--text3);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.06em">Launched</th>
+            <th style="text-align:left;padding:8px 12px;color:var(--text3);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.06em">Creatives</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows.map(r => `
+          <tr style="border-bottom:1px solid var(--border)">
+            <td style="padding:10px 12px;font-weight:600">${themeEmoji[r.theme]||''} ${r.theme}</td>
+            <td style="padding:10px 12px;text-align:center">
+              <span style="font-size:18px;font-weight:700;color:${r.count>0?'var(--green)':'var(--text3)'}">${r.count}</span>
+            </td>
+            <td style="padding:10px 12px;color:var(--text2);font-size:12px">
+              ${r.creatives.length ? r.creatives.map(c=>`<span style="display:inline-block;background:var(--card-bg);border:1px solid var(--border);border-radius:4px;padding:2px 7px;margin:2px 3px 2px 0;font-family:'IBM Plex Mono',monospace;font-size:11px;cursor:pointer" onclick="openPopup('${c.key}')">${c.key}</span>`).join('') : '<span style="color:var(--text3)">—</span>'}
+            </td>
+          </tr>`).join('')}
+          <tr style="border-top:2px solid var(--border)">
+            <td style="padding:10px 12px;font-weight:700;color:var(--text)">Total</td>
+            <td style="padding:10px 12px;text-align:center;font-size:18px;font-weight:700;color:${total>0?'var(--green)':'var(--text3)'}">${total}</td>
+            <td></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>`;
+}
+
 function applyData(data) {
   Object.assign(RAW, data);
   C.length = 0;
   data.creatives.forEach(c => C.push(c));
   DAILY_DATA = data.dailyData || {};
   initOverview();
+  renderSupply();
   updateActionMenuOptions();
   updateAllThemeLbl();
   populateMonthBtns();
