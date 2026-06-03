@@ -308,6 +308,7 @@ body{background:var(--bg);color:var(--text);font-family:'Manrope',sans-serif;fon
       <div class="theme-dd-menu" id="allMonthMenu" style="min-width:140px"></div>
     </div>
     <span class="cnt" id="all-cnt"></span>
+    <button class="fi" style="margin-left:auto" onclick="downloadCSV('all')">⬇ Download CSV</button>
   </div>
   <div class="tbl-wrap">
     <table class="dtbl">
@@ -358,6 +359,7 @@ body{background:var(--bg);color:var(--text);font-family:'Manrope',sans-serif;fon
       <div class="theme-dd-menu" id="cplMonthMenu" style="min-width:140px"></div>
     </div>
     <span class="cnt" id="cpl-cnt"></span>
+    <button class="fi" style="margin-left:auto" onclick="downloadCSV('cpl')">⬇ Download CSV</button>
   </div>
   <div class="tbl-wrap">
     <table class="dtbl"><thead><tr>
@@ -405,6 +407,7 @@ body{background:var(--bg);color:var(--text);font-family:'Manrope',sans-serif;fon
       <div class="theme-dd-menu" id="d3MonthMenu" style="min-width:140px"></div>
     </div>
     <span class="cnt" id="d3-cnt"></span>
+    <button class="fi" style="margin-left:auto" onclick="downloadCSV('d3')">⬇ Download CSV</button>
   </div>
   <div class="tbl-wrap">
     <table class="dtbl"><thead><tr>
@@ -449,6 +452,7 @@ body{background:var(--bg);color:var(--text);font-family:'Manrope',sans-serif;fon
       <div class="theme-dd-menu" id="roMonthMenu" style="min-width:140px"></div>
     </div>
     <span class="cnt" id="ro-cnt"></span>
+    <button class="fi" style="margin-left:auto" onclick="downloadCSV('ro')">⬇ Download CSV</button>
   </div>
   <div class="tbl-wrap">
     <table class="dtbl"><thead><tr>
@@ -1210,6 +1214,68 @@ function closePopup() {
 }
 
 document.addEventListener('keydown', e => { if(e.key==='Escape') closePopup(); });
+
+// ── DOWNLOAD CSV ──
+function downloadCSV(tab) {
+  const configs = {
+    all: {
+      headers: ['Status','Creative','Theme','Age','Score','Confidence','Action','CPL Tag','CPL ₹','D3','D7','ROAS','Spend'],
+      getData: () => getAll(),
+      row: c => [
+        c.paused_from ? 'Paused' : 'Active',
+        c.key, c.theme, c.age,
+        c.health_score, c.confidence, c.action,
+        c.cpl_tag, c.cpl_val ?? '', c.cost_d3_tag, c.cost_d7_tag, c.roas_tag,
+        c.total_spend
+      ]
+    },
+    cpl: {
+      headers: ['Status','Creative','Theme','Age','CPL ₹','CPL Tag','D3','D7','ROAS','Spend','Leads'],
+      getData: () => getCpl(),
+      row: c => [
+        c.paused_from ? 'Paused' : 'Active',
+        c.key, c.theme, c.age,
+        c.cpl_val ?? '', c.cpl_tag, c.cost_d3_tag, c.cost_d7_tag, c.roas_tag,
+        c.total_spend, c.total_leads
+      ]
+    },
+    d3: {
+      headers: ['Status','Creative','Theme','Age','CPL','Cost D3 ₹','D3 Tag','Cost D7 ₹','D7 Tag','ROAS','Spend'],
+      getData: () => getD3(),
+      row: c => [
+        c.paused_from ? 'Paused' : 'Active',
+        c.key, c.theme, c.age,
+        c.cpl_tag, c.cost_d3_val ?? '', c.cost_d3_tag, c.cost_d7_val ?? '', c.cost_d7_tag,
+        c.roas_tag, c.total_spend
+      ]
+    },
+    ro: {
+      headers: ['Status','Creative','Theme','Age','Score','Confidence','CPL','D3','D7','ROAS','Tag','Spend'],
+      getData: () => getRo(),
+      row: c => [
+        c.paused_from ? 'Paused' : 'Active',
+        c.key, c.theme, c.age,
+        c.health_score, c.confidence, c.cpl_tag, c.cost_d3_tag, c.cost_d7_tag,
+        c.roas_val ?? '', c.roas_tag, c.total_spend
+      ]
+    }
+  };
+
+  const cfg = configs[tab];
+  const rows = cfg.getData();
+  const csvLines = [cfg.headers.join(',')];
+  for (const c of rows) {
+    csvLines.push(cfg.row(c).map(v => `"${String(v).replace(/"/g,'""')}"`).join(','));
+  }
+
+  const blob = new Blob([csvLines.join('\n')], {type:'text/csv'});
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url;
+  a.download = `creative_dashboard_${tab}_${new Date().toISOString().split('T')[0]}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
 // ── GOOGLE SHEETS LIVE SYNC ──
 const SHEETS_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRTXEI-U9nQeZlMUrLyyHoiTUAJEtD36fnQOKMJ3kjRjLf_8F2mbFXyWf4pOOlVby_GY0JviXr41ZZP/pub?gid=0&single=true&output=csv';
