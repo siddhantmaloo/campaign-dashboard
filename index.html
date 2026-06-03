@@ -411,10 +411,10 @@ body{background:var(--bg);color:var(--text);font-family:'Manrope',sans-serif;fon
   </div>
   <div class="tbl-wrap">
     <table class="dtbl"><thead><tr>
+      <th>Status</th>
       <th onclick="sortD('key')">Creative</th>
       <th onclick="sortD('theme')">Theme</th>
       <th onclick="sortD('age')" class="srt">Age</th>
-      <th>Status</th>
       <th>CPL</th>
       <th onclick="sortD('cost_d3_val')">Cost D3 ₹</th><th>D3 Tag</th>
       <th onclick="sortD('cost_d7_val')">Cost D7 ₹</th><th>D7 Tag</th>
@@ -455,10 +455,10 @@ body{background:var(--bg);color:var(--text);font-family:'Manrope',sans-serif;fon
   </div>
   <div class="tbl-wrap">
     <table class="dtbl"><thead><tr>
+      <th>Status</th>
       <th onclick="sortR('key')">Creative</th>
       <th onclick="sortR('theme')">Theme</th>
       <th onclick="sortR('age')" class="srt">Age</th>
-      <th>Status</th>
       <th>Score</th><th>Confidence</th>
       <th>CPL</th><th>D3</th><th>D7</th>
       <th onclick="sortR('roas_val')">ROAS</th><th>Tag</th>
@@ -1020,10 +1020,10 @@ function renderD3(){
   const pages=Math.max(1,Math.ceil(rows.length/PS));s.p=Math.min(s.p,pages);
   document.getElementById('d3-cnt').textContent=rows.length+' creatives';
   document.getElementById('d3Body').innerHTML=rows.slice((s.p-1)*PS,s.p*PS).map(c=>`<tr>
+    <td>${c.paused_from?`<span class="tag tpause">⏸ Paused</span>`:`<span class="tag" style="background:var(--gbg);color:var(--green);border:1px solid var(--gborder)">● Active</span>`}</td>
     <td class="nm">${nameCell(c)}</td>
     <td>${themeH(c.theme,c.theme==='Date Hook')}</td>
     <td>${c.age}d</td>
-    <td>${c.paused_from?`<span class="tag tpause">⏸ Paused</span>`:`<span class="tag" style="background:var(--gbg);color:var(--green);border:1px solid var(--gborder)">● Active</span>`}</td>
     <td>${tagH(c.cpl_tag)}</td>
     <td class="nr">${c.cost_d3_val!=null?'₹'+c.cost_d3_val:'—'}</td>
     <td>${tagH(c.cost_d3_tag)}</td>
@@ -1052,10 +1052,10 @@ function renderRo(){
   const pages=Math.max(1,Math.ceil(rows.length/PS));s.p=Math.min(s.p,pages);
   document.getElementById('ro-cnt').textContent=rows.length+' creatives';
   document.getElementById('roBody').innerHTML=rows.slice((s.p-1)*PS,s.p*PS).map(c=>`<tr>
+    <td>${c.paused_from?`<span class="tag tpause">⏸ Paused</span>`:`<span class="tag" style="background:var(--gbg);color:var(--green);border:1px solid var(--gborder)">● Active</span>`}</td>
     <td class="nm">${nameCell(c)}</td>
     <td>${themeH(c.theme,c.theme==='Date Hook')}</td>
     <td>${c.age}d</td>
-    <td>${c.paused_from?`<span class="tag tpause">⏸ Paused</span>`:`<span class="tag" style="background:var(--gbg);color:var(--green);border:1px solid var(--gborder)">● Active</span>`}</td>
     <td>${scorePill(c.health_score)}</td>
     <td style="display:flex;align-items:center;gap:4px;padding-top:10px">${confH(c.confidence)}</td>
     <td>${tagH(c.cpl_tag)}</td><td>${tagH(c.cost_d3_tag)}</td><td>${tagH(c.cost_d7_tag)}</td>
