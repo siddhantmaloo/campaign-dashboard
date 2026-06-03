@@ -468,6 +468,7 @@ body{background:var(--bg);color:var(--text);font-family:'Manrope',sans-serif;fon
       <div class="theme-dd-menu" id="allMonthMenu" style="min-width:140px"></div>
     </div>
     <span class="cnt" id="all-cnt"></span>
+    <button class="fi" id="allBtnNotes" onclick="toggleNotesFilter('all')" title="Show only creatives with notes">📝 Has Notes</button>
     <button class="fi" style="margin-left:auto" onclick="downloadCSV('all')">⬇ Download CSV</button>
   </div>
   <div class="tbl-wrap">
@@ -520,6 +521,7 @@ body{background:var(--bg);color:var(--text);font-family:'Manrope',sans-serif;fon
       <div class="theme-dd-menu" id="cplMonthMenu" style="min-width:140px"></div>
     </div>
     <span class="cnt" id="cpl-cnt"></span>
+    <button class="fi" id="cplBtnNotes" onclick="toggleNotesFilter('cpl')" title="Show only creatives with notes">📝 Has Notes</button>
     <button class="fi" style="margin-left:auto" onclick="downloadCSV('cpl')">⬇ Download CSV</button>
   </div>
   <div class="tbl-wrap">
@@ -569,6 +571,7 @@ body{background:var(--bg);color:var(--text);font-family:'Manrope',sans-serif;fon
       <div class="theme-dd-menu" id="d3MonthMenu" style="min-width:140px"></div>
     </div>
     <span class="cnt" id="d3-cnt"></span>
+    <button class="fi" id="d3BtnNotes" onclick="toggleNotesFilter('d3')" title="Show only creatives with notes">📝 Has Notes</button>
     <button class="fi" style="margin-left:auto" onclick="downloadCSV('d3')">⬇ Download CSV</button>
   </div>
   <div class="tbl-wrap">
@@ -615,6 +618,7 @@ body{background:var(--bg);color:var(--text);font-family:'Manrope',sans-serif;fon
       <div class="theme-dd-menu" id="roMonthMenu" style="min-width:140px"></div>
     </div>
     <span class="cnt" id="ro-cnt"></span>
+    <button class="fi" id="roBtnNotes" onclick="toggleNotesFilter('ro')" title="Show only creatives with notes">📝 Has Notes</button>
     <button class="fi" style="margin-left:auto" onclick="downloadCSV('ro')">⬇ Download CSV</button>
   </div>
   <div class="tbl-wrap">
@@ -871,10 +875,10 @@ function initOverview(){
 }
 
 // ── TABLE STATES ──
-const allS={q:'',actions:new Set(),themes:new Set(['Date Hook','Problem Statement','Generic','Social Proof','AI Creative']),status:'',month:'',sort:'health_score',dir:-1,p:1};
-const cplS={q:'',cpl_tag:'',_paused:'',status:'',themes:new Set(),month:'',sort:'age',dir:-1,p:1};
-const d3S={q:'',d3f:'',d7f:'',status:'',themes:new Set(),month:'',sort:'age',dir:-1,p:1};
-const roS={q:'',roas_tag:'',status:'',themes:new Set(),month:'',sort:'age',dir:-1,p:1};
+const allS={q:'',actions:new Set(),themes:new Set(['Date Hook','Problem Statement','Generic','Social Proof','AI Creative']),status:'',month:'',sort:'health_score',dir:-1,p:1,notesOnly:false};
+const cplS={q:'',cpl_tag:'',_paused:'',status:'',themes:new Set(),month:'',sort:'age',dir:-1,p:1,notesOnly:false};
+const d3S={q:'',d3f:'',d7f:'',status:'',themes:new Set(),month:'',sort:'age',dir:-1,p:1,notesOnly:false};
+const roS={q:'',roas_tag:'',status:'',themes:new Set(),month:'',sort:'age',dir:-1,p:1,notesOnly:false};
 
 function toggleF(state,val,key,btn,render){
   state[key]=state[key]===val?'':val; state.p=1;
@@ -955,6 +959,7 @@ function getAll(){
   if(allS.themes.size>0&&allS.themes.size<5) r=r.filter(c=>allS.themes.has(c.theme));
   if(allS.status==='active') r=r.filter(c=>!c.paused_from);
   if(allS.status==='paused') r=r.filter(c=>!!c.paused_from);
+  if(allS.notesOnly){ const n=getNotes(); r=r.filter(c=>n[c.key]&&n[c.key].text); }
   r=applyMonthFilter(r,allS);
   r.sort((a,b)=>{const av=a[allS.sort]??'',bv=b[allS.sort]??'';return typeof av==='string'?allS.dir*av.localeCompare(bv):allS.dir*((av||0)-(bv||0));});
   return r;
@@ -1164,6 +1169,7 @@ function getCpl(){
   if(cplS.cpl_tag) r=r.filter(c=>c.cpl_tag===cplS.cpl_tag);
   if(cplS.status==='active') r=r.filter(c=>!c.paused_from);
   if(cplS.status==='paused') r=r.filter(c=>!!c.paused_from);
+  if(cplS.notesOnly){ const n=getNotes(); r=r.filter(c=>n[c.key]&&n[c.key].text); }
   if(cplS.themes.size>0) r=r.filter(c=>cplS.themes.has(c.theme));
   r=applyMonthFilter(r,cplS);
   r.sort((a,b)=>{const av=a[cplS.sort]??'',bv=b[cplS.sort]??'';return typeof av==='string'?cplS.dir*av.localeCompare(bv):cplS.dir*((av||0)-(bv||0));});
@@ -1198,6 +1204,7 @@ function getD3(){
   if(d3S.d7f) r=r.filter(c=>c.cost_d7_tag===d3S.d7f);
   if(d3S.status==='active') r=r.filter(c=>!c.paused_from);
   if(d3S.status==='paused') r=r.filter(c=>!!c.paused_from);
+  if(d3S.notesOnly){ const n=getNotes(); r=r.filter(c=>n[c.key]&&n[c.key].text); }
   if(d3S.themes.size>0) r=r.filter(c=>d3S.themes.has(c.theme));
   r=applyMonthFilter(r,d3S);
   r.sort((a,b)=>d3S.dir*((a[d3S.sort]||0)-(b[d3S.sort]||0)));
@@ -1231,6 +1238,7 @@ function getRo(){
   if(roS.roas_tag) r=r.filter(c=>c.roas_tag===roS.roas_tag);
   if(roS.status==='active') r=r.filter(c=>!c.paused_from);
   if(roS.status==='paused') r=r.filter(c=>!!c.paused_from);
+  if(roS.notesOnly){ const n=getNotes(); r=r.filter(c=>n[c.key]&&n[c.key].text); }
   if(roS.themes.size>0) r=r.filter(c=>roS.themes.has(c.theme));
   r=applyMonthFilter(r,roS);
   r.sort((a,b)=>{const av=a[roS.sort]??'',bv=b[roS.sort]??'';return typeof av==='string'?roS.dir*av.localeCompare(bv):roS.dir*((av||0)-(bv||0));});
@@ -1403,6 +1411,18 @@ function closePopup() {
 }
 
 document.addEventListener('keydown', e => { if(e.key==='Escape') closePopup(); });
+
+// ── NOTES FILTER ──
+const NOTES_TAB_MAP = {all:{s:allS,btn:'allBtnNotes',render:()=>renderAll()},cpl:{s:cplS,btn:'cplBtnNotes',render:()=>renderCpl()},d3:{s:d3S,btn:'d3BtnNotes',render:()=>renderD3()},ro:{s:roS,btn:'roBtnNotes',render:()=>renderRo()}};
+
+function toggleNotesFilter(tab) {
+  const cfg = NOTES_TAB_MAP[tab];
+  cfg.s.notesOnly = !cfg.s.notesOnly;
+  cfg.s.p = 1;
+  const btn = document.getElementById(cfg.btn);
+  btn.classList.toggle('active', cfg.s.notesOnly);
+  cfg.render();
+}
 
 // ── PROFILE ──
 function toggleProfileMenu(e) {
