@@ -1612,6 +1612,7 @@ function saveSettings() {
     RAW.creatives = reprocessed;
   }
   initOverview();
+  renderSupply();
   renderAll(); renderCpl(); renderD3(); renderRo(); renderScaled();
 }
 
@@ -2415,6 +2416,7 @@ function updateScorecard(monthStr, tbodyId, themes) {
 }
 
 initOverview();
+renderSupply();
 updateActionMenuOptions();
 updateAllThemeLbl();
 populateMonthBtns();
