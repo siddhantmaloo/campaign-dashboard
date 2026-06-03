@@ -23,6 +23,25 @@
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:var(--bg);color:var(--text);font-family:'Manrope',sans-serif;font-size:13px}
 
+/* ── NOTES ── */
+#notes-modal{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9998;display:none;align-items:center;justify-content:center}
+#notes-modal.open{display:flex}
+#notes-box{background:var(--bg2);border:1px solid var(--border2);border-radius:12px;padding:24px;width:100%;max-width:480px;display:flex;flex-direction:column;gap:14px}
+#notes-box h3{font-size:13px;font-weight:800;color:var(--text)}
+#notes-box h3 span{color:var(--blue);font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;display:block;margin-top:2px}
+#notes-textarea{background:var(--bg3);border:1px solid var(--border2);border-radius:var(--rs);padding:12px;color:var(--text);font-size:13px;font-family:'Manrope',sans-serif;resize:vertical;min-height:120px;outline:none;transition:border .15s;line-height:1.6}
+#notes-textarea:focus{border-color:var(--blue)}
+#notes-textarea::placeholder{color:var(--text3)}
+.notes-actions{display:flex;gap:8px;justify-content:flex-end}
+.notes-save{padding:8px 18px;background:var(--blue);border:none;border-radius:var(--rs);color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:'Manrope',sans-serif}
+.notes-save:hover{opacity:.85}
+.notes-clear{padding:8px 14px;background:var(--rbg);border:1px solid var(--rborder);border-radius:var(--rs);color:var(--red);font-size:12px;font-weight:700;cursor:pointer;font-family:'Manrope',sans-serif}
+.notes-cancel{padding:8px 14px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--rs);color:var(--text2);font-size:12px;font-weight:700;cursor:pointer;font-family:'Manrope',sans-serif}
+.note-btn{background:none;border:none;cursor:pointer;padding:3px 6px;border-radius:var(--rs);font-size:13px;line-height:1;transition:background .15s;position:relative}
+.note-btn:hover{background:var(--bg3)}
+.note-btn.has-note::after{content:'';position:absolute;top:2px;right:2px;width:6px;height:6px;background:var(--yellow);border-radius:50%}
+#notes-timestamp{font-size:10px;color:var(--text3);font-family:'IBM Plex Mono',monospace}
+
 /* ── LOGIN ── */
 #login-overlay{position:fixed;inset:0;background:var(--bg);z-index:9999;display:flex;align-items:center;justify-content:center}
 #login-box{background:var(--bg2);border:1px solid var(--border2);border-radius:12px;padding:40px 36px;width:100%;max-width:360px;display:flex;flex-direction:column;gap:20px}
@@ -190,6 +209,20 @@ body{background:var(--bg);color:var(--text);font-family:'Manrope',sans-serif;fon
 </style>
 </head>
 <body>
+
+<!-- ── NOTES MODAL ── -->
+<div id="notes-modal">
+  <div id="notes-box">
+    <h3>📝 Notes <span id="notes-creative-label"></span></h3>
+    <textarea id="notes-textarea" placeholder="Type your thoughts, action items, observations…"></textarea>
+    <div id="notes-timestamp"></div>
+    <div class="notes-actions">
+      <button class="notes-clear" onclick="clearNote()">🗑 Clear</button>
+      <button class="notes-cancel" onclick="closeNotes()">Cancel</button>
+      <button class="notes-save" onclick="saveNote()">Save Note</button>
+    </div>
+  </div>
+</div>
 
 <!-- ── LOGIN OVERLAY ── -->
 <div id="login-overlay">
@@ -360,6 +393,7 @@ body{background:var(--bg);color:var(--text);font-family:'Manrope',sans-serif;fon
         <th onclick="sortA('cost_d7_tag')">D7</th>
         <th onclick="sortA('roas_tag')">ROAS</th>
         <th onclick="sortA('total_spend')">Spend</th>
+        <th>Notes</th>
       </tr></thead>
       <tbody id="allBody"></tbody>
     </table>
@@ -406,6 +440,7 @@ body{background:var(--bg);color:var(--text);font-family:'Manrope',sans-serif;fon
       <th>D3</th><th>D7</th><th>ROAS</th>
       <th onclick="sortC('total_spend')">Spend</th>
       <th onclick="sortC('total_leads')">Leads</th>
+      <th>Notes</th>
     </tr></thead>
     <tbody id="cplBody"></tbody></table>
     <div class="pag" id="cplPag"></div>
@@ -454,6 +489,7 @@ body{background:var(--bg);color:var(--text);font-family:'Manrope',sans-serif;fon
       <th onclick="sortD('cost_d7_val')">Cost D7 ₹</th><th>D7 Tag</th>
       <th>ROAS</th>
       <th onclick="sortD('total_spend')">Spend</th>
+      <th>Notes</th>
     </tr></thead>
     <tbody id="d3Body"></tbody></table>
     <div class="pag" id="d3Pag"></div>
@@ -498,6 +534,7 @@ body{background:var(--bg);color:var(--text);font-family:'Manrope',sans-serif;fon
       <th>CPL</th><th>D3</th><th>D7</th>
       <th onclick="sortR('roas_val')">ROAS</th><th>Tag</th>
       <th onclick="sortR('total_spend')">Spend</th>
+      <th>Notes</th>
     </tr></thead>
     <tbody id="roBody"></tbody></table>
     <div class="pag" id="roPag"></div>
@@ -847,7 +884,8 @@ function renderAll(){
     <td>${tagH(c.cost_d7_tag)}</td>
     <td>${tagH(c.roas_tag)}</td>
     <td class="nr">${spendH(c.total_spend)}</td>
-  </tr>`).join('')||`<tr><td colspan="12" class="empty">No creatives match</td></tr>`;
+    <td style="text-align:center">${noteBtn(c.key)}</td>
+  </tr>`).join('')||`<tr><td colspan="13" class="empty">No creatives match</td></tr>`;
   pag('allPag',s,pages,renderAll);
 }
 function sortA(col){if(allS.sort===col)allS.dir*=-1;else{allS.sort=col;allS.dir=-1;}allS.p=1;renderAll();}
@@ -1054,7 +1092,8 @@ function renderCpl(){
     <td>${tagH(c.roas_tag)}</td>
     <td class="nr">${spendH(c.total_spend)}</td>
     <td class="nr">${c.total_leads.toLocaleString('en-IN')}</td>
-  </tr>`).join('')||`<tr><td colspan="12" class="empty">No match</td></tr>`;
+    <td style="text-align:center">${noteBtn(c.key)}</td>
+  </tr>`).join('')||`<tr><td colspan="13" class="empty">No match</td></tr>`;
   pag('cplPag',s,pages,renderCpl);
 }
 function sortC(col){if(cplS.sort===col)cplS.dir*=-1;else{cplS.sort=col;cplS.dir=-1;}cplS.p=1;renderCpl();}
@@ -1087,7 +1126,8 @@ function renderD3(){
     <td>${tagH(c.cost_d7_tag)}</td>
     <td>${tagH(c.roas_tag)}</td>
     <td class="nr">${spendH(c.total_spend)}</td>
-  </tr>`).join('')||`<tr><td colspan="11" class="empty">No match</td></tr>`;
+    <td style="text-align:center">${noteBtn(c.key)}</td>
+  </tr>`).join('')||`<tr><td colspan="12" class="empty">No match</td></tr>`;
   pag('d3Pag',s,pages,renderD3);
 }
 function sortD(col){if(d3S.sort===col)d3S.dir*=-1;else{d3S.sort=col;d3S.dir=-1;}d3S.p=1;renderD3();}
@@ -1118,7 +1158,8 @@ function renderRo(){
     <td class="nr" style="color:var(--text);font-weight:600">${c.roas_val!=null?c.roas_val+'×':'—'}</td>
     <td>${tagH(c.roas_tag)}</td>
     <td class="nr">${spendH(c.total_spend)}</td>
-  </tr>`).join('')||`<tr><td colspan="12" class="empty">No match</td></tr>`;
+    <td style="text-align:center">${noteBtn(c.key)}</td>
+  </tr>`).join('')||`<tr><td colspan="13" class="empty">No match</td></tr>`;
   pag('roPag',s,pages,renderRo);
 }
 function sortR(col){if(roS.sort===col)roS.dir*=-1;else{roS.sort=col;roS.dir=-1;}roS.p=1;renderRo();}
@@ -1269,6 +1310,73 @@ function closePopup() {
 }
 
 document.addEventListener('keydown', e => { if(e.key==='Escape') closePopup(); });
+
+// ── NOTES ──
+const NOTES_KEY = 'cd_notes_v1';
+
+function getNotes() {
+  try { return JSON.parse(localStorage.getItem(NOTES_KEY) || '{}'); } catch { return {}; }
+}
+
+function noteBtn(creativeKey) {
+  const notes = getNotes();
+  const hasNote = !!(notes[creativeKey] && notes[creativeKey].text);
+  return `<button class="note-btn${hasNote ? ' has-note' : ''}" onclick="openNotes('${creativeKey.replace(/'/g,"\\'")}',event)" title="${hasNote ? 'Edit note' : 'Add note'}">📝</button>`;
+}
+
+let _currentNoteKey = null;
+
+function openNotes(creativeKey, e) {
+  e.stopPropagation();
+  _currentNoteKey = creativeKey;
+  const notes = getNotes();
+  const entry = notes[creativeKey] || {};
+  document.getElementById('notes-creative-label').textContent = creativeKey;
+  document.getElementById('notes-textarea').value = entry.text || '';
+  document.getElementById('notes-timestamp').textContent = entry.updatedAt ? `Last updated: ${entry.updatedAt}` : '';
+  document.getElementById('notes-modal').classList.add('open');
+  setTimeout(() => document.getElementById('notes-textarea').focus(), 50);
+}
+
+function closeNotes() {
+  document.getElementById('notes-modal').classList.remove('open');
+  _currentNoteKey = null;
+}
+
+function saveNote() {
+  if (!_currentNoteKey) return;
+  const text = document.getElementById('notes-textarea').value.trim();
+  const notes = getNotes();
+  if (text) {
+    notes[_currentNoteKey] = {
+      text,
+      updatedAt: new Date().toLocaleString('en-IN', {day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'})
+    };
+  } else {
+    delete notes[_currentNoteKey];
+  }
+  localStorage.setItem(NOTES_KEY, JSON.stringify(notes));
+  closeNotes();
+  renderAll(); renderCpl(); renderD3(); renderRo();
+}
+
+function clearNote() {
+  if (!_currentNoteKey) return;
+  const notes = getNotes();
+  delete notes[_currentNoteKey];
+  localStorage.setItem(NOTES_KEY, JSON.stringify(notes));
+  document.getElementById('notes-textarea').value = '';
+  document.getElementById('notes-timestamp').textContent = '';
+}
+
+// Close on backdrop click
+document.addEventListener('click', e => {
+  if (e.target.id === 'notes-modal') closeNotes();
+});
+// Close on Escape
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeNotes();
+});
 
 // ── DOWNLOAD CSV ──
 function downloadCSV(tab) {
