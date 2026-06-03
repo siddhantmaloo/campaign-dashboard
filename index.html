@@ -1874,29 +1874,55 @@ function applySupplyCustom() {
 function renderSupply() {
   const el = document.getElementById('supplyGrid'); if (!el) return;
   const today = new Date(); today.setHours(0,0,0,0);
-  let cutoff, rangeEnd;
+  let cutoff, rangeEnd, prevCutoff, prevRangeEnd;
   if (supplyCustomFrom && supplyCustomTo) {
     const [fy,fm,fd] = supplyCustomFrom.split('-');
     const [ty,tm,td] = supplyCustomTo.split('-');
     cutoff   = new Date(+fy,+fm-1,+fd);
     rangeEnd = new Date(+ty,+tm-1,+td);
+    const span = rangeEnd - cutoff;
+    prevRangeEnd = new Date(cutoff - 1);
+    prevCutoff   = new Date(prevRangeEnd - span);
   } else {
-    cutoff   = new Date(today); cutoff.setDate(cutoff.getDate() - supplyWindow);
-    rangeEnd = today;
+    cutoff       = new Date(today); cutoff.setDate(cutoff.getDate() - supplyWindow);
+    rangeEnd     = today;
+    prevRangeEnd = new Date(cutoff - 1);
+    prevCutoff   = new Date(today); prevCutoff.setDate(prevCutoff.getDate() - supplyWindow * 2);
   }
+
   const themes = ['Problem Statement','Generic','Social Proof','Date Hook','AI Creative'];
   const themeEmoji = {'Problem Statement':'🩺','Generic':'💬','Social Proof':'⭐','Date Hook':'📅','AI Creative':'🤖'};
 
+  const inRange = (goLive, from, to) => {
+    if (!goLive) return false;
+    const [y,m,d] = goLive.split('-');
+    const gl = new Date(+y,+m-1,+d);
+    return gl >= from && gl <= to;
+  };
+
   const rows = themes.map(th => {
-    const launched = C.filter(c => {
-      if (!c.go_live) return false;
-      const [y,m,d] = c.go_live.split('-');
-      const gl = new Date(+y,+m-1,+d);
-      return gl >= cutoff && gl <= rangeEnd && c.theme === th;
-    });
-    return { theme: th, count: launched.length, creatives: launched };
+    const launched  = C.filter(c => inRange(c.go_live, cutoff, rangeEnd) && c.theme === th);
+    const prevCount = C.filter(c => inRange(c.go_live, prevCutoff, prevRangeEnd) && c.theme === th).length;
+    return { theme: th, count: launched.length, prevCount, creatives: launched };
   });
-  const total = rows.reduce((s,r) => s+r.count, 0);
+  const total     = rows.reduce((s,r) => s+r.count, 0);
+  const prevTotal = rows.reduce((s,r) => s+r.prevCount, 0);
+
+  const deltaHtml = (cur, prev) => {
+    const d = cur - prev;
+    if (d === 0) return `<span style="color:var(--text3);font-size:11px;margin-left:6px">↔ 0</span>`;
+    if (d > 0)   return `<span style="color:var(--green);font-size:11px;margin-left:6px">↑${d}</span>`;
+                 return `<span style="color:var(--red);font-size:11px;margin-left:6px">↓${Math.abs(d)}</span>`;
+  };
+
+  const chipHtml = c => {
+    const isActive = !c.paused_from;
+    const dot = isActive
+      ? `<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--green);margin-right:4px;vertical-align:middle"></span>`
+      : `<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--text3);margin-right:4px;vertical-align:middle"></span>`;
+    const goLiveFmt = c.go_live ? (() => { const [y,m,d]=c.go_live.split('-'); return new Date(+y,+m-1,+d).toLocaleDateString('en-IN',{day:'numeric',month:'short'}); })() : '';
+    return `<span title="${isActive?'Active':'Paused'} · Go-live: ${goLiveFmt}" style="display:inline-flex;align-items:center;background:var(--card-bg);border:1px solid ${isActive?'var(--gborder)':'var(--border)'};border-radius:4px;padding:3px 8px;margin:2px 3px 2px 0;font-family:'IBM Plex Mono',monospace;font-size:11px;cursor:pointer" onclick="openPopup('${c.key}')">${dot}${c.key}</span>`;
+  };
 
   el.innerHTML = `
     <div style="overflow-x:auto">
@@ -1912,16 +1938,20 @@ function renderSupply() {
           ${rows.map(r => `
           <tr style="border-bottom:1px solid var(--border)">
             <td style="padding:10px 12px;font-weight:600">${themeEmoji[r.theme]||''} ${r.theme}</td>
-            <td style="padding:10px 12px;text-align:center">
+            <td style="padding:10px 12px;text-align:center;white-space:nowrap">
               <span style="font-size:18px;font-weight:700;color:${r.count>0?'var(--green)':'var(--text3)'}">${r.count}</span>
+              ${deltaHtml(r.count, r.prevCount)}
             </td>
-            <td style="padding:10px 12px;color:var(--text2);font-size:12px">
-              ${r.creatives.length ? r.creatives.map(c=>`<span style="display:inline-block;background:var(--card-bg);border:1px solid var(--border);border-radius:4px;padding:2px 7px;margin:2px 3px 2px 0;font-family:'IBM Plex Mono',monospace;font-size:11px;cursor:pointer" onclick="openPopup('${c.key}')">${c.key}</span>`).join('') : '<span style="color:var(--text3)">—</span>'}
+            <td style="padding:10px 12px">
+              ${r.creatives.length ? r.creatives.map(chipHtml).join('') : '<span style="color:var(--text3)">—</span>'}
             </td>
           </tr>`).join('')}
           <tr style="border-top:2px solid var(--border)">
             <td style="padding:10px 12px;font-weight:700;color:var(--text)">Total</td>
-            <td style="padding:10px 12px;text-align:center;font-size:18px;font-weight:700;color:${total>0?'var(--green)':'var(--text3)'}">${total}</td>
+            <td style="padding:10px 12px;text-align:center;white-space:nowrap">
+              <span style="font-size:18px;font-weight:700;color:${total>0?'var(--green)':'var(--text3)'}">${total}</span>
+              ${deltaHtml(total, prevTotal)}
+            </td>
             <td></td>
           </tr>
         </tbody>
