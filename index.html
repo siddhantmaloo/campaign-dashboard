@@ -366,39 +366,19 @@ body{background:var(--bg);color:var(--text);font-family:'Manrope',sans-serif;fon
   <div class="sec">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
       <div class="sec-label" style="margin-bottom:0">Monthly Scorecard</div>
-        <div class="theme-dd-wrap">
-          <button class="theme-dd-btn" id="scGlobalBtn" onclick="toggleDD('scGlobalMenu','scGlobalBtn')">🏷 Theme <span id="scGlobalLbl">All</span> ▾</button>
-          <div class="theme-dd-menu" id="scGlobalMenu" style="right:0;left:auto">
-            <div class="theme-dd-item" onclick="scGlobalPick('',this)"><input type="checkbox"> All themes</div>
-            <div class="theme-dd-item checked" onclick="scGlobalPick('Date Hook',this)"><input type="checkbox" checked>📅 Date Hook</div>
-            <div class="theme-dd-item checked" onclick="scGlobalPick('Problem Statement',this)"><input type="checkbox" checked>🩺 Problem Stmt</div>
-            <div class="theme-dd-item checked" onclick="scGlobalPick('Generic',this)"><input type="checkbox" checked>💬 Generic</div>
-            <div class="theme-dd-item checked" onclick="scGlobalPick('Social Proof',this)"><input type="checkbox" checked>⭐ Social Proof</div>
-            <div class="theme-dd-item checked" onclick="scGlobalPick('AI Creative',this)"><input type="checkbox" checked>🤖 AI Creative</div>
-          </div>
+      <div class="theme-dd-wrap">
+        <button class="theme-dd-btn" id="scGlobalBtn" onclick="toggleDD('scGlobalMenu','scGlobalBtn')">🏷 Theme <span id="scGlobalLbl">All</span> ▾</button>
+        <div class="theme-dd-menu" id="scGlobalMenu" style="right:0;left:auto">
+          <div class="theme-dd-item" onclick="scGlobalPick('',this)"><input type="checkbox"> All themes</div>
+          <div class="theme-dd-item checked" onclick="scGlobalPick('Date Hook',this)"><input type="checkbox" checked>📅 Date Hook</div>
+          <div class="theme-dd-item checked" onclick="scGlobalPick('Problem Statement',this)"><input type="checkbox" checked>🩺 Problem Stmt</div>
+          <div class="theme-dd-item checked" onclick="scGlobalPick('Generic',this)"><input type="checkbox" checked>💬 Generic</div>
+          <div class="theme-dd-item checked" onclick="scGlobalPick('Social Proof',this)"><input type="checkbox" checked>⭐ Social Proof</div>
+          <div class="theme-dd-item checked" onclick="scGlobalPick('AI Creative',this)"><input type="checkbox" checked>🤖 AI Creative</div>
         </div>
       </div>
-      <div class="three-col" id="scorecardGrid"></div>
     </div>
-    <div>
-      <div class="sec-label">Scoring Logic</div>
-      <div class="score-box">
-        <div class="dh-rule">
-          <b>Date Hook</b> — CPL only (1-week window)<br>
-          Age &lt;3d → Too Early &nbsp;·&nbsp; 3–7d: Green=Scale+Relaunch, Yellow=Watch, Red=Drop<br>
-          8–14d → Wind Down (still running past cohort date)<br>
-          &gt;14d → Historical reference
-        </div>
-        <div class="ev-rule">
-          <b>Evergreen</b> — Stage-based score<br>
-          Early (0–13d): CPL 100%<br>
-          Mid (14–27d): CPL 40% · D3 35% · D7 25%<br>
-          Mature (28d+): CPL 30% · D3 25% · D7 20% · ROAS 25%<br>
-          ROAS weight: 10% (&lt;₹5K spend) → 20% (₹5–20K) → 30% (&gt;₹20K)
-        </div>
-        Score ≥70 → Scale &nbsp;·&nbsp; 50–69 → Watch &nbsp;·&nbsp; &lt;50 → Pause
-      </div>
-    </div>
+    <div class="three-col" id="scorecardGrid"></div>
   </div>
 
   <!-- Creative Supply -->
@@ -438,6 +418,27 @@ body{background:var(--bg);color:var(--text);font-family:'Manrope',sans-serif;fon
         <div class="card"><div class="card-title">CPL Tags</div><div class="chart-wrap"><canvas id="cplDonut"></canvas></div></div>
         <div class="card"><div class="card-title">ROAS Tags</div><div class="chart-wrap"><canvas id="roasDonut"></canvas></div></div>
       </div>
+    </div>
+  </div>
+
+  <!-- Scoring Logic -->
+  <div class="sec">
+    <div class="sec-label">Scoring Logic</div>
+    <div class="score-box">
+      <div class="dh-rule">
+        <b>Date Hook</b> — CPL only (1-week window)<br>
+        Age &lt;3d → Too Early &nbsp;·&nbsp; 3–7d: Green=Scale+Relaunch, Yellow=Watch, Red=Drop<br>
+        8–14d → Wind Down (still running past cohort date)<br>
+        &gt;14d → Historical reference
+      </div>
+      <div class="ev-rule">
+        <b>Evergreen</b> — Stage-based score<br>
+        Early (0–13d): CPL 100%<br>
+        Mid (14–27d): CPL 40% · D3 35% · D7 25%<br>
+        Mature (28d+): CPL 30% · D3 25% · D7 20% · ROAS 25%<br>
+        ROAS weight: 10% (&lt;₹5K spend) → 20% (₹5–20K) → 30% (&gt;₹20K)
+      </div>
+      Score ≥70 → Scale &nbsp;·&nbsp; 50–69 → Watch &nbsp;·&nbsp; &lt;50 → Pause
     </div>
   </div>
 
