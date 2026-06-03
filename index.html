@@ -181,11 +181,8 @@ body{background:var(--bg);color:var(--text);font-family:'Manrope',sans-serif;fon
 <div class="hdr">
   <div class="hdr-title">Creative Testing <span>Dashboard</span></div>
   <div style="display:flex;align-items:center;gap:12px">
-    <div class="hdr-meta" id="dataInfo">Apr 7 – Jun 1, 2026 &nbsp;·&nbsp; 84 creatives</div>
-    <label id="uploadBtn" style="display:flex;align-items:center;gap:6px;padding:5px 12px;background:var(--bbg);border:1px solid var(--bborder);border-radius:var(--rs);color:var(--blue);font-size:11px;font-weight:700;cursor:pointer;font-family:'Manrope',sans-serif;transition:all .15s" onmouseover="this.style.background='rgba(91,156,246,.2)'" onmouseout="this.style.background='var(--bbg)'">
-      ↑ Upload CSV
-      <input type="file" accept=".csv" style="display:none" onchange="handleCSVUpload(this)">
-    </label>
+    <div class="hdr-meta" id="dataInfo">Loading…</div>
+    <button id="refreshBtn" onclick="loadFromGoogleSheets()" style="display:flex;align-items:center;gap:6px;padding:5px 12px;background:var(--bbg);border:1px solid var(--bborder);border-radius:var(--rs);color:var(--blue);font-size:11px;font-weight:700;cursor:pointer;font-family:'Manrope',sans-serif;transition:all .15s" onmouseover="this.style.background='rgba(91,156,246,.2)'" onmouseout="this.style.background='var(--bbg)'">↻ Refresh</button>
     <div id="uploadStatus" style="font-size:11px;font-family:'IBM Plex Mono',monospace;color:var(--text3)"></div>
   </div>
 </div>
@@ -1214,6 +1211,57 @@ function closePopup() {
 
 document.addEventListener('keydown', e => { if(e.key==='Escape') closePopup(); });
 
+// ── GOOGLE SHEETS LIVE SYNC ──
+const SHEETS_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRTXEI-U9nQeZlMUrLyyHoiTUAJEtD36fnQOKMJ3kjRjLf_8F2mbFXyWf4pOOlVby_GY0JviXr41ZZP/pub?gid=0&single=true&output=csv';
+
+function applyData(data) {
+  Object.assign(RAW, data);
+  C.length = 0;
+  data.creatives.forEach(c => C.push(c));
+  DAILY_DATA = data.dailyData || {};
+  initOverview();
+  updateActionMenuOptions();
+  updateAllThemeLbl();
+  populateMonthBtns();
+  renderAll(); renderCpl(); renderD3(); renderRo();
+  document.getElementById('btnActive').classList.toggle('active', allS.status==='active');
+  document.getElementById('btnPaused').classList.toggle('active', allS.status==='paused');
+  const dates = RAW.creatives.map(c => c.go_live).sort();
+  document.getElementById('dataInfo').textContent =
+    `${dates[0]} – ${dates[dates.length-1]} · ${RAW.creatives.length} creatives`;
+}
+
+async function loadFromGoogleSheets() {
+  const status = document.getElementById('uploadStatus');
+  const btn = document.getElementById('refreshBtn');
+  status.textContent = '⟳ Syncing…';
+  status.style.color = 'var(--yellow)';
+  if (btn) { btn.disabled = true; btn.textContent = '↻ Syncing…'; }
+  try {
+    const res = await fetch(SHEETS_CSV_URL + '&t=' + Date.now());
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const text = await res.text();
+    const data = processCSV(text);
+    applyData(data);
+    const now = new Date();
+    const time = now.toLocaleTimeString('en-IN', {hour:'2-digit',minute:'2-digit'});
+    status.textContent = `✓ Synced at ${time}`;
+    status.style.color = 'var(--green)';
+    status.style.fontWeight = '700';
+    setTimeout(() => { status.textContent = ''; status.style.fontWeight = ''; }, 5000);
+  } catch(err) {
+    status.textContent = '✗ Sync failed: ' + err.message;
+    status.style.color = 'var(--red)';
+    status.style.fontWeight = '700';
+    console.error('Sheets sync error:', err);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '↻ Refresh'; }
+  }
+}
+
+// Auto-load on page open
+window.addEventListener('DOMContentLoaded', () => loadFromGoogleSheets());
+
 // ── CSV UPLOAD ──
 function handleCSVUpload(input) {
   const file = input.files[0];
@@ -1225,24 +1273,7 @@ function handleCSVUpload(input) {
   reader.onload = e => {
     try {
       const data = processCSV(e.target.result);
-      // Replace RAW data and re-render everything
-      // Update RAW data
-      Object.assign(RAW, data);
-      // Sync C array in place (C is a reference to original RAW.creatives)
-      C.length = 0;
-      data.creatives.forEach(c => C.push(c));
-      // Store daily data for popup
-      DAILY_DATA = data.dailyData || {};
-      initOverview();
-      updateActionMenuOptions();
-      updateAllThemeLbl();
-      populateMonthBtns();
-      // Re-render active tab tables
-      renderAll(); renderCpl(); renderD3(); renderRo();
-      const dates = RAW.creatives.map(c => c.go_live).sort();
-      const acts = RAW.creatives.filter(c => !c.paused_from).length;
-      document.getElementById('dataInfo').textContent =
-        `${dates[0]} – ${dates[dates.length-1]} · ${RAW.creatives.length} creatives`;
+      applyData(data);
       status.textContent = '✓ Loaded successfully';
       status.style.color = 'var(--green)';
       status.style.fontWeight = '700';
