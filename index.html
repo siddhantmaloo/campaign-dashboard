@@ -917,14 +917,17 @@ function initOverview(){
   const doOpts=(d)=>({type:'doughnut',data:{labels:['Green','Yellow','Red'],datasets:[{data:d,backgroundColor:[G,Y,R],borderWidth:0}]},
     options:{responsive:true,maintainAspectRatio:false,cutout:'68%',plugins:{legend:{position:'bottom',labels:{color:'#7b8499',font:{size:9,family:'IBM Plex Mono'},boxWidth:8,padding:5}}}}});
 
-  // Destroy existing charts before recreating
-  ['cplDonut','roasDonut'].forEach(id => {
-    const existing = Chart.getChart(id);
-    if (existing) existing.destroy();
-  });
-
-  new Chart(document.getElementById('cplDonut'),doOpts([cplT.G,cplT.Y,cplT.R]));
-  new Chart(document.getElementById('roasDonut'),doOpts([roasT.G,roasT.Y,roasT.R]));
+  // Donut charts removed from UI — skip if elements not present
+  const cplEl = document.getElementById('cplDonut');
+  const roasEl = document.getElementById('roasDonut');
+  if (cplEl) {
+    const ex = Chart.getChart('cplDonut'); if (ex) ex.destroy();
+    new Chart(cplEl, doOpts([cplT.G,cplT.Y,cplT.R]));
+  }
+  if (roasEl) {
+    const ex = Chart.getChart('roasDonut'); if (ex) ex.destroy();
+    new Chart(roasEl, doOpts([roasT.G,roasT.Y,roasT.R]));
+  }
 }
 
 // ── TABLE STATES ──
