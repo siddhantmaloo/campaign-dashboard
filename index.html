@@ -1890,8 +1890,8 @@ function renderSupply() {
     prevCutoff   = new Date(today); prevCutoff.setDate(prevCutoff.getDate() - supplyWindow * 2);
   }
 
-  const themes = ['Problem Statement','Generic','Social Proof','Date Hook','AI Creative'];
-  const themeEmoji = {'Problem Statement':'🩺','Generic':'💬','Social Proof':'⭐','Date Hook':'📅','AI Creative':'🤖'};
+  const themes = ['Date Hook','Problem Statement','Generic','Social Proof','AI Creative'];
+  const themeEmoji = {}; // emojis removed
 
   const inRange = (goLive, from, to) => {
     if (!goLive) return false;
@@ -1926,30 +1926,30 @@ function renderSupply() {
 
   el.innerHTML = `
     <div style="overflow-x:auto">
-      <table style="width:100%;border-collapse:collapse;font-size:13px">
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
         <thead>
           <tr style="border-bottom:1px solid var(--border)">
-            <th style="text-align:left;padding:8px 12px;color:var(--text3);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.06em">Theme</th>
-            <th style="text-align:center;padding:8px 12px;color:var(--text3);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.06em">Launched</th>
-            <th style="text-align:left;padding:8px 12px;color:var(--text3);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.06em">Creatives</th>
+            <th style="text-align:left;padding:6px 12px;color:var(--text3);font-weight:600;font-size:10px;text-transform:uppercase;letter-spacing:.06em">Theme</th>
+            <th style="text-align:center;padding:6px 12px;color:var(--text3);font-weight:600;font-size:10px;text-transform:uppercase;letter-spacing:.06em">Launched</th>
+            <th style="text-align:left;padding:6px 12px;color:var(--text3);font-weight:600;font-size:10px;text-transform:uppercase;letter-spacing:.06em">Creatives</th>
           </tr>
         </thead>
         <tbody>
           ${rows.map(r => `
           <tr style="border-bottom:1px solid var(--border)">
-            <td style="padding:10px 12px;font-weight:600">${themeEmoji[r.theme]||''} ${r.theme}</td>
-            <td style="padding:10px 12px;text-align:center;white-space:nowrap">
-              <span style="font-size:18px;font-weight:700;color:${r.count>0?'var(--green)':'var(--text3)'}">${r.count}</span>
+            <td style="padding:7px 12px;font-weight:600;font-size:12px">${r.theme}</td>
+            <td style="padding:7px 12px;text-align:center;white-space:nowrap">
+              <span style="font-size:15px;font-weight:700;color:${r.count>0?'var(--green)':'var(--text3)'}">${r.count}</span>
               ${deltaHtml(r.count, r.prevCount)}
             </td>
-            <td style="padding:10px 12px">
+            <td style="padding:7px 12px">
               ${r.creatives.length ? r.creatives.map(chipHtml).join('') : '<span style="color:var(--text3)">—</span>'}
             </td>
           </tr>`).join('')}
           <tr style="border-top:2px solid var(--border)">
-            <td style="padding:10px 12px;font-weight:700;color:var(--text)">Total</td>
-            <td style="padding:10px 12px;text-align:center;white-space:nowrap">
-              <span style="font-size:18px;font-weight:700;color:${total>0?'var(--green)':'var(--text3)'}">${total}</span>
+            <td style="padding:7px 12px;font-weight:700;color:var(--text);font-size:12px">Total</td>
+            <td style="padding:7px 12px;text-align:center;white-space:nowrap">
+              <span style="font-size:15px;font-weight:700;color:${total>0?'var(--green)':'var(--text3)'}">${total}</span>
               ${deltaHtml(total, prevTotal)}
             </td>
             <td></td>
