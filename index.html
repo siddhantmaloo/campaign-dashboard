@@ -673,6 +673,7 @@ body{background:var(--bg);color:var(--text);font-family:'Manrope',sans-serif;fon
       <th onclick="sortSc('sc_d3_val')">D3 ₹</th><th>D3 Tag</th>
       <th onclick="sortSc('sc_d7_val')">D7 ₹</th><th>D7 Tag</th>
       <th onclick="sortSc('sc_roas_val')">ROAS</th><th>ROAS Tag</th>
+      <th onclick="sortSc('sc_health_score')">Score</th>
       <th onclick="sortSc('total_spend')">Spend</th>
       <th onclick="sortSc('total_leads')">Leads</th>
       <th>Notes</th>
@@ -1339,10 +1340,11 @@ function renderScaled(){
     <td>${tagH(c.sc_d7_tag)}</td>
     <td class="nr">${c.sc_roas_val!=null?c.sc_roas_val+'×':'—'}</td>
     <td>${tagH(c.sc_roas_tag)}</td>
+    <td class="nr" style="font-weight:700;color:${c.sc_health_score>=67?'var(--green)':c.sc_health_score>=34?'var(--yellow)':'var(--red)'}">${c.sc_health_score!=null?c.sc_health_score:'—'}</td>
     <td class="nr">${spendH(c.total_spend)}</td>
     <td class="nr">${c.total_leads.toLocaleString('en-IN')}</td>
     <td style="text-align:center">${noteBtn(c.key)}</td>
-  </tr>`).join('')||`<tr><td colspan="16" class="empty">No creatives with age &gt; 28 days</td></tr>`;
+  </tr>`).join('')||`<tr><td colspan="17" class="empty">No creatives with age &gt; 28 days</td></tr>`;
   pag('scPag',s,pages,renderScaled);
 }
 function sortSc(col){if(scS.sort===col)scS.dir*=-1;else{scS.sort=col;scS.dir=-1;}scS.p=1;renderScaled();}
@@ -1409,7 +1411,10 @@ function openPopup(key) {
         </div>
       </div>
       <div>
-        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--blue);font-family:'IBM Plex Mono',monospace;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--bborder)">⬆ Overall (All Time · ${c.active_days}d active)</div>
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--blue);font-family:'IBM Plex Mono',monospace;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--bborder);display:flex;justify-content:space-between;align-items:center">
+          <span>⬆ Overall (All Time · ${c.active_days}d active)</span>
+          ${c.sc_health_score!=null?`<span style="font-size:13px;font-weight:800;color:${c.sc_health_score>=67?'var(--green)':c.sc_health_score>=34?'var(--yellow)':'var(--red)'}">Score: ${c.sc_health_score}</span>`:''}
+        </div>
         <div class="popup-metrics" style="margin-bottom:0">
           ${metricCard('CPL', c.sc_cpl_val!=null?'₹'+c.sc_cpl_val:'—', c.sc_cpl_tag)}
           ${metricCard('Cost D3', c.sc_d3_val!=null?'₹'+c.sc_d3_val:c.sc_d3_tag==='Not Eligible Yet'?'N/A':'—', c.sc_d3_tag)}
@@ -1625,6 +1630,17 @@ function recomputeTags() {
       nc.sc_d7_tag = nc.sc_d7_val < t.d7Green ? 'Green' : nc.sc_d7_val <= t.d7Yellow ? 'Yellow' : 'Red';
     if (nc.sc_roas_val != null && nc.sc_roas_tag !== 'Not Eligible Yet')
       nc.sc_roas_tag = nc.sc_roas_val >= t.roasGreen ? 'Green' : nc.sc_roas_val > t.roasYellow ? 'Yellow' : 'Red';
+    // recompute sc_health_score
+    if (nc.active_days > 28) {
+      const ts2={Green:2,Yellow:1,Red:0};
+      const w=[];
+      if (nc.sc_cpl_tag in ts2)  w.push([ts2[nc.sc_cpl_tag],30]);
+      if (nc.sc_d3_tag  in ts2)  w.push([ts2[nc.sc_d3_tag], 25]);
+      if (nc.sc_d7_tag  in ts2)  w.push([ts2[nc.sc_d7_tag], 20]);
+      if (nc.sc_roas_tag in ts2) w.push([ts2[nc.sc_roas_tag],25]);
+      const tw=w.reduce((s,[,wt])=>s+wt,0);
+      nc.sc_health_score = tw>0 ? Math.round(w.reduce((s,[v,wt])=>s+v*wt,0)/tw*50) : null;
+    }
     return nc;
   });
 }
@@ -2198,11 +2214,27 @@ function processCSV(text) {
       }
     }
 
+    // Scaled health score — same weights as mature (28d+) evergreen: CPL 30, D3 25, D7 20, ROAS 25
+    let sc_health_score = null;
+    if (active_days > 28) {
+      const ts2 = {Green:2, Yellow:1, Red:0};
+      const w = [];
+      if (sc_cpl_tag in ts2)  w.push([ts2[sc_cpl_tag],  30]);
+      if (sc_d3_tag  in ts2)  w.push([ts2[sc_d3_tag],   25]);
+      if (sc_d7_tag  in ts2)  w.push([ts2[sc_d7_tag],   20]);
+      if (sc_roas_tag in ts2) w.push([ts2[sc_roas_tag],  25]);
+      if (w.length > 0) {
+        const tw = w.reduce((s,[,wt])=>s+wt, 0);
+        sc_health_score = Math.round(w.reduce((s,[v,wt])=>s+v*wt,0) / tw * 50);
+      }
+    }
+
     creatives.push({
       key, ad_name: c.adName, go_live: fmtDate(goLive), age, theme, dh_phase,
       paused_from, cpl_val, cpl_tag, cost_d3_val, cost_d3_tag,
       cost_d7_val, cost_d7_tag, roas_val, roas_tag,
       sc_cpl_val, sc_cpl_tag, sc_d3_val, sc_d3_tag, sc_d7_val, sc_d7_tag, sc_roas_val, sc_roas_tag,
+      sc_health_score,
       total_spend, total_leads, active_days, is_ai, health_score, confidence, action,
       utm_ids: [...(creativeIds[key]||[])].sort()
     });
