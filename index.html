@@ -2180,9 +2180,9 @@ function processCSV(text) {
         sc_d7_tag = sc_d7_val < getThr().d7Green ? 'Green' : sc_d7_val <= getThr().d7Yellow ? 'Yellow' : 'Red';
       }
 
-      // ROAS — min 35 active days, tiered window: floor((active_days-21)/7)*7 days from go-live
-      // active_days 35-41→14d, 42-48→21d, 49-55→28d, ...
-      if (active_days >= 35) {
+      // ROAS — min 28 active days, tiered window: floor((active_days-21)/7)*7 days from go-live
+      // active_days 28-34→7d, 35-41→14d, 42-48→21d, 49-55→28d, ...
+      if (active_days >= 28) {
         const roasWin = Math.floor((active_days - 21) / 7) * 7;
         const roasCutoff = new Date(goLive); roasCutoff.setDate(roasCutoff.getDate() + roasWin - 1);
         let roasS=0, roasRev=0;
