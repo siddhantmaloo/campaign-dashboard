@@ -149,6 +149,7 @@ body{background:var(--bg);color:var(--text);font-family:'Manrope',sans-serif;fon
 .sc-table td{padding:7px 10px;font-size:12px;border-top:1px solid var(--border);text-align:right;font-family:'IBM Plex Mono',monospace}
 .sc-table td:first-child{text-align:left;font-family:'Manrope',sans-serif;font-weight:700;color:var(--text)}
 .sc-g{color:var(--green)}.sc-y{color:var(--yellow)}.sc-r{color:var(--red)}.sc-t{color:var(--text2)}
+.sc-row-link:hover td{background:rgba(255,255,255,.04)}
 
 /* ── THEME ── */
 .theme-row{display:flex;align-items:center;gap:8px;margin-bottom:7px}
@@ -872,7 +873,7 @@ function initOverview(){
       </div>
       <table class="sc-table">
         <thead><tr><th>Metric</th><th>Total</th><th>🟢</th><th>🟡</th><th>🔴</th></tr></thead>
-        <tbody id="scTbody${m.id}">${renderScorecardTable(scorecardForMonth(m.month,''))}</tbody>
+        <tbody id="scTbody${m.id}">${renderScorecardTable(scorecardForMonth(m.month,''), m.month)}</tbody>
       </table>
     </div>`).join('');
 
@@ -2478,19 +2479,51 @@ function scorecardForMonth(monthStr, themes) {
   });
 }
 
-function renderScorecardTable(rows) {
-  return rows.map(r=>`<tr>
-    <td>${r.metric}</td>
-    <td class="sc-t">${r.total}</td>
-    <td class="sc-g">${r.green}</td>
-    <td class="sc-y">${r.yellow}</td>
-    <td class="sc-r">${r.red}</td>
-  </tr>`).join('');
+const METRIC_TAB_MAP = {'CPL':'cpl','Cost D3':'d3d7','Cost D7':'d3d7','ROAS':'roas'};
+
+function renderScorecardTable(rows, month) {
+  return rows.map(r=>{
+    const tab = METRIC_TAB_MAP[r.metric];
+    const clickable = tab && month;
+    return `<tr ${clickable?`onclick="navigateToTab('${tab}','${month}')" style="cursor:pointer" class="sc-row-link"`:''}">
+      <td>${r.metric}${clickable?` <span style="font-size:9px;color:var(--text3);margin-left:4px">↗</span>`:''}  </td>
+      <td class="sc-t">${r.total}</td>
+      <td class="sc-g">${r.green}</td>
+      <td class="sc-y">${r.yellow}</td>
+      <td class="sc-r">${r.red}</td>
+    </tr>`;
+  }).join('');
+}
+
+function navigateToTab(tab, month) {
+  const stateMap  = {cpl:cplS, d3d7:d3S, roas:roS};
+  const lblMap    = {cpl:'cplMonthLbl',  d3d7:'d3MonthLbl',  roas:'roMonthLbl'};
+  const btnMap    = {cpl:'cplMonthBtn',  d3d7:'d3MonthBtn',  roas:'roMonthBtn'};
+  const actBtnMap = {cpl:'cplBtnActive', d3d7:'d3BtnActive', roas:'roBtnActive'};
+  const pauBtnMap = {cpl:'cplBtnPaused', d3d7:'d3BtnPaused', roas:'roBtnPaused'};
+  const state = stateMap[tab];
+  if (!state) return;
+  // Apply month & clear status filter (show all)
+  state.month = month;
+  state.status = '';
+  state.p = 1;
+  // Update month button label
+  const lbl = document.getElementById(lblMap[tab]);
+  const mbtn = document.getElementById(btnMap[tab]);
+  if (lbl)  lbl.textContent = month;
+  if (mbtn) mbtn.classList.add('has-sel');
+  // Deactivate Active/Paused status buttons so neither is highlighted
+  const aBtn = document.getElementById(actBtnMap[tab]);
+  const pBtn = document.getElementById(pauBtnMap[tab]);
+  if (aBtn) aBtn.classList.remove('active');
+  if (pBtn) pBtn.classList.remove('active');
+  // Switch tab and render
+  switchTab(tab);
 }
 
 function updateScorecard(monthStr, tbodyId, themes) {
   const rows = scorecardForMonth(monthStr, themes);
-  document.getElementById(tbodyId).innerHTML = renderScorecardTable(rows);
+  document.getElementById(tbodyId).innerHTML = renderScorecardTable(rows, monthStr);
 }
 
 initOverview();
