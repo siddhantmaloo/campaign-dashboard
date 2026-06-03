@@ -413,32 +413,23 @@ body{background:var(--bg);color:var(--text);font-family:'Manrope',sans-serif;fon
       <div class="card" id="themeCard"></div>
     </div>
     <div>
-      <div class="sec-label">Tag Distribution</div>
-      <div class="two-col">
-        <div class="card"><div class="card-title">CPL Tags</div><div class="chart-wrap"><canvas id="cplDonut"></canvas></div></div>
-        <div class="card"><div class="card-title">ROAS Tags</div><div class="chart-wrap"><canvas id="roasDonut"></canvas></div></div>
+      <div class="sec-label">Scoring Logic</div>
+      <div class="score-box">
+        <div class="dh-rule">
+          <b>Date Hook</b> — CPL only (1-week window)<br>
+          Age &lt;3d → Too Early &nbsp;·&nbsp; 3–7d: Green=Scale+Relaunch, Yellow=Watch, Red=Drop<br>
+          8–14d → Wind Down (still running past cohort date)<br>
+          &gt;14d → Historical reference
+        </div>
+        <div class="ev-rule">
+          <b>Evergreen</b> — Stage-based score<br>
+          Early (0–13d): CPL 100%<br>
+          Mid (14–27d): CPL 40% · D3 35% · D7 25%<br>
+          Mature (28d+): CPL 30% · D3 25% · D7 20% · ROAS 25%<br>
+          ROAS weight: 10% (&lt;₹5K spend) → 20% (₹5–20K) → 30% (&gt;₹20K)
+        </div>
+        Score ≥70 → Scale &nbsp;·&nbsp; 50–69 → Watch &nbsp;·&nbsp; &lt;50 → Pause
       </div>
-    </div>
-  </div>
-
-  <!-- Scoring Logic -->
-  <div class="sec">
-    <div class="sec-label">Scoring Logic</div>
-    <div class="score-box">
-      <div class="dh-rule">
-        <b>Date Hook</b> — CPL only (1-week window)<br>
-        Age &lt;3d → Too Early &nbsp;·&nbsp; 3–7d: Green=Scale+Relaunch, Yellow=Watch, Red=Drop<br>
-        8–14d → Wind Down (still running past cohort date)<br>
-        &gt;14d → Historical reference
-      </div>
-      <div class="ev-rule">
-        <b>Evergreen</b> — Stage-based score<br>
-        Early (0–13d): CPL 100%<br>
-        Mid (14–27d): CPL 40% · D3 35% · D7 25%<br>
-        Mature (28d+): CPL 30% · D3 25% · D7 20% · ROAS 25%<br>
-        ROAS weight: 10% (&lt;₹5K spend) → 20% (₹5–20K) → 30% (&gt;₹20K)
-      </div>
-      Score ≥70 → Scale &nbsp;·&nbsp; 50–69 → Watch &nbsp;·&nbsp; &lt;50 → Pause
     </div>
   </div>
 
