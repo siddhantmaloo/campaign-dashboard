@@ -1392,7 +1392,7 @@ function openPopup(key) {
     <div class="pm-card" ${tooltip?`title="${tooltip}"`:''}  style="cursor:${tooltip?'help':'default'}">
       <div class="pm-label">${label}</div>
       <div class="pm-val" style="color:${tagColor(tag)}">${val}</div>
-      <div class="pm-sub">${tag==='Not Eligible Yet'?'Not Eligible':tag}${tooltip?` <span style="opacity:.5;font-size:9px">ℹ</span>`:''}</div>
+      <div class="pm-sub">${tag==='Not Eligible Yet'?'Not Eligible':tag}</div>
     </div>`;
 
   const isScaled = c.active_days > 28;
@@ -1400,8 +1400,8 @@ function openPopup(key) {
   // Compute actual testing windows from calendar age (mirrors processCSV logic)
   const _cplW  = 20;
   const _d3W   = c.age < 14 ? null : c.age <= 20 ? 7 : c.age <= 27 ? 14 : 21;
-  const _d7W   = c.age < 21 ? null : c.age <= 27 ? 7 : 14;
-  const _roasW = c.age < 28 ? null : c.age <= 34 ? 7 : 14;
+  const _d7W   = c.age < 21 ? null : c.age <= 27 ? 7 : c.age <= 34 ? 14 : 21;
+  const _roasW = c.age < 28 ? null : c.age <= 34 ? 7 : c.age <= 41 ? 14 : 21;
   const _testWin = Math.max(_cplW, _d3W||0, _d7W||0, _roasW||0);
 
   document.getElementById('popupBody').innerHTML = `
@@ -2079,7 +2079,7 @@ function processCSV(text) {
     }
 
     // D7
-    const d7Win = age < 21 ? null : age <= 27 ? 7 : 14;
+    const d7Win = age < 21 ? null : age <= 27 ? 7 : age <= 34 ? 14 : 21;
     let cost_d7_tag = 'Not Eligible Yet', cost_d7_val = null;
     if (d7Win) {
       const cutoff = new Date(goLive); cutoff.setDate(cutoff.getDate()+d7Win-1);
@@ -2096,7 +2096,7 @@ function processCSV(text) {
     }
 
     // ROAS
-    const roasWin = age < 28 ? null : age <= 34 ? 7 : 14;
+    const roasWin = age < 28 ? null : age <= 34 ? 7 : age <= 41 ? 14 : 21;
     let roas_tag = 'Not Eligible Yet', roas_val = null;
     if (roasWin) {
       const cutoff = new Date(goLive); cutoff.setDate(cutoff.getDate()+roasWin-1);
