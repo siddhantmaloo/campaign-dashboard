@@ -366,7 +366,11 @@ body{background:var(--bg);color:var(--text);font-family:'Manrope',sans-serif;fon
   <!-- Monthly Scorecard -->
   <div class="sec">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-      <div class="sec-label" style="margin-bottom:0">Monthly Scorecard</div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <div class="sec-label" style="margin-bottom:0">Monthly Scorecard</div>
+        <button id="scNavLeft"  onclick="shiftScorecard(-1)" style="background:none;border:1px solid var(--border);border-radius:4px;color:var(--text2);width:22px;height:22px;cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;padding:0">‹</button>
+        <button id="scNavRight" onclick="shiftScorecard(1)"  style="background:none;border:1px solid var(--border);border-radius:4px;color:var(--text2);width:22px;height:22px;cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;padding:0">›</button>
+      </div>
       <div class="theme-dd-wrap">
         <button class="theme-dd-btn" id="scGlobalBtn" onclick="toggleDD('scGlobalMenu','scGlobalBtn')">🏷 Theme <span id="scGlobalLbl">All</span> ▾</button>
         <div class="theme-dd-menu" id="scGlobalMenu" style="right:0;left:auto">
@@ -859,23 +863,7 @@ function initOverview(){
   const THEMES_ALL = ['Date Hook','Problem Statement','Generic','Social Proof','AI Creative'];
   const THEME_ICONS = {'Date Hook':'📅','Problem Statement':'🩺','Generic':'💬','Social Proof':'⭐','AI Creative':'🤖'};
 
-  const months=[
-    {label:'Current',month:SC.cur_month, id:'sc0'},
-    {label:'Month -1',month:SC.prev1_month, id:'sc1'},
-    {label:'Month -2',month:SC.prev2_month, id:'sc2'},
-  ];
-
-  document.getElementById('scorecardGrid').innerHTML = months.map(m=>`
-    <div class="card" style="padding:0;overflow:hidden">
-      <div style="padding:9px 12px;background:var(--bg3);border-bottom:1px solid var(--border);display:flex;justify-content:space-between">
-        <span style="font-size:11px;font-weight:700">${m.label}</span>
-        <span style="font-size:10px;color:var(--text3);font-family:'IBM Plex Mono'">${m.month}</span>
-      </div>
-      <table class="sc-table">
-        <thead><tr><th>Metric</th><th>Total</th><th>🟢</th><th>🟡</th><th>🔴</th></tr></thead>
-        <tbody id="scTbody${m.id}">${renderScorecardTable(scorecardForMonth(m.month,''), m.month)}</tbody>
-      </table>
-    </div>`).join('');
+  renderScorecardCards();
 
   // Theme bars
   const TS = RAW.theme_summary;
@@ -1054,6 +1042,49 @@ function hideTT(){
 }
 document.addEventListener('scroll', hideTT, true);
 const scSelectedThemes = new Set(['Date Hook','Problem Statement','Generic','Social Proof','AI Creative']);
+let scCardOffset = 0; // 0 = newest 3 months; positive = shifted older
+
+function getAllScorecardMonths() {
+  // All unique YYYY-MM from go_live dates, sorted newest first
+  return [...new Set(C.map(c => c.go_live.slice(0,7)))].sort().reverse();
+}
+
+function shiftScorecard(dir) {
+  const allMonths = getAllScorecardMonths();
+  const maxOffset = Math.max(0, allMonths.length - 3);
+  scCardOffset = Math.max(0, Math.min(scCardOffset + dir, maxOffset));
+  renderScorecardCards();
+}
+
+function renderScorecardCards() {
+  const allMonths = getAllScorecardMonths();
+  const maxOffset = Math.max(0, allMonths.length - 3);
+  const visible = allMonths.slice(scCardOffset, scCardOffset + 3);
+
+  // Build label: index 0 = "Current", else "Month -N" relative to newest
+  const labels = visible.map(m => {
+    const idx = allMonths.indexOf(m);
+    return idx === 0 ? 'Current' : `Month -${idx}`;
+  });
+
+  document.getElementById('scorecardGrid').innerHTML = visible.map((month, i) => `
+    <div class="card" style="padding:0;overflow:hidden">
+      <div style="padding:9px 12px;background:var(--bg3);border-bottom:1px solid var(--border);display:flex;justify-content:space-between">
+        <span style="font-size:11px;font-weight:700">${labels[i]}</span>
+        <span style="font-size:10px;color:var(--text3);font-family:'IBM Plex Mono'">${month}</span>
+      </div>
+      <table class="sc-table">
+        <thead><tr><th>Metric</th><th>Total</th><th>🟢</th><th>🟡</th><th>🔴</th></tr></thead>
+        <tbody id="scTbodyDyn${i}">${renderScorecardTable(scorecardForMonth(month, scSelectedThemes.size===0||scSelectedThemes.size===5?'':scSelectedThemes), month)}</tbody>
+      </table>
+    </div>`).join('');
+
+  // Update nav button states
+  const lBtn = document.getElementById('scNavLeft');
+  const rBtn = document.getElementById('scNavRight');
+  if (lBtn) { lBtn.style.opacity = scCardOffset === 0 ? '0.3' : '1'; lBtn.style.pointerEvents = scCardOffset === 0 ? 'none' : ''; }
+  if (rBtn) { rBtn.style.opacity = scCardOffset >= maxOffset ? '0.3' : '1'; rBtn.style.pointerEvents = scCardOffset >= maxOffset ? 'none' : ''; }
+}
 
 function scGlobalPick(theme, item) {
   event.stopPropagation();
@@ -1093,16 +1124,7 @@ function scGlobalPick(theme, item) {
   else if (scSelectedThemes.size === 1) { lbl.textContent = [...scSelectedThemes][0].split(' ')[0]; btn.classList.add('has-sel'); }
   else { lbl.textContent = scSelectedThemes.size + ' selected'; btn.classList.add('has-sel'); }
 
-  // Update all 3 scorecard tables
-  const months = [
-    {month: RAW.scorecard.cur_month, id:'sc0'},
-    {month: RAW.scorecard.prev1_month, id:'sc1'},
-    {month: RAW.scorecard.prev2_month, id:'sc2'},
-  ];
-  months.forEach(m => {
-    const theme = scSelectedThemes.size === 0 ? null : [...scSelectedThemes];
-    updateScorecard(m.month, 'scTbody'+m.id, scSelectedThemes.size === 0 ? '' : [...scSelectedThemes]);
-  });
+  renderScorecardCards();
 }
 
 document.addEventListener('click', e => {
