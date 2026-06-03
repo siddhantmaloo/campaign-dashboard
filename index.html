@@ -448,11 +448,11 @@ body{background:var(--bg);color:var(--text);font-family:'Manrope',sans-serif;fon
     <div class="theme-dd-wrap">
       <button class="theme-dd-btn" id="allThemeBtn" onclick="toggleDD('allThemeMenu','allThemeBtn')">🏷 Theme <span id="allThemeLbl">All</span> ▾</button>
       <div class="theme-dd-menu" id="allThemeMenu">
-        <div class="theme-dd-item checked" onclick="toggleThemeDd('Date Hook',this)"><input type="checkbox" checked>📅 Date Hook</div>
-        <div class="theme-dd-item checked" onclick="toggleThemeDd('Problem Statement',this)"><input type="checkbox" checked>🩺 Problem Stmt</div>
-        <div class="theme-dd-item checked" onclick="toggleThemeDd('Generic',this)"><input type="checkbox" checked>💬 Generic</div>
-        <div class="theme-dd-item checked" onclick="toggleThemeDd('Social Proof',this)"><input type="checkbox" checked>⭐ Social Proof</div>
-        <div class="theme-dd-item checked" onclick="toggleThemeDd('AI Creative',this)"><input type="checkbox" checked>🤖 AI Creative</div>
+        <div class="theme-dd-item" onclick="toggleTabTheme('all','Date Hook',this)"><input type="checkbox">📅 Date Hook</div>
+        <div class="theme-dd-item" onclick="toggleTabTheme('all','Problem Statement',this)"><input type="checkbox">🩺 Problem Stmt</div>
+        <div class="theme-dd-item" onclick="toggleTabTheme('all','Generic',this)"><input type="checkbox">💬 Generic</div>
+        <div class="theme-dd-item" onclick="toggleTabTheme('all','Social Proof',this)"><input type="checkbox">⭐ Social Proof</div>
+        <div class="theme-dd-item" onclick="toggleTabTheme('all','AI Creative',this)"><input type="checkbox">🤖 AI Creative</div>
       </div>
     </div>
     <div class="theme-dd-wrap">
@@ -928,7 +928,7 @@ function initOverview(){
 }
 
 // ── TABLE STATES ──
-const allS={q:'',actions:new Set(),themes:new Set(['Date Hook','Problem Statement','Generic','Social Proof','AI Creative']),status:'active',month:'',sort:'health_score',dir:-1,p:1,notesOnly:false};
+const allS={q:'',actions:new Set(),themes:new Set(),status:'active',month:'',sort:'health_score',dir:-1,p:1,notesOnly:false};
 const cplS={q:'',cpl_tag:'',_paused:'',status:'active',themes:new Set(),month:'',sort:'age',dir:-1,p:1,notesOnly:false};
 const d3S={q:'',d3f:'',d7f:'',status:'active',themes:new Set(),month:'',sort:'age',dir:-1,p:1,notesOnly:false};
 const roS={q:'',roas_tag:'',status:'active',themes:new Set(),month:'',sort:'age',dir:-1,p:1,notesOnly:false};
@@ -960,8 +960,8 @@ const ALL_ACTIONS = ['Scale + Relaunch','Scale','Watch','Wind Down','Maturing','
 const ACTION_ICONS = {'Scale + Relaunch':'🚀','Scale':'⬆','Watch':'👁','Wind Down':'🌅','Maturing':'⏳','Pause':'⏸','Drop Angle':'🔴','Too Early':'⏳','Historical':'📁'};
 
 function updateActionMenuOptions(){
-  const isDH = allS.themes.size > 0 && allS.themes.size < 5 && [...allS.themes].every(t => t === 'Date Hook');
-  const isEV = allS.themes.size > 0 && allS.themes.size < 5 && ![...allS.themes].includes('Date Hook');
+  const isDH = allS.themes.size > 0 && [...allS.themes].every(t => t === 'Date Hook');
+  const isEV = allS.themes.size > 0 && ![...allS.themes].includes('Date Hook');
   const actions = isDH ? DH_ACTIONS : isEV ? EV_ACTIONS : ALL_ACTIONS;
   const menu = document.getElementById('allActionMenu');
   if(!menu) return;
@@ -970,14 +970,7 @@ function updateActionMenuOptions(){
   ).join('');
 }
 
-function updateAllThemeLbl(){
-  const lbl = document.getElementById('allThemeLbl');
-  const btn = document.getElementById('allThemeBtn');
-  if(!lbl||!btn) return;
-  if(allS.themes.size===0||allS.themes.size===5){ lbl.textContent='All'; btn.classList.remove('has-sel'); }
-  else if(allS.themes.size===1){ lbl.textContent=[...allS.themes][0].split(' ')[0]; btn.classList.add('has-sel'); }
-  else { lbl.textContent=allS.themes.size+' selected'; btn.classList.add('has-sel'); }
-}
+function updateAllThemeLbl(){ updateThemeLbl('all'); }
 
 function toggleActionDd(val, item){
   event.stopPropagation();
@@ -1010,7 +1003,7 @@ function getAll(){
   let r=[...C];
   if(allS.q) r=r.filter(c=>c.key.toLowerCase().includes(allS.q.toLowerCase()));
   if(allS.actions.size>0) r=r.filter(c=>allS.actions.has(c.action));
-  if(allS.themes.size>0&&allS.themes.size<5) r=r.filter(c=>allS.themes.has(c.theme));
+  if(allS.themes.size>0) r=r.filter(c=>allS.themes.has(c.theme));
   if(allS.status==='active') r=r.filter(c=>!c.paused_from);
   if(allS.status==='paused') r=r.filter(c=>!!c.paused_from);
   if(allS.notesOnly){ const n=getNotes(); r=r.filter(c=>n[c.key]&&n[c.key].text); }
@@ -1124,10 +1117,10 @@ function toggleDD(menuId, btnId){
   if(!isOpen) menu.classList.add('open');
 }
 
-const TAB_STATE_MAP = {cpl:cplS, d3:d3S, ro:roS, sc:scS};
-const TAB_RENDER_MAP = {cpl:()=>renderCpl(), d3:()=>renderD3(), ro:()=>renderRo(), sc:()=>renderScaled()};
-const TAB_LBL_MAP = {cpl:'cplThemeLbl', d3:'d3ThemeLbl', ro:'roThemeLbl', sc:'scThemeLbl'};
-const TAB_BTN_MAP = {cpl:'cplThemeBtn', d3:'d3ThemeBtn', ro:'roThemeBtn', sc:'scThemeBtn'};
+const TAB_STATE_MAP = {all:allS, cpl:cplS, d3:d3S, ro:roS, sc:scS};
+const TAB_RENDER_MAP = {all:()=>renderAll(), cpl:()=>renderCpl(), d3:()=>renderD3(), ro:()=>renderRo(), sc:()=>renderScaled()};
+const TAB_LBL_MAP = {all:'allThemeLbl', cpl:'cplThemeLbl', d3:'d3ThemeLbl', ro:'roThemeLbl', sc:'scThemeLbl'};
+const TAB_BTN_MAP = {all:'allThemeBtn', cpl:'cplThemeBtn', d3:'d3ThemeBtn', ro:'roThemeBtn', sc:'scThemeBtn'};
 
 function toggleTabTheme(tab, val, item){
   event.stopPropagation(); // keep dropdown open
@@ -1136,6 +1129,7 @@ function toggleTabTheme(tab, val, item){
   if(state.themes.has(val)){ state.themes.delete(val); cb.checked=false; item.classList.remove('checked'); }
   else { state.themes.add(val); cb.checked=true; item.classList.add('checked'); }
   state.p=1;
+  if(tab==='all'){ allS.actions.clear(); updateActionMenuOptions(); updateAllActionLbl(); }
   updateThemeLbl(tab);
   TAB_RENDER_MAP[tab]();
 }
