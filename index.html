@@ -1670,14 +1670,9 @@ function applyData(data) {
   document.getElementById('btnActive').classList.toggle('active', allS.status==='active');
   document.getElementById('btnPaused').classList.toggle('active', allS.status==='paused');
   const goLiveDates = RAW.creatives.map(c => c.go_live).sort();
-  const fmtD = s => { const d = new Date(s); return d.toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}); };
+  const fmtD = s => { if(!s) return '—'; const [y,m,d] = s.split('-'); return new Date(+y,+m-1,+d).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}); };
   const activeCount = RAW.creatives.filter(c => !c.paused_from).length;
-  // Use latest activity date from daily data if available
-  let latestActivity = goLiveDates[goLiveDates.length-1];
-  if (DAILY_DATA && Object.keys(DAILY_DATA).length > 0) {
-    const allDates = Object.values(DAILY_DATA).flatMap(d => Object.keys(d));
-    if (allDates.length > 0) latestActivity = allDates.sort()[allDates.length-1];
-  }
+  const latestActivity = data.datasetLatest || goLiveDates[goLiveDates.length-1];
   document.getElementById('dataInfo').textContent =
     `${fmtD(goLiveDates[0])} – ${fmtD(latestActivity)} · ${RAW.creatives.length} creatives (${activeCount} active)`;
 }
@@ -2075,6 +2070,7 @@ function processCSV(text) {
   return {
     creatives,
     dailyData,
+    datasetLatest: datasetLatest ? datasetLatest.toISOString().split('T')[0] : null,
     scorecard: {current:scorecard(cur),prev1:scorecard(p1),prev2:scorecard(p2),
                 cur_month:cur,prev1_month:p1,prev2_month:p2},
     theme_summary
