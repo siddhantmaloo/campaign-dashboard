@@ -2496,27 +2496,54 @@ function renderScorecardTable(rows, month) {
 }
 
 function navigateToTab(tab, month) {
-  const stateMap  = {cpl:cplS, d3d7:d3S, roas:roS};
-  const lblMap    = {cpl:'cplMonthLbl',  d3d7:'d3MonthLbl',  roas:'roMonthLbl'};
-  const btnMap    = {cpl:'cplMonthBtn',  d3d7:'d3MonthBtn',  roas:'roMonthBtn'};
-  const actBtnMap = {cpl:'cplBtnActive', d3d7:'d3BtnActive', roas:'roBtnActive'};
-  const pauBtnMap = {cpl:'cplBtnPaused', d3d7:'d3BtnPaused', roas:'roBtnPaused'};
+  const stateMap   = {cpl:cplS, d3d7:d3S, roas:roS};
+  const lblMap     = {cpl:'cplMonthLbl',  d3d7:'d3MonthLbl',  roas:'roMonthLbl'};
+  const btnMap     = {cpl:'cplMonthBtn',  d3d7:'d3MonthBtn',  roas:'roMonthBtn'};
+  const actBtnMap  = {cpl:'cplBtnActive', d3d7:'d3BtnActive', roas:'roBtnActive'};
+  const pauBtnMap  = {cpl:'cplBtnPaused', d3d7:'d3BtnPaused', roas:'roBtnPaused'};
+  const menuMap    = {cpl:'cplThemeMenu', d3d7:'d3ThemeMenu', roas:'roThemeMenu'};
+  const tabKeyMap  = {cpl:'cpl', d3d7:'d3', roas:'ro'};
   const state = stateMap[tab];
   if (!state) return;
+
   // Apply month & clear status filter (show all)
   state.month = month;
   state.status = '';
   state.p = 1;
+
+  // Carry forward overview theme selection
+  // scSelectedThemes: 0 or all-5 = "All"; subset = specific filter
+  const ovThemes = (scSelectedThemes.size === 0 || scSelectedThemes.size === 5)
+    ? new Set()
+    : new Set(scSelectedThemes);
+  state.themes = ovThemes;
+  // Sync theme dropdown checkboxes for the target tab
+  const menu = document.getElementById(menuMap[tab]);
+  if (menu) {
+    menu.querySelectorAll('.theme-dd-item').forEach(item => {
+      const cb = item.querySelector('input[type=checkbox]');
+      // Extract theme name from onclick attr
+      const m = item.getAttribute('onclick').match(/'([^']+)'\s*,\s*this/);
+      const t = m ? m[1] : '';
+      const sel = ovThemes.size > 0 && ovThemes.has(t);
+      cb.checked = sel;
+      item.classList.toggle('checked', sel);
+    });
+  }
+  updateThemeLbl(tabKeyMap[tab]);
+
   // Update month button label
   const lbl = document.getElementById(lblMap[tab]);
   const mbtn = document.getElementById(btnMap[tab]);
   if (lbl)  lbl.textContent = month;
   if (mbtn) mbtn.classList.add('has-sel');
-  // Deactivate Active/Paused status buttons so neither is highlighted
+
+  // Deactivate Active/Paused status buttons
   const aBtn = document.getElementById(actBtnMap[tab]);
   const pBtn = document.getElementById(pauBtnMap[tab]);
   if (aBtn) aBtn.classList.remove('active');
   if (pBtn) pBtn.classList.remove('active');
+
   // Switch tab and render
   switchTab(tab);
 }
