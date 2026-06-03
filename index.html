@@ -383,12 +383,18 @@ body{background:var(--bg);color:var(--text);font-family:'Manrope',sans-serif;fon
 
   <!-- Creative Supply -->
   <div class="sec">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px">
       <div class="sec-label" style="margin-bottom:0">Creative Supply</div>
-      <div style="display:flex;gap:6px">
+      <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
         <button class="fi" id="supplyBtn7"  onclick="setSupplyWindow(7)"  style="background:var(--gbg);color:var(--green);border-color:var(--gborder)">Last 7d</button>
         <button class="fi" id="supplyBtn14" onclick="setSupplyWindow(14)">Last 14d</button>
         <button class="fi" id="supplyBtn30" onclick="setSupplyWindow(30)">Last 30d</button>
+        <button class="fi" id="supplyBtnCustom" onclick="toggleSupplyCustom()">Custom ▾</button>
+        <div id="supplyCustomRange" style="display:none;align-items:center;gap:6px">
+          <input type="date" id="supplyFrom" style="background:var(--card-bg);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:4px 8px;font-size:12px" onchange="applySupplyCustom()">
+          <span style="color:var(--text3);font-size:12px">→</span>
+          <input type="date" id="supplyTo" style="background:var(--card-bg);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:4px 8px;font-size:12px" onchange="applySupplyCustom()">
+        </div>
       </div>
     </div>
     <div id="supplyGrid"></div>
@@ -1814,23 +1820,67 @@ function downloadCSV(tab) {
 const SHEETS_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRTXEI-U9nQeZlMUrLyyHoiTUAJEtD36fnQOKMJ3kjRjLf_8F2mbFXyWf4pOOlVby_GY0JviXr41ZZP/pub?gid=0&single=true&output=csv';
 
 let supplyWindow = 7;
+let supplyCustomFrom = null, supplyCustomTo = null;
+
 function setSupplyWindow(d) {
   supplyWindow = d;
-  ['7','14','30'].forEach(n => {
+  supplyCustomFrom = null; supplyCustomTo = null;
+  ['7','14','30','Custom'].forEach(n => {
     const btn = document.getElementById('supplyBtn'+n);
-    if (btn) {
-      btn.style.background = ''; btn.style.color = ''; btn.style.borderColor = '';
-    }
+    if (btn) { btn.style.background=''; btn.style.color=''; btn.style.borderColor=''; }
   });
   const active = document.getElementById('supplyBtn'+d);
   if (active) { active.style.background='var(--gbg)'; active.style.color='var(--green)'; active.style.borderColor='var(--gborder)'; }
+  const cr = document.getElementById('supplyCustomRange');
+  if (cr) cr.style.display='none';
+  renderSupply();
+}
+
+function toggleSupplyCustom() {
+  const cr = document.getElementById('supplyCustomRange');
+  if (!cr) return;
+  const isOpen = cr.style.display !== 'none';
+  if (isOpen) {
+    cr.style.display = 'none';
+    setSupplyWindow(supplyWindow); // revert to last quick filter
+  } else {
+    cr.style.display = 'flex';
+    ['7','14','30'].forEach(n => {
+      const btn = document.getElementById('supplyBtn'+n);
+      if (btn) { btn.style.background=''; btn.style.color=''; btn.style.borderColor=''; }
+    });
+    const btn = document.getElementById('supplyBtnCustom');
+    if (btn) { btn.style.background='var(--gbg)'; btn.style.color='var(--green)'; btn.style.borderColor='var(--gborder)'; }
+    // pre-fill to/from with sensible defaults
+    const today = new Date();
+    const from = new Date(today); from.setDate(from.getDate()-30);
+    document.getElementById('supplyFrom').value = from.toISOString().split('T')[0];
+    document.getElementById('supplyTo').value = today.toISOString().split('T')[0];
+    applySupplyCustom();
+  }
+}
+
+function applySupplyCustom() {
+  const f = document.getElementById('supplyFrom').value;
+  const t = document.getElementById('supplyTo').value;
+  if (!f || !t) return;
+  supplyCustomFrom = f; supplyCustomTo = t;
   renderSupply();
 }
 
 function renderSupply() {
   const el = document.getElementById('supplyGrid'); if (!el) return;
   const today = new Date(); today.setHours(0,0,0,0);
-  const cutoff = new Date(today); cutoff.setDate(cutoff.getDate() - supplyWindow);
+  let cutoff, rangeEnd;
+  if (supplyCustomFrom && supplyCustomTo) {
+    const [fy,fm,fd] = supplyCustomFrom.split('-');
+    const [ty,tm,td] = supplyCustomTo.split('-');
+    cutoff   = new Date(+fy,+fm-1,+fd);
+    rangeEnd = new Date(+ty,+tm-1,+td);
+  } else {
+    cutoff   = new Date(today); cutoff.setDate(cutoff.getDate() - supplyWindow);
+    rangeEnd = today;
+  }
   const themes = ['Problem Statement','Generic','Social Proof','Date Hook','AI Creative'];
   const themeEmoji = {'Problem Statement':'🩺','Generic':'💬','Social Proof':'⭐','Date Hook':'📅','AI Creative':'🤖'};
 
@@ -1839,7 +1889,7 @@ function renderSupply() {
       if (!c.go_live) return false;
       const [y,m,d] = c.go_live.split('-');
       const gl = new Date(+y,+m-1,+d);
-      return gl >= cutoff && gl <= today && c.theme === th;
+      return gl >= cutoff && gl <= rangeEnd && c.theme === th;
     });
     return { theme: th, count: launched.length, creatives: launched };
   });
