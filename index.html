@@ -1398,7 +1398,7 @@ function openPopup(key) {
   const isScaled = c.active_days > 28;
 
   // Compute actual testing windows from calendar age (mirrors processCSV logic)
-  const _cplW  = 20;
+  const _cplW  = 21;
   const _d3W   = c.age < 14 ? null : c.age <= 20 ? 7 : c.age <= 27 ? 14 : 21;
   const _d7W   = c.age < 21 ? null : c.age <= 27 ? 7 : c.age <= 34 ? 14 : 21;
   const _roasW = c.age < 28 ? null : c.age <= 34 ? 7 : c.age <= 41 ? 14 : 21;
@@ -1414,7 +1414,7 @@ function openPopup(key) {
           ${c.health_score!=null?`<span style="font-size:13px;font-weight:800;color:${c.health_score>=67?'var(--green)':c.health_score>=34?'var(--yellow)':'var(--red)'}">Score: ${c.health_score}</span>`:''}
         </div>
         <div class="popup-metrics" style="margin-bottom:0">
-          ${metricCard('CPL', c.cpl_val!=null?'₹'+c.cpl_val:'—', c.cpl_tag, `Based on first 20 days from go-live`)}
+          ${metricCard('CPL', c.cpl_val!=null?'₹'+c.cpl_val:'—', c.cpl_tag, `Based on first 21 days from go-live`)}
           ${metricCard('Cost D3', c.cost_d3_val!=null?'₹'+c.cost_d3_val:c.cost_d3_tag==='Not Eligible Yet'?'N/A':'—', c.cost_d3_tag, _d3W?`Based on first ${_d3W} days from go-live`:'')}
           ${metricCard('Cost D7', c.cost_d7_val!=null?'₹'+c.cost_d7_val:c.cost_d7_tag==='Not Eligible Yet'?'N/A':'—', c.cost_d7_tag, _d7W?`Based on first ${_d7W} days from go-live`:'')}
           ${metricCard('ROAS', c.roas_val!=null?c.roas_val+'×':c.roas_tag==='Not Eligible Yet'?'N/A':'—', c.roas_tag, _roasW?`Based on first ${_roasW} days from go-live`:'')}
