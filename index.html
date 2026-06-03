@@ -1397,13 +1397,20 @@ function openPopup(key) {
 
   const isScaled = c.active_days > 28;
 
+  // Compute actual testing windows from calendar age (mirrors processCSV logic)
+  const _cplW  = 20;
+  const _d3W   = c.age < 14 ? null : c.age <= 20 ? 7 : c.age <= 27 ? 14 : 21;
+  const _d7W   = c.age < 21 ? null : c.age <= 27 ? 7 : 14;
+  const _roasW = c.age < 28 ? null : c.age <= 34 ? 7 : 14;
+  const _testWin = Math.max(_cplW, _d3W||0, _d7W||0, _roasW||0);
+
   document.getElementById('popupBody').innerHTML = `
 
     ${isScaled ? `
     <div style="display:flex;flex-direction:column;gap:14px;margin-bottom:18px">
       <div>
         <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);font-family:'IBM Plex Mono',monospace;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
-          <span>🧪 Testing Window (28d)</span>
+          <span>🧪 Testing Window (first ${_testWin}d)</span>
           ${c.health_score!=null?`<span style="font-size:13px;font-weight:800;color:${c.health_score>=67?'var(--green)':c.health_score>=34?'var(--yellow)':'var(--red)'}">Score: ${c.health_score}</span>`:''}
         </div>
         <div class="popup-metrics" style="margin-bottom:0">
