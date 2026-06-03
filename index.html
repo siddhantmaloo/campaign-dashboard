@@ -208,6 +208,16 @@ body{background:var(--bg);color:var(--text);font-family:'Manrope',sans-serif;fon
 .tt-label{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);font-family:'IBM Plex Mono',monospace;margin-bottom:4px}
 .tt-id{font-size:11px;font-family:'IBM Plex Mono',monospace;color:var(--blue);line-height:1.8}
 #global-tt{display:none;position:fixed;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--rs);padding:8px 10px;z-index:99999;min-width:230px;box-shadow:0 8px 24px rgba(0,0,0,.7);pointer-events:none;white-space:normal}
+.search-wrap{position:relative;display:inline-flex}
+.search-suggestions{display:none;position:absolute;top:calc(100% + 3px);left:0;min-width:320px;max-width:440px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);z-index:500;box-shadow:0 8px 24px rgba(0,0,0,.5);overflow:hidden;max-height:280px;overflow-y:auto}
+.search-suggestions.open{display:block}
+.ss-item{padding:7px 12px;cursor:pointer;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:2px}
+.ss-item:last-child{border-bottom:none}
+.ss-item:hover,.ss-item.focused{background:var(--bg4)}
+.ss-name{font-size:12px;font-weight:600;color:var(--text);font-family:'Manrope',sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ss-meta{font-size:10px;color:var(--text3);font-family:'IBM Plex Mono',monospace}
+.ss-match{color:var(--blue)}
+.ss-id-badge{display:inline-block;background:var(--bbg);border:1px solid var(--bborder);border-radius:3px;padding:1px 5px;font-size:9px;color:var(--blue);font-family:'IBM Plex Mono',monospace;margin-top:1px}
 #creativePopup{display:none;position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.7);backdrop-filter:blur(4px);align-items:center;justify-content:center}
 #creativePopup.open{display:flex}
 .popup-box{background:var(--bg2);border:1px solid var(--border2);border-radius:12px;width:min(860px,95vw);max-height:88vh;overflow-y:auto;position:relative}
@@ -449,7 +459,7 @@ body{background:var(--bg);color:var(--text);font-family:'Manrope',sans-serif;fon
 <!-- ══════ ALL CREATIVES ══════ -->
 <div class="panel" id="panel-all">
   <div class="filters">
-    <input class="fi-input" type="text" placeholder="Search creative…" oninput="allS.q=this.value;allS.p=1;renderAll()">
+    <div class="search-wrap"><input class="fi-input" id="allSearch" type="text" placeholder="Search by name or creative ID…" autocomplete="off" oninput="allS.q=this.value;allS.p=1;renderAll();showSuggestions('allSearch','allSug',this.value,'all')" onfocus="showSuggestions('allSearch','allSug',this.value,'all')" onkeydown="navSuggestions(event,'allSug','all')"><div class="search-suggestions" id="allSug"></div></div>
     <div class="theme-dd-wrap">
       <button class="theme-dd-btn" id="allThemeBtn" onclick="toggleDD('allThemeMenu','allThemeBtn')">🏷 Theme <span id="allThemeLbl">All</span> ▾</button>
       <div class="theme-dd-menu" id="allThemeMenu">
@@ -513,7 +523,7 @@ body{background:var(--bg);color:var(--text);font-family:'Manrope',sans-serif;fon
 <!-- ══════ CPL ══════ -->
 <div class="panel" id="panel-cpl">
   <div class="filters">
-    <input class="fi-input" type="text" placeholder="Search…" oninput="cplS.q=this.value;cplS.p=1;renderCpl()">
+    <div class="search-wrap"><input class="fi-input" id="cplSearch" type="text" placeholder="Search by name or creative ID…" autocomplete="off" oninput="cplS.q=this.value;cplS.p=1;renderCpl();showSuggestions('cplSearch','cplSug',this.value,'cpl')" onfocus="showSuggestions('cplSearch','cplSug',this.value,'cpl')" onkeydown="navSuggestions(event,'cplSug','cpl')"><div class="search-suggestions" id="cplSug"></div></div>
     <div class="theme-dd-wrap">
       <button class="theme-dd-btn" id="cplThemeBtn" onclick="toggleDD('cplThemeMenu','cplThemeBtn')">🏷 Theme <span id="cplThemeLbl">All</span> ▾</button>
       <div class="theme-dd-menu" id="cplThemeMenu">
@@ -560,7 +570,7 @@ body{background:var(--bg);color:var(--text);font-family:'Manrope',sans-serif;fon
 <!-- ══════ D3/D7 ══════ -->
 <div class="panel" id="panel-d3d7">
   <div class="filters">
-    <input class="fi-input" type="text" placeholder="Search…" oninput="d3S.q=this.value;d3S.p=1;renderD3()">
+    <div class="search-wrap"><input class="fi-input" id="d3Search" type="text" placeholder="Search by name or creative ID…" autocomplete="off" oninput="d3S.q=this.value;d3S.p=1;renderD3();showSuggestions('d3Search','d3Sug',this.value,'d3d7')" onfocus="showSuggestions('d3Search','d3Sug',this.value,'d3d7')" onkeydown="navSuggestions(event,'d3Sug','d3d7')"><div class="search-suggestions" id="d3Sug"></div></div>
     <div class="theme-dd-wrap">
       <button class="theme-dd-btn" id="d3ThemeBtn" onclick="toggleDD('d3ThemeMenu','d3ThemeBtn')">🏷 Theme <span id="d3ThemeLbl">All</span> ▾</button>
       <div class="theme-dd-menu" id="d3ThemeMenu">
@@ -610,7 +620,7 @@ body{background:var(--bg);color:var(--text);font-family:'Manrope',sans-serif;fon
 <!-- ══════ ROAS ══════ -->
 <div class="panel" id="panel-roas">
   <div class="filters">
-    <input class="fi-input" type="text" placeholder="Search…" oninput="roS.q=this.value;roS.p=1;renderRo()">
+    <div class="search-wrap"><input class="fi-input" id="roSearch" type="text" placeholder="Search by name or creative ID…" autocomplete="off" oninput="roS.q=this.value;roS.p=1;renderRo();showSuggestions('roSearch','roSug',this.value,'roas')" onfocus="showSuggestions('roSearch','roSug',this.value,'roas')" onkeydown="navSuggestions(event,'roSug','roas')"><div class="search-suggestions" id="roSug"></div></div>
     <div class="theme-dd-wrap">
       <button class="theme-dd-btn" id="roThemeBtn" onclick="toggleDD('roThemeMenu','roThemeBtn')">🏷 Theme <span id="roThemeLbl">All</span> ▾</button>
       <div class="theme-dd-menu" id="roThemeMenu">
@@ -656,7 +666,7 @@ body{background:var(--bg);color:var(--text);font-family:'Manrope',sans-serif;fon
 <!-- ══════ SCALED ══════ -->
 <div class="panel" id="panel-scaled">
   <div class="filters">
-    <input class="fi-input" type="text" placeholder="Search…" oninput="scS.q=this.value;scS.p=1;renderScaled()">
+    <div class="search-wrap"><input class="fi-input" id="scSearch" type="text" placeholder="Search by name or creative ID…" autocomplete="off" oninput="scS.q=this.value;scS.p=1;renderScaled();showSuggestions('scSearch','scSug',this.value,'scaled')" onfocus="showSuggestions('scSearch','scSug',this.value,'scaled')" onkeydown="navSuggestions(event,'scSug','scaled')"><div class="search-suggestions" id="scSug"></div></div>
     <div class="theme-dd-wrap">
       <button class="theme-dd-btn" id="scThemeBtn" onclick="toggleDD('scThemeMenu','scThemeBtn')">🏷 Theme <span id="scThemeLbl">All</span> ▾</button>
       <div class="theme-dd-menu" id="scThemeMenu">
@@ -990,7 +1000,7 @@ function toggleStatus(val, btn){
 
 function getAll(){
   let r=[...C];
-  if(allS.q) r=r.filter(c=>c.key.toLowerCase().includes(allS.q.toLowerCase()));
+  if(allS.q) r=r.filter(c=>matchesSearch(c,allS.q));
   if(allS.actions.size>0) r=r.filter(c=>allS.actions.has(c.action));
   if(allS.themes.size>0) r=r.filter(c=>allS.themes.has(c.theme));
   if(allS.status==='active') r=r.filter(c=>!c.paused_from);
@@ -1041,6 +1051,83 @@ function hideTT(){
   document.getElementById('global-tt').style.display = 'none';
 }
 document.addEventListener('scroll', hideTT, true);
+
+// ── SEARCH AUTOCOMPLETE ──
+function matchesSearch(c, q) {
+  if (!q) return true;
+  const ql = q.toLowerCase();
+  if (c.key.toLowerCase().includes(ql)) return true;
+  if ((c.utm_ids||[]).some(id => id.includes(ql))) return true;
+  return false;
+}
+
+function highlight(text, q) {
+  if (!q) return text;
+  const idx = text.toLowerCase().indexOf(q.toLowerCase());
+  if (idx < 0) return text;
+  return text.slice(0,idx) + `<span class="ss-match">${text.slice(idx,idx+q.length)}</span>` + text.slice(idx+q.length);
+}
+
+function showSuggestions(inputId, sugId, q, tab) {
+  const sug = document.getElementById(sugId);
+  if (!sug) return;
+  if (!q || q.length < 1) { sug.classList.remove('open'); return; }
+  const ql = q.toLowerCase();
+  // Find matches: name match first, then ID match
+  const nameMatches = C.filter(c => c.key.toLowerCase().includes(ql)).slice(0,6);
+  const idMatches = C.filter(c => !(c.key.toLowerCase().includes(ql)) && (c.utm_ids||[]).some(id=>id.includes(ql))).slice(0,4);
+  const results = [...nameMatches, ...idMatches].slice(0,8);
+  if (results.length === 0) { sug.classList.remove('open'); return; }
+  sug.innerHTML = results.map((c,i) => {
+    const matchedId = (c.utm_ids||[]).find(id=>id.includes(ql));
+    const byId = !c.key.toLowerCase().includes(ql) && matchedId;
+    return `<div class="ss-item" data-key="${c.key.replace(/"/g,'&quot;')}" data-tab="${tab}" onmousedown="pickSuggestion('${c.key.replace(/'/g,"\\'")}','${inputId}','${sugId}','${tab}')">
+      <div class="ss-name">${highlight(c.key, q)}</div>
+      <div class="ss-meta">${c.theme} · go-live ${c.go_live}${byId?` <span class="ss-id-badge">${matchedId}</span>`:(c.utm_ids&&c.utm_ids.length?` <span class="ss-id-badge">${c.utm_ids[0]}</span>`:'')}</div>
+    </div>`;
+  }).join('');
+  sug.classList.add('open');
+}
+
+function pickSuggestion(key, inputId, sugId, tab) {
+  const inp = document.getElementById(inputId);
+  const sug = document.getElementById(sugId);
+  if (inp) inp.value = key;
+  if (sug) sug.classList.remove('open');
+  // Set state and render
+  const stateRenderMap = {
+    all:    [allS,  renderAll],
+    cpl:    [cplS,  renderCpl],
+    d3d7:   [d3S,   renderD3],
+    roas:   [roS,   renderRo],
+    scaled: [scS,   renderScaled],
+  };
+  const [state, render] = stateRenderMap[tab] || [];
+  if (state) { state.q = key; state.p = 1; render(); }
+  // Open popup directly
+  setTimeout(() => openPopup(key), 100);
+}
+
+function navSuggestions(e, sugId, tab) {
+  const sug = document.getElementById(sugId);
+  if (!sug || !sug.classList.contains('open')) return;
+  const items = sug.querySelectorAll('.ss-item');
+  const focused = sug.querySelector('.ss-item.focused');
+  let idx = [...items].indexOf(focused);
+  if (e.key === 'ArrowDown') { e.preventDefault(); idx = Math.min(idx+1, items.length-1); }
+  else if (e.key === 'ArrowUp') { e.preventDefault(); idx = Math.max(idx-1, 0); }
+  else if (e.key === 'Enter' && focused) { e.preventDefault(); focused.dispatchEvent(new MouseEvent('mousedown')); return; }
+  else if (e.key === 'Escape') { sug.classList.remove('open'); return; }
+  else return;
+  items.forEach(it => it.classList.remove('focused'));
+  if (items[idx]) items[idx].classList.add('focused');
+}
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('.search-wrap')) {
+    document.querySelectorAll('.search-suggestions').forEach(s => s.classList.remove('open'));
+  }
+});
 const scSelectedThemes = new Set(['Date Hook','Problem Statement','Generic','Social Proof','AI Creative']);
 let scCardOffset = 0; // 0 = newest 3 months; positive = shifted older
 
@@ -1237,7 +1324,7 @@ function toggleTabStatus(state, val, activeId, pausedId, render){
 
 function getCpl(){
   let r=[...C];
-  if(cplS.q) r=r.filter(c=>c.key.toLowerCase().includes(cplS.q.toLowerCase()));
+  if(cplS.q) r=r.filter(c=>matchesSearch(c,cplS.q));
   if(cplS.cpl_tag) r=r.filter(c=>c.cpl_tag===cplS.cpl_tag);
   if(cplS.status==='active') r=r.filter(c=>!c.paused_from);
   if(cplS.status==='paused') r=r.filter(c=>!!c.paused_from);
@@ -1271,7 +1358,7 @@ function sortC(col){if(cplS.sort===col)cplS.dir*=-1;else{cplS.sort=col;cplS.dir=
 
 function getD3(){
   let r=C.filter(c=>c.cost_d3_tag!=='Not Eligible Yet');
-  if(d3S.q) r=r.filter(c=>c.key.toLowerCase().includes(d3S.q.toLowerCase()));
+  if(d3S.q) r=r.filter(c=>matchesSearch(c,d3S.q));
   if(d3S.d3f) r=r.filter(c=>c.cost_d3_tag===d3S.d3f);
   if(d3S.d7f) r=r.filter(c=>c.cost_d7_tag===d3S.d7f);
   if(d3S.status==='active') r=r.filter(c=>!c.paused_from);
@@ -1306,7 +1393,7 @@ function sortD(col){if(d3S.sort===col)d3S.dir*=-1;else{d3S.sort=col;d3S.dir=-1;}
 
 function getRo(){
   let r=C.filter(c=>c.roas_tag!=='Not Eligible Yet');
-  if(roS.q) r=r.filter(c=>c.key.toLowerCase().includes(roS.q.toLowerCase()));
+  if(roS.q) r=r.filter(c=>matchesSearch(c,roS.q));
   if(roS.roas_tag) r=r.filter(c=>c.roas_tag===roS.roas_tag);
   if(roS.status==='active') r=r.filter(c=>!c.paused_from);
   if(roS.status==='paused') r=r.filter(c=>!!c.paused_from);
@@ -1340,7 +1427,7 @@ function sortR(col){if(roS.sort===col)roS.dir*=-1;else{roS.sort=col;roS.dir=-1;}
 // ── SCALED TAB ──
 function getScaled(){
   let r=C.filter(c=>c.active_days>28);
-  if(scS.q) r=r.filter(c=>c.key.toLowerCase().includes(scS.q.toLowerCase()));
+  if(scS.q) r=r.filter(c=>matchesSearch(c,scS.q));
   if(scS.status==='active') r=r.filter(c=>!c.paused_from);
   if(scS.status==='paused') r=r.filter(c=>!!c.paused_from);
   if(scS.themes.size>0) r=r.filter(c=>scS.themes.has(c.theme));
