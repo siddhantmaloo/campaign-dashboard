@@ -1669,11 +1669,17 @@ function applyData(data) {
   renderAll(); renderCpl(); renderD3(); renderRo();
   document.getElementById('btnActive').classList.toggle('active', allS.status==='active');
   document.getElementById('btnPaused').classList.toggle('active', allS.status==='paused');
-  const dates = RAW.creatives.map(c => c.go_live).sort();
+  const goLiveDates = RAW.creatives.map(c => c.go_live).sort();
   const fmtD = s => { const d = new Date(s); return d.toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}); };
   const activeCount = RAW.creatives.filter(c => !c.paused_from).length;
+  // Use latest activity date from daily data if available
+  let latestActivity = goLiveDates[goLiveDates.length-1];
+  if (DAILY_DATA && Object.keys(DAILY_DATA).length > 0) {
+    const allDates = Object.values(DAILY_DATA).flatMap(d => Object.keys(d));
+    if (allDates.length > 0) latestActivity = allDates.sort()[allDates.length-1];
+  }
   document.getElementById('dataInfo').textContent =
-    `${fmtD(dates[0])} – ${fmtD(dates[dates.length-1])} · ${RAW.creatives.length} creatives (${activeCount} active)`;
+    `${fmtD(goLiveDates[0])} – ${fmtD(latestActivity)} · ${RAW.creatives.length} creatives (${activeCount} active)`;
 }
 
 async function loadFromGoogleSheets() {
