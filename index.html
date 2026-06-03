@@ -39,7 +39,8 @@ body{background:var(--bg);color:var(--text);font-family:'Manrope',sans-serif;fon
 .notes-cancel{padding:8px 14px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--rs);color:var(--text2);font-size:12px;font-weight:700;cursor:pointer;font-family:'Manrope',sans-serif}
 .note-btn{background:none;border:none;cursor:pointer;padding:3px 6px;border-radius:var(--rs);font-size:13px;line-height:1;transition:background .15s;position:relative}
 .note-btn:hover{background:var(--bg3)}
-.note-btn.has-note::after{content:'';position:absolute;top:2px;right:2px;width:7px;height:7px;background:var(--blue);border-radius:50%;box-shadow:0 0 4px rgba(91,156,246,.8)}
+.note-btn.has-note{background:rgba(91,156,246,.15);border:1px solid var(--bborder);color:var(--blue)}
+.note-btn.has-note::after{content:'✎';position:absolute;top:-5px;right:-5px;width:14px;height:14px;background:var(--blue);border-radius:50%;font-size:8px;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700}
 
 /* ── PROFILE ── */
 #profile-wrap{position:relative}
