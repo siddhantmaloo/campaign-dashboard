@@ -354,8 +354,8 @@ body{background:var(--bg);color:var(--text);font-family:'Manrope',sans-serif;fon
         <th onclick="sortA('health_score')" class="srt">Score</th>
         <th>Confidence</th>
         <th onclick="sortA('action')">Action</th>
-        <th onclick="sortA('cpl_tag')">CPL Tag</th>
         <th onclick="sortA('cpl_val')">CPL ₹</th>
+        <th onclick="sortA('cpl_tag')">CPL Tag</th>
         <th onclick="sortA('cost_d3_tag')">D3</th>
         <th onclick="sortA('cost_d7_tag')">D7</th>
         <th onclick="sortA('roas_tag')">ROAS</th>
@@ -841,8 +841,8 @@ function renderAll(){
     <td>${scorePill(c.health_score)}</td>
     <td style="display:flex;align-items:center;gap:4px;padding-top:10px">${confH(c.confidence)}</td>
     <td>${actionH(c.action)}</td>
-    <td>${tagH(c.cpl_tag)}</td>
     <td class="nr" style="color:var(--text);font-weight:600">${c.cpl_val!=null?'₹'+c.cpl_val:'—'}</td>
+    <td>${tagH(c.cpl_tag)}</td>
     <td>${tagH(c.cost_d3_tag)}</td>
     <td>${tagH(c.cost_d7_tag)}</td>
     <td>${tagH(c.roas_tag)}</td>
