@@ -354,6 +354,7 @@ body{background:var(--bg);color:var(--text);font-family:'Manrope',sans-serif;fon
   <div class="tab" onclick="switchTab('cpl')">CPL View</div>
   <div class="tab" onclick="switchTab('d3d7')">D3 / D7</div>
   <div class="tab" onclick="switchTab('roas')">ROAS</div>
+  <div class="tab" onclick="switchTab('scaled')">⬆ Scaled (21d+)</div>
 </div>
 
 <div class="page">
@@ -639,6 +640,48 @@ body{background:var(--bg);color:var(--text);font-family:'Manrope',sans-serif;fon
   </div>
 </div>
 
+<!-- ══════ SCALED ══════ -->
+<div class="panel" id="panel-scaled">
+  <div class="filters">
+    <input class="fi-input" type="text" placeholder="Search…" oninput="scS.q=this.value;scS.p=1;renderScaled()">
+    <div class="theme-dd-wrap">
+      <button class="theme-dd-btn" id="scThemeBtn" onclick="toggleDD('scThemeMenu','scThemeBtn')">🏷 Theme <span id="scThemeLbl">All</span> ▾</button>
+      <div class="theme-dd-menu" id="scThemeMenu">
+        <div class="theme-dd-item" onclick="toggleTabTheme('sc','Date Hook',this)"><input type="checkbox">📅 Date Hook</div>
+        <div class="theme-dd-item" onclick="toggleTabTheme('sc','Problem Statement',this)"><input type="checkbox">🩺 Problem Stmt</div>
+        <div class="theme-dd-item" onclick="toggleTabTheme('sc','Generic',this)"><input type="checkbox">💬 Generic</div>
+        <div class="theme-dd-item" onclick="toggleTabTheme('sc','Social Proof',this)"><input type="checkbox">⭐ Social Proof</div>
+        <div class="theme-dd-item" onclick="toggleTabTheme('sc','AI Creative',this)"><input type="checkbox">🤖 AI Creative</div>
+      </div>
+    </div>
+    <span style="color:var(--border2);padding:0 4px">|</span>
+    <button class="fi" id="scBtnActive" onclick="toggleTabStatus(scS,'active','scBtnActive','scBtnPaused',renderScaled)">● Active</button>
+    <button class="fi" id="scBtnPaused" onclick="toggleTabStatus(scS,'paused','scBtnActive','scBtnPaused',renderScaled)">⏸ Paused</button>
+    <span style="color:var(--border2);padding:0 4px">|</span>
+    <button class="fi" id="scBtnNotes" onclick="toggleNotesFilter('sc')" title="Show only creatives with notes">📝 Has Notes</button>
+    <span class="cnt" id="sc-cnt"></span>
+    <button class="fi" style="margin-left:auto" onclick="downloadCSV('sc')">⬇ Download CSV</button>
+  </div>
+  <div class="tbl-wrap">
+    <table class="dtbl"><thead><tr>
+      <th>Status</th>
+      <th onclick="sortSc('key')">Creative</th>
+      <th onclick="sortSc('theme')">Theme</th>
+      <th onclick="sortSc('age')" class="srt">Age</th>
+      <th>Scale Age</th>
+      <th onclick="sortSc('sc_cpl_val')">CPL ₹</th><th>CPL Tag</th>
+      <th onclick="sortSc('sc_d3_val')">D3 ₹</th><th>D3 Tag</th>
+      <th onclick="sortSc('sc_d7_val')">D7 ₹</th><th>D7 Tag</th>
+      <th onclick="sortSc('sc_roas_val')">ROAS</th><th>ROAS Tag</th>
+      <th onclick="sortSc('total_spend')">Spend</th>
+      <th onclick="sortSc('total_leads')">Leads</th>
+      <th>Notes</th>
+    </tr></thead>
+    <tbody id="scBody"></tbody></table>
+    <div class="pag" id="scPag"></div>
+  </div>
+</div>
+
 </div>
 
 <div id="creativePopup" onclick="if(event.target===this)closePopup()">
@@ -880,6 +923,7 @@ const allS={q:'',actions:new Set(),themes:new Set(['Date Hook','Problem Statemen
 const cplS={q:'',cpl_tag:'',_paused:'',status:'',themes:new Set(),month:'',sort:'age',dir:-1,p:1,notesOnly:false};
 const d3S={q:'',d3f:'',d7f:'',status:'',themes:new Set(),month:'',sort:'age',dir:-1,p:1,notesOnly:false};
 const roS={q:'',roas_tag:'',status:'',themes:new Set(),month:'',sort:'age',dir:-1,p:1,notesOnly:false};
+const scS={q:'',status:'',themes:new Set(),sort:'age',dir:-1,p:1,notesOnly:false};
 
 function toggleF(state,val,key,btn,render){
   state[key]=state[key]===val?'':val; state.p=1;
@@ -1071,10 +1115,10 @@ function toggleDD(menuId, btnId){
   if(!isOpen) menu.classList.add('open');
 }
 
-const TAB_STATE_MAP = {cpl:cplS, d3:d3S, ro:roS};
-const TAB_RENDER_MAP = {cpl:()=>renderCpl(), d3:()=>renderD3(), ro:()=>renderRo()};
-const TAB_LBL_MAP = {cpl:'cplThemeLbl', d3:'d3ThemeLbl', ro:'roThemeLbl'};
-const TAB_BTN_MAP = {cpl:'cplThemeBtn', d3:'d3ThemeBtn', ro:'roThemeBtn'};
+const TAB_STATE_MAP = {cpl:cplS, d3:d3S, ro:roS, sc:scS};
+const TAB_RENDER_MAP = {cpl:()=>renderCpl(), d3:()=>renderD3(), ro:()=>renderRo(), sc:()=>renderScaled()};
+const TAB_LBL_MAP = {cpl:'cplThemeLbl', d3:'d3ThemeLbl', ro:'roThemeLbl', sc:'scThemeLbl'};
+const TAB_BTN_MAP = {cpl:'cplThemeBtn', d3:'d3ThemeBtn', ro:'roThemeBtn', sc:'scThemeBtn'};
 
 function toggleTabTheme(tab, val, item){
   event.stopPropagation(); // keep dropdown open
@@ -1266,6 +1310,44 @@ function renderRo(){
 }
 function sortR(col){if(roS.sort===col)roS.dir*=-1;else{roS.sort=col;roS.dir=-1;}roS.p=1;renderRo();}
 
+// ── SCALED TAB ──
+function getScaled(){
+  let r=C.filter(c=>c.age>21);
+  if(scS.q) r=r.filter(c=>c.key.toLowerCase().includes(scS.q.toLowerCase()));
+  if(scS.status==='active') r=r.filter(c=>!c.paused_from);
+  if(scS.status==='paused') r=r.filter(c=>!!c.paused_from);
+  if(scS.themes.size>0) r=r.filter(c=>scS.themes.has(c.theme));
+  if(scS.notesOnly){ const n=getNotes(); r=r.filter(c=>n[c.key]&&n[c.key].text); }
+  r.sort((a,b)=>{const av=a[scS.sort]??'',bv=b[scS.sort]??'';return typeof av==='string'?scS.dir*av.localeCompare(bv):scS.dir*((av||0)-(bv||0));});
+  return r;
+}
+function renderScaled(){
+  const rows=getScaled();const s=scS;
+  const pages=Math.max(1,Math.ceil(rows.length/PS));s.p=Math.min(s.p,pages);
+  document.getElementById('sc-cnt').textContent=rows.length+' creatives';
+  document.getElementById('scBody').innerHTML=rows.slice((s.p-1)*PS,s.p*PS).map(c=>`<tr>
+    <td>${c.paused_from?`<span class="tag tpause">⏸ Paused</span>`:`<span class="tag" style="background:var(--gbg);color:var(--green);border:1px solid var(--gborder)">● Active</span>`}</td>
+    <td class="nm">${nameCell(c)}</td>
+    <td>${themeH(c.theme,c.theme==='Date Hook')}</td>
+    <td style="font-family:'IBM Plex Mono'">${c.age}d</td>
+    <td style="font-family:'IBM Plex Mono';color:var(--blue)">${c.age-21}d</td>
+    <td class="nr" style="color:var(--text);font-weight:600">${c.sc_cpl_val!=null?'₹'+c.sc_cpl_val:'—'}</td>
+    <td>${tagH(c.sc_cpl_tag)}</td>
+    <td class="nr">${c.sc_d3_val!=null?'₹'+c.sc_d3_val:'—'}</td>
+    <td>${tagH(c.sc_d3_tag)}</td>
+    <td class="nr">${c.sc_d7_val!=null?'₹'+c.sc_d7_val:'—'}</td>
+    <td>${tagH(c.sc_d7_tag)}</td>
+    <td class="nr">${c.sc_roas_val!=null?c.sc_roas_val+'×':'—'}</td>
+    <td>${tagH(c.sc_roas_tag)}</td>
+    <td class="nr">${spendH(c.total_spend)}</td>
+    <td class="nr">${c.total_leads.toLocaleString('en-IN')}</td>
+    <td style="text-align:center">${noteBtn(c.key)}</td>
+  </tr>`).join('')||`<tr><td colspan="16" class="empty">No creatives with age &gt; 21 days</td></tr>`;
+  pag('scPag',s,pages,renderScaled);
+}
+function sortSc(col){if(scS.sort===col)scS.dir*=-1;else{scS.sort=col;scS.dir=-1;}scS.p=1;renderScaled();}
+function sscPage(p){scS.p=p;renderScaled();}
+
 function pag(id,s,pages,cb){
   const total = id==='allPag'?getAll().length:id==='cplPag'?getCpl().length:id==='d3Pag'?getD3().length:getRo().length;
   document.getElementById(id).innerHTML=`
@@ -1281,13 +1363,14 @@ function srPage(p){roS.p=p;renderRo();}
 
 // ── TABS ──
 function switchTab(name){
-  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',['overview','all','cpl','d3d7','roas'][i]===name));
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',['overview','all','cpl','d3d7','roas','scaled'][i]===name));
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
   document.getElementById('panel-'+name).classList.add('active');
-  if(name==='all'){renderAll();}
+  if(name==='all') renderAll();
   if(name==='cpl') renderCpl();
   if(name==='d3d7') renderD3();
   if(name==='roas') renderRo();
+  if(name==='scaled') renderScaled();
 }
 
 // ── CREATIVE POPUP ──
@@ -1414,7 +1497,7 @@ function closePopup() {
 document.addEventListener('keydown', e => { if(e.key==='Escape') closePopup(); });
 
 // ── NOTES FILTER ──
-const NOTES_TAB_MAP = {all:{s:allS,btn:'allBtnNotes',render:()=>renderAll()},cpl:{s:cplS,btn:'cplBtnNotes',render:()=>renderCpl()},d3:{s:d3S,btn:'d3BtnNotes',render:()=>renderD3()},ro:{s:roS,btn:'roBtnNotes',render:()=>renderRo()}};
+const NOTES_TAB_MAP = {all:{s:allS,btn:'allBtnNotes',render:()=>renderAll()},cpl:{s:cplS,btn:'cplBtnNotes',render:()=>renderCpl()},d3:{s:d3S,btn:'d3BtnNotes',render:()=>renderD3()},ro:{s:roS,btn:'roBtnNotes',render:()=>renderRo()},sc:{s:scS,btn:'scBtnNotes',render:()=>renderScaled()}};
 
 function toggleNotesFilter(tab) {
   const cfg = NOTES_TAB_MAP[tab];
@@ -1489,7 +1572,7 @@ function saveSettings() {
     RAW.creatives = reprocessed;
   }
   initOverview();
-  renderAll(); renderCpl(); renderD3(); renderRo();
+  renderAll(); renderCpl(); renderD3(); renderRo(); renderScaled();
 }
 
 function resetThresholds() {
@@ -1517,6 +1600,14 @@ function recomputeTags() {
       nc.cost_d7_tag = nc.cost_d7_val < t.d7Green ? 'Green' : nc.cost_d7_val <= t.d7Yellow ? 'Yellow' : 'Red';
     if (nc.roas_val != null && nc.roas_tag !== 'Not Eligible Yet')
       nc.roas_tag = nc.roas_val >= t.roasGreen ? 'Green' : nc.roas_val > t.roasYellow ? 'Yellow' : 'Red';
+    if (nc.sc_cpl_val != null)
+      nc.sc_cpl_tag = nc.sc_cpl_val < t.cplGreen ? 'Green' : nc.sc_cpl_val <= t.cplYellow ? 'Yellow' : 'Red';
+    if (nc.sc_d3_val != null)
+      nc.sc_d3_tag = nc.sc_d3_val < t.d3Green ? 'Green' : nc.sc_d3_val <= t.d3Yellow ? 'Yellow' : 'Red';
+    if (nc.sc_d7_val != null)
+      nc.sc_d7_tag = nc.sc_d7_val < t.d7Green ? 'Green' : nc.sc_d7_val <= t.d7Yellow ? 'Yellow' : 'Red';
+    if (nc.sc_roas_val != null && nc.sc_roas_tag !== 'Not Eligible Yet')
+      nc.sc_roas_tag = nc.sc_roas_val >= t.roasGreen ? 'Green' : nc.sc_roas_val > t.roasYellow ? 'Yellow' : 'Red';
     return nc;
   });
 }
@@ -1571,7 +1662,7 @@ function saveNote() {
   }
   localStorage.setItem(NOTES_KEY, JSON.stringify(notes));
   closeNotes();
-  renderAll(); renderCpl(); renderD3(); renderRo();
+  renderAll(); renderCpl(); renderD3(); renderRo(); renderScaled();
 }
 
 function clearNote() {
@@ -1635,6 +1726,19 @@ function downloadCSV(tab) {
         c.health_score, c.confidence, c.cpl_tag, c.cost_d3_tag, c.cost_d7_tag,
         c.roas_val ?? '', c.roas_tag, c.total_spend
       ]
+    },
+    sc: {
+      headers: ['Status','Creative','Theme','Age','Scale Age (d)','CPL ₹','CPL Tag','D3 ₹','D3 Tag','D7 ₹','D7 Tag','ROAS','ROAS Tag','Spend','Leads'],
+      getData: () => getScaled(),
+      row: c => [
+        c.paused_from ? 'Paused' : 'Active',
+        c.key, c.theme, c.age, c.age-21,
+        c.sc_cpl_val ?? '', c.sc_cpl_tag,
+        c.sc_d3_val ?? '', c.sc_d3_tag,
+        c.sc_d7_val ?? '', c.sc_d7_tag,
+        c.sc_roas_val ?? '', c.sc_roas_tag,
+        c.total_spend, c.total_leads
+      ]
     }
   };
 
@@ -1666,7 +1770,7 @@ function applyData(data) {
   updateActionMenuOptions();
   updateAllThemeLbl();
   populateMonthBtns();
-  renderAll(); renderCpl(); renderD3(); renderRo();
+  renderAll(); renderCpl(); renderD3(); renderRo(); renderScaled();
   document.getElementById('btnActive').classList.toggle('active', allS.status==='active');
   document.getElementById('btnPaused').classList.toggle('active', allS.status==='paused');
   const goLiveDates = RAW.creatives.map(c => c.go_live).sort();
@@ -2010,10 +2114,53 @@ function processCSV(text) {
       }
     }
 
+    // ── SCALED METRICS (no max-day cap, all data) ──
+    let sc_cpl_val=null, sc_cpl_tag='Red';
+    let sc_d3_val=null,  sc_d3_tag='Not Eligible Yet';
+    let sc_d7_val=null,  sc_d7_tag='Not Eligible Yet';
+    let sc_roas_val=null,sc_roas_tag='Not Eligible Yet';
+
+    if (age > 21) {
+      // CPL — all days
+      let scS=0,scL=0,scD3=0,scD7=0,scRev=0;
+      for (const [dk,v] of Object.entries(c.days)) {
+        const d = new Date(dk);
+        if (d < today) { scS+=v.spend; scL+=v.leads; scD3+=v.d3; scD7+=v.d7; scRev+=v.revenue; }
+      }
+      sc_cpl_val = scL > 0 ? Math.round(scS/scL*100)/100 : null;
+      sc_cpl_tag = sc_cpl_val == null ? 'Red' : sc_cpl_val < getThr().cplGreen ? 'Green' : sc_cpl_val <= getThr().cplYellow ? 'Yellow' : 'Red';
+
+      // D3 — min 14 days
+      if (age >= 14) {
+        if (scD3 === 0) sc_d3_tag = 'Red';
+        else {
+          sc_d3_val = Math.round(scS/scD3*100)/100;
+          sc_d3_tag = sc_d3_val < getThr().d3Green ? 'Green' : sc_d3_val <= getThr().d3Yellow ? 'Yellow' : 'Red';
+        }
+      }
+      // D7 — min 21 days
+      if (age >= 21) {
+        if (scD7 === 0) sc_d7_tag = 'Red';
+        else {
+          sc_d7_val = Math.round(scS/scD7*100)/100;
+          sc_d7_tag = sc_d7_val < getThr().d7Green ? 'Green' : sc_d7_val <= getThr().d7Yellow ? 'Yellow' : 'Red';
+        }
+      }
+      // ROAS — min 28 days
+      if (age >= 28) {
+        if (scS === 0) sc_roas_tag = 'Red';
+        else {
+          sc_roas_val = Math.round(scRev/scS*100)/100;
+          sc_roas_tag = sc_roas_val >= getThr().roasGreen ? 'Green' : sc_roas_val > getThr().roasYellow ? 'Yellow' : 'Red';
+        }
+      }
+    }
+
     creatives.push({
       key, ad_name: c.adName, go_live: fmtDate(goLive), age, theme, dh_phase,
       paused_from, cpl_val, cpl_tag, cost_d3_val, cost_d3_tag,
       cost_d7_val, cost_d7_tag, roas_val, roas_tag,
+      sc_cpl_val, sc_cpl_tag, sc_d3_val, sc_d3_tag, sc_d7_val, sc_d7_tag, sc_roas_val, sc_roas_tag,
       total_spend, total_leads, is_ai, health_score, confidence, action,
       utm_ids: [...(creativeIds[key]||[])].sort()
     });
