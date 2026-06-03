@@ -40,6 +40,36 @@ body{background:var(--bg);color:var(--text);font-family:'Manrope',sans-serif;fon
 .note-btn{background:none;border:none;cursor:pointer;padding:3px 6px;border-radius:var(--rs);font-size:13px;line-height:1;transition:background .15s;position:relative}
 .note-btn:hover{background:var(--bg3)}
 .note-btn.has-note::after{content:'';position:absolute;top:2px;right:2px;width:7px;height:7px;background:var(--blue);border-radius:50%;box-shadow:0 0 4px rgba(91,156,246,.8)}
+
+/* ── PROFILE ── */
+#profile-wrap{position:relative}
+#profile-btn{width:32px;height:32px;border-radius:50%;background:var(--bbg);border:1px solid var(--bborder);color:var(--blue);font-size:13px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:'Manrope',sans-serif;transition:all .15s}
+#profile-btn:hover{background:rgba(91,156,246,.2)}
+#profile-menu{position:absolute;top:40px;right:0;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r);min-width:160px;z-index:300;display:none;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,.4)}
+#profile-menu.open{display:block}
+.pm-item{padding:10px 14px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:8px;transition:background .15s;color:var(--text2)}
+.pm-item:hover{background:var(--bg3);color:var(--text)}
+.pm-divider{border:none;border-top:1px solid var(--border);margin:0}
+.pm-user{padding:10px 14px;font-size:11px;color:var(--text3);font-family:'IBM Plex Mono',monospace;border-bottom:1px solid var(--border)}
+
+/* ── SETTINGS MODAL ── */
+#settings-modal{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9997;display:none;align-items:center;justify-content:center}
+#settings-modal.open{display:flex}
+#settings-box{background:var(--bg2);border:1px solid var(--border2);border-radius:12px;padding:28px;width:100%;max-width:520px;max-height:85vh;overflow-y:auto;display:flex;flex-direction:column;gap:20px}
+#settings-box h2{font-size:15px;font-weight:800}
+.s-section{display:flex;flex-direction:column;gap:10px}
+.s-section-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--text3);font-family:'IBM Plex Mono',monospace;padding-bottom:6px;border-bottom:1px solid var(--border)}
+.s-row{display:grid;grid-template-columns:120px 1fr 1fr;align-items:center;gap:10px}
+.s-label{font-size:12px;color:var(--text2);font-weight:600}
+.s-input-wrap{display:flex;flex-direction:column;gap:3px}
+.s-input-lbl{font-size:10px;color:var(--text3);font-family:'IBM Plex Mono',monospace}
+.s-input{background:var(--bg3);border:1px solid var(--border2);border-radius:var(--rs);padding:7px 10px;color:var(--text);font-size:12px;font-family:'IBM Plex Mono',monospace;outline:none;width:100%;transition:border .15s}
+.s-input:focus{border-color:var(--blue)}
+.s-hint{font-size:10px;color:var(--text3);font-family:'IBM Plex Mono',monospace;margin-top:2px}
+.s-actions{display:flex;gap:8px;justify-content:flex-end;padding-top:4px}
+.s-save{padding:9px 20px;background:var(--blue);border:none;border-radius:var(--rs);color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:'Manrope',sans-serif}
+.s-reset{padding:9px 14px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--rs);color:var(--text2);font-size:12px;font-weight:700;cursor:pointer;font-family:'Manrope',sans-serif}
+.s-cancel{padding:9px 14px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--rs);color:var(--text2);font-size:12px;font-weight:700;cursor:pointer;font-family:'Manrope',sans-serif}
 #notes-timestamp{font-size:10px;color:var(--text3);font-family:'IBM Plex Mono',monospace}
 
 /* ── LOGIN ── */
@@ -210,6 +240,59 @@ body{background:var(--bg);color:var(--text);font-family:'Manrope',sans-serif;fon
 </head>
 <body>
 
+<!-- ── SETTINGS MODAL ── -->
+<div id="settings-modal">
+  <div id="settings-box">
+    <h2>⚙️ Threshold Settings</h2>
+
+    <div class="s-section">
+      <div class="s-section-title">CPL — Cost Per Lead (₹) · Lower is better</div>
+      <div class="s-row">
+        <span class="s-label">🟢 Green</span>
+        <div class="s-input-wrap"><span class="s-input-lbl">Max ₹ for Green</span><input class="s-input" id="s-cpl-green" type="number" step="0.1"></div>
+        <div class="s-input-wrap"><span class="s-input-lbl">Max ₹ for Yellow</span><input class="s-input" id="s-cpl-yellow" type="number" step="0.1"></div>
+      </div>
+      <div class="s-hint">Green: CPL &lt; value · Yellow: CPL ≤ value · Red: above Yellow</div>
+    </div>
+
+    <div class="s-section">
+      <div class="s-section-title">D3 — Cost per 3-Day Attendee (₹) · Lower is better</div>
+      <div class="s-row">
+        <span class="s-label">🟢 Green</span>
+        <div class="s-input-wrap"><span class="s-input-lbl">Max ₹ for Green</span><input class="s-input" id="s-d3-green" type="number" step="0.1"></div>
+        <div class="s-input-wrap"><span class="s-input-lbl">Max ₹ for Yellow</span><input class="s-input" id="s-d3-yellow" type="number" step="0.1"></div>
+      </div>
+      <div class="s-hint">Green: D3 &lt; value · Yellow: D3 ≤ value · Red: above Yellow</div>
+    </div>
+
+    <div class="s-section">
+      <div class="s-section-title">D7 — Cost per 7-Day Attendee (₹) · Lower is better</div>
+      <div class="s-row">
+        <span class="s-label">🟢 Green</span>
+        <div class="s-input-wrap"><span class="s-input-lbl">Max ₹ for Green</span><input class="s-input" id="s-d7-green" type="number" step="0.1"></div>
+        <div class="s-input-wrap"><span class="s-input-lbl">Max ₹ for Yellow</span><input class="s-input" id="s-d7-yellow" type="number" step="0.1"></div>
+      </div>
+      <div class="s-hint">Green: D7 &lt; value · Yellow: D7 ≤ value · Red: above Yellow</div>
+    </div>
+
+    <div class="s-section">
+      <div class="s-section-title">ROAS — Return on Ad Spend (×) · Higher is better</div>
+      <div class="s-row">
+        <span class="s-label">🟢 Green</span>
+        <div class="s-input-wrap"><span class="s-input-lbl">Min × for Green</span><input class="s-input" id="s-roas-green" type="number" step="0.1"></div>
+        <div class="s-input-wrap"><span class="s-input-lbl">Min × for Yellow</span><input class="s-input" id="s-roas-yellow" type="number" step="0.1"></div>
+      </div>
+      <div class="s-hint">Green: ROAS ≥ value · Yellow: ROAS &gt; value · Red: below Yellow</div>
+    </div>
+
+    <div class="s-actions">
+      <button class="s-reset" onclick="resetThresholds()">↺ Reset to Default</button>
+      <button class="s-cancel" onclick="closeSettings()">Cancel</button>
+      <button class="s-save" onclick="saveSettings()">Save & Recompute</button>
+    </div>
+  </div>
+</div>
+
 <!-- ── NOTES MODAL ── -->
 <div id="notes-modal">
   <div id="notes-box">
@@ -251,6 +334,15 @@ body{background:var(--bg);color:var(--text);font-family:'Manrope',sans-serif;fon
     <div class="hdr-meta" id="dataInfo">Loading…</div>
     <button id="refreshBtn" onclick="loadFromGoogleSheets()" style="display:flex;align-items:center;gap:6px;padding:5px 12px;background:var(--bbg);border:1px solid var(--bborder);border-radius:var(--rs);color:var(--blue);font-size:11px;font-weight:700;cursor:pointer;font-family:'Manrope',sans-serif;transition:all .15s" onmouseover="this.style.background='rgba(91,156,246,.2)'" onmouseout="this.style.background='var(--bbg)'">↻ Refresh</button>
     <div id="uploadStatus" style="font-size:11px;font-family:'IBM Plex Mono',monospace;color:var(--text3)"></div>
+    <div id="profile-wrap">
+      <button id="profile-btn" onclick="toggleProfileMenu(event)">S</button>
+      <div id="profile-menu">
+        <div class="pm-user">siddhant</div>
+        <div class="pm-item" onclick="openSettings();closeProfileMenu()">⚙️ Settings</div>
+        <hr class="pm-divider">
+        <div class="pm-item" style="color:var(--red)" onclick="doLogout()">⏻ Logout</div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -1311,6 +1403,106 @@ function closePopup() {
 
 document.addEventListener('keydown', e => { if(e.key==='Escape') closePopup(); });
 
+// ── PROFILE ──
+function toggleProfileMenu(e) {
+  e.stopPropagation();
+  document.getElementById('profile-menu').classList.toggle('open');
+}
+function closeProfileMenu() {
+  document.getElementById('profile-menu').classList.remove('open');
+}
+document.addEventListener('click', () => closeProfileMenu());
+
+function doLogout() {
+  sessionStorage.removeItem('cd_auth');
+  location.reload();
+}
+
+// ── THRESHOLDS ──
+const DEFAULT_THR = {cplGreen:10, cplYellow:15, d3Green:33, d3Yellow:38, d7Green:66, d7Yellow:95, roasGreen:1.8, roasYellow:1.2};
+const THR_KEY = 'cd_thresholds_v1';
+
+function getThr() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(THR_KEY));
+    return saved ? {...DEFAULT_THR, ...saved} : {...DEFAULT_THR};
+  } catch { return {...DEFAULT_THR}; }
+}
+
+function openSettings() {
+  const t = getThr();
+  document.getElementById('s-cpl-green').value   = t.cplGreen;
+  document.getElementById('s-cpl-yellow').value  = t.cplYellow;
+  document.getElementById('s-d3-green').value    = t.d3Green;
+  document.getElementById('s-d3-yellow').value   = t.d3Yellow;
+  document.getElementById('s-d7-green').value    = t.d7Green;
+  document.getElementById('s-d7-yellow').value   = t.d7Yellow;
+  document.getElementById('s-roas-green').value  = t.roasGreen;
+  document.getElementById('s-roas-yellow').value = t.roasYellow;
+  document.getElementById('settings-modal').classList.add('open');
+}
+
+function closeSettings() {
+  document.getElementById('settings-modal').classList.remove('open');
+}
+
+function saveSettings() {
+  const t = {
+    cplGreen:   parseFloat(document.getElementById('s-cpl-green').value),
+    cplYellow:  parseFloat(document.getElementById('s-cpl-yellow').value),
+    d3Green:    parseFloat(document.getElementById('s-d3-green').value),
+    d3Yellow:   parseFloat(document.getElementById('s-d3-yellow').value),
+    d7Green:    parseFloat(document.getElementById('s-d7-green').value),
+    d7Yellow:   parseFloat(document.getElementById('s-d7-yellow').value),
+    roasGreen:  parseFloat(document.getElementById('s-roas-green').value),
+    roasYellow: parseFloat(document.getElementById('s-roas-yellow').value),
+  };
+  localStorage.setItem(THR_KEY, JSON.stringify(t));
+  closeSettings();
+  // Reprocess data with new thresholds
+  if (Object.keys(DAILY_DATA).length > 0) {
+    const reprocessed = recomputeTags();
+    C.length = 0;
+    reprocessed.forEach(c => C.push(c));
+    RAW.creatives = reprocessed;
+  }
+  initOverview();
+  renderAll(); renderCpl(); renderD3(); renderRo();
+}
+
+function resetThresholds() {
+  localStorage.removeItem(THR_KEY);
+  const d = DEFAULT_THR;
+  document.getElementById('s-cpl-green').value   = d.cplGreen;
+  document.getElementById('s-cpl-yellow').value  = d.cplYellow;
+  document.getElementById('s-d3-green').value    = d.d3Green;
+  document.getElementById('s-d3-yellow').value   = d.d3Yellow;
+  document.getElementById('s-d7-green').value    = d.d7Green;
+  document.getElementById('s-d7-yellow').value   = d.d7Yellow;
+  document.getElementById('s-roas-green').value  = d.roasGreen;
+  document.getElementById('s-roas-yellow').value = d.roasYellow;
+}
+
+function recomputeTags() {
+  const t = getThr();
+  return RAW.creatives.map(c => {
+    const nc = {...c};
+    if (nc.cpl_val != null)
+      nc.cpl_tag = nc.cpl_val < t.cplGreen ? 'Green' : nc.cpl_val <= t.cplYellow ? 'Yellow' : 'Red';
+    if (nc.cost_d3_val != null)
+      nc.cost_d3_tag = nc.cost_d3_val < t.d3Green ? 'Green' : nc.cost_d3_val <= t.d3Yellow ? 'Yellow' : 'Red';
+    if (nc.cost_d7_val != null)
+      nc.cost_d7_tag = nc.cost_d7_val < t.d7Green ? 'Green' : nc.cost_d7_val <= t.d7Yellow ? 'Yellow' : 'Red';
+    if (nc.roas_val != null && nc.roas_tag !== 'Not Eligible Yet')
+      nc.roas_tag = nc.roas_val >= t.roasGreen ? 'Green' : nc.roas_val > t.roasYellow ? 'Yellow' : 'Red';
+    return nc;
+  });
+}
+
+document.addEventListener('click', e => {
+  if (e.target.id === 'settings-modal') closeSettings();
+});
+
 // ── NOTES ──
 const NOTES_KEY = 'cd_notes_v1';
 
@@ -1694,7 +1886,7 @@ function processCSV(text) {
       if (d <= goLive20 && d < today) { cplSpend += v.spend; cplLeads += v.leads; }
     }
     const cpl_val = cplLeads > 0 ? Math.round(cplSpend/cplLeads*100)/100 : null;
-    const cpl_tag = cpl_val == null ? 'Red' : cpl_val < 10 ? 'Green' : cpl_val <= 15 ? 'Yellow' : 'Red';
+    const cpl_tag = cpl_val == null ? 'Red' : cpl_val < getThr().cplGreen ? 'Green' : cpl_val <= getThr().cplYellow ? 'Yellow' : 'Red';
 
     // D3
     const d3Win = age < 14 ? null : age <= 20 ? 7 : age <= 27 ? 14 : 21;
@@ -1709,7 +1901,7 @@ function processCSV(text) {
       if (a === 0) cost_d3_tag = 'Red';
       else {
         cost_d3_val = Math.round(s/a*100)/100;
-        cost_d3_tag = cost_d3_val < 33 ? 'Green' : cost_d3_val <= 38 ? 'Yellow' : 'Red';
+        cost_d3_tag = cost_d3_val < getThr().d3Green ? 'Green' : cost_d3_val <= getThr().d3Yellow ? 'Yellow' : 'Red';
       }
     }
 
@@ -1726,7 +1918,7 @@ function processCSV(text) {
       if (a === 0) cost_d7_tag = 'Red';
       else {
         cost_d7_val = Math.round(s/a*100)/100;
-        cost_d7_tag = cost_d7_val < 66 ? 'Green' : cost_d7_val <= 95 ? 'Yellow' : 'Red';
+        cost_d7_tag = cost_d7_val < getThr().d7Green ? 'Green' : cost_d7_val <= getThr().d7Yellow ? 'Yellow' : 'Red';
       }
     }
 
@@ -1743,7 +1935,7 @@ function processCSV(text) {
       if (rs === 0) roas_tag = 'Red';
       else {
         roas_val = Math.round(rr/rs*100)/100;
-        roas_tag = roas_val >= 1.8 ? 'Green' : roas_val > 1.2 ? 'Yellow' : 'Red';
+        roas_tag = roas_val >= getThr().roasGreen ? 'Green' : roas_val > getThr().roasYellow ? 'Yellow' : 'Red';
       }
     }
 
