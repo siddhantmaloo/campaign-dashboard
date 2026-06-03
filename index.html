@@ -1400,7 +1400,7 @@ function openPopup(key) {
   const tagColor = t => t==='Green'?'var(--green)':t==='Yellow'?'var(--yellow)':t==='Red'?'var(--red)':'var(--text3)';
 
   const metricCard = (label, val, tag, tooltip='') => `
-    <div class="pm-card" ${tooltip?`title="${tooltip}"`:''}  style="cursor:${tooltip?'help':'default'}">
+    <div class="pm-card" ${tooltip?`title="${tooltip}"`:''}  style="cursor:default">
       <div class="pm-label">${label}</div>
       <div class="pm-val" style="color:${tagColor(tag)}">${val}</div>
       <div class="pm-sub">${tag==='Not Eligible Yet'?'Not Eligible':tag}</div>
