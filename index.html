@@ -1082,8 +1082,8 @@ function renderScorecardCards() {
   // Update nav button states
   const lBtn = document.getElementById('scNavLeft');
   const rBtn = document.getElementById('scNavRight');
-  if (lBtn) { const dis = scCardOffset === 0; lBtn.style.opacity = dis ? '0.25' : '1'; lBtn.style.cursor = dis ? 'default' : 'pointer'; lBtn.disabled = dis; }
-  if (rBtn) { const dis = scCardOffset >= maxOffset; rBtn.style.opacity = dis ? '0.25' : '1'; rBtn.style.cursor = dis ? 'default' : 'pointer'; rBtn.disabled = dis; }
+  if (lBtn) { const dis = scCardOffset === 0; lBtn.style.opacity = dis ? '0.25' : '1'; lBtn.style.cursor = dis ? 'default' : 'pointer'; lBtn.disabled = dis; lBtn.style.display = allMonths.length <= 3 ? 'none' : 'flex'; }
+  if (rBtn) { const dis = scCardOffset >= maxOffset; rBtn.style.opacity = dis ? '0.25' : '1'; rBtn.style.cursor = dis ? 'default' : 'pointer'; rBtn.disabled = dis; rBtn.style.display = allMonths.length <= 3 ? 'none' : 'flex'; }
 }
 
 function scGlobalPick(theme, item) {
