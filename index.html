@@ -354,7 +354,7 @@ body{background:var(--bg);color:var(--text);font-family:'Manrope',sans-serif;fon
   <div class="tab" onclick="switchTab('cpl')">CPL View</div>
   <div class="tab" onclick="switchTab('d3d7')">D3 / D7</div>
   <div class="tab" onclick="switchTab('roas')">ROAS</div>
-  <div class="tab" onclick="switchTab('scaled')">⬆ Scaled (21d+)</div>
+  <div class="tab" onclick="switchTab('scaled')">⬆ Scaled (28d+)</div>
 </div>
 
 <div class="page">
@@ -668,7 +668,7 @@ body{background:var(--bg);color:var(--text);font-family:'Manrope',sans-serif;fon
       <th onclick="sortSc('key')">Creative</th>
       <th onclick="sortSc('theme')">Theme</th>
       <th onclick="sortSc('active_days')" class="srt">Active Days</th>
-      <th>Days Past 21</th>
+      <th>Days Past 28</th>
       <th onclick="sortSc('sc_cpl_val')">CPL ₹</th><th>CPL Tag</th>
       <th onclick="sortSc('sc_d3_val')">D3 ₹</th><th>D3 Tag</th>
       <th onclick="sortSc('sc_d7_val')">D7 ₹</th><th>D7 Tag</th>
@@ -1312,7 +1312,7 @@ function sortR(col){if(roS.sort===col)roS.dir*=-1;else{roS.sort=col;roS.dir=-1;}
 
 // ── SCALED TAB ──
 function getScaled(){
-  let r=C.filter(c=>c.active_days>21);
+  let r=C.filter(c=>c.active_days>28);
   if(scS.q) r=r.filter(c=>c.key.toLowerCase().includes(scS.q.toLowerCase()));
   if(scS.status==='active') r=r.filter(c=>!c.paused_from);
   if(scS.status==='paused') r=r.filter(c=>!!c.paused_from);
@@ -1330,7 +1330,7 @@ function renderScaled(){
     <td class="nm">${nameCell(c)}</td>
     <td>${themeH(c.theme,c.theme==='Date Hook')}</td>
     <td style="font-family:'IBM Plex Mono'">${c.active_days}d <span style="color:var(--text3);font-size:10px">(${c.age}d cal)</span></td>
-    <td style="font-family:'IBM Plex Mono';color:var(--blue)">${c.active_days-21}d</td>
+    <td style="font-family:'IBM Plex Mono';color:var(--blue)">${c.active_days-28}d</td>
     <td class="nr" style="color:var(--text);font-weight:600">${c.sc_cpl_val!=null?'₹'+c.sc_cpl_val:'—'}</td>
     <td>${tagH(c.sc_cpl_tag)}</td>
     <td class="nr">${c.sc_d3_val!=null?'₹'+c.sc_d3_val:'—'}</td>
@@ -1342,7 +1342,7 @@ function renderScaled(){
     <td class="nr">${spendH(c.total_spend)}</td>
     <td class="nr">${c.total_leads.toLocaleString('en-IN')}</td>
     <td style="text-align:center">${noteBtn(c.key)}</td>
-  </tr>`).join('')||`<tr><td colspan="16" class="empty">No creatives with age &gt; 21 days</td></tr>`;
+  </tr>`).join('')||`<tr><td colspan="16" class="empty">No creatives with age &gt; 28 days</td></tr>`;
   pag('scPag',s,pages,renderScaled);
 }
 function sortSc(col){if(scS.sort===col)scS.dir*=-1;else{scS.sort=col;scS.dir=-1;}scS.p=1;renderScaled();}
@@ -1393,14 +1393,14 @@ function openPopup(key) {
       <div class="pm-sub">${tag==='Not Eligible Yet'?'Not Eligible':tag}</div>
     </div>`;
 
-  const isScaled = c.active_days > 21;
+  const isScaled = c.active_days > 28;
 
   document.getElementById('popupBody').innerHTML = `
 
     ${isScaled ? `
     <div style="display:flex;flex-direction:column;gap:14px;margin-bottom:18px">
       <div>
-        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);font-family:'IBM Plex Mono',monospace;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--border)">🧪 Testing Window (21d)</div>
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);font-family:'IBM Plex Mono',monospace;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--border)">🧪 Testing Window (28d)</div>
         <div class="popup-metrics" style="margin-bottom:0">
           ${metricCard('CPL', c.cpl_val!=null?'₹'+c.cpl_val:'—', c.cpl_tag)}
           ${metricCard('Cost D3', c.cost_d3_val!=null?'₹'+c.cost_d3_val:c.cost_d3_tag==='Not Eligible Yet'?'N/A':'—', c.cost_d3_tag)}
@@ -1745,11 +1745,11 @@ function downloadCSV(tab) {
       ]
     },
     sc: {
-      headers: ['Status','Creative','Theme','Active Days','Calendar Age','Days Past 21','CPL ₹','CPL Tag','D3 ₹','D3 Tag','D7 ₹','D7 Tag','ROAS','ROAS Tag','Spend','Leads'],
+      headers: ['Status','Creative','Theme','Active Days','Calendar Age','Days Past 28','CPL ₹','CPL Tag','D3 ₹','D3 Tag','D7 ₹','D7 Tag','ROAS','ROAS Tag','Spend','Leads'],
       getData: () => getScaled(),
       row: c => [
         c.paused_from ? 'Paused' : 'Active',
-        c.key, c.theme, c.active_days, c.age, c.active_days-21,
+        c.key, c.theme, c.active_days, c.age, c.active_days-28,
         c.sc_cpl_val ?? '', c.sc_cpl_tag,
         c.sc_d3_val ?? '', c.sc_d3_tag,
         c.sc_d7_val ?? '', c.sc_d7_tag,
@@ -2138,7 +2138,7 @@ function processCSV(text) {
     let sc_d7_val=null,  sc_d7_tag='Not Eligible Yet';
     let sc_roas_val=null,sc_roas_tag='Not Eligible Yet';
 
-    if (active_days > 21) {
+    if (active_days > 28) {
       // CPL — all days
       let scS=0,scL=0,scD3=0,scD7=0,scRev=0;
       for (const [dk,v] of Object.entries(c.days)) {
