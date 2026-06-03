@@ -368,8 +368,8 @@ body{background:var(--bg);color:var(--text);font-family:'Manrope',sans-serif;fon
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
       <div style="display:flex;align-items:center;gap:8px">
         <div class="sec-label" style="margin-bottom:0">Monthly Scorecard</div>
-        <button id="scNavLeft"  onclick="shiftScorecard(-1)" style="background:none;border:1px solid var(--border);border-radius:4px;color:var(--text2);width:22px;height:22px;cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;padding:0">‹</button>
-        <button id="scNavRight" onclick="shiftScorecard(1)"  style="background:none;border:1px solid var(--border);border-radius:4px;color:var(--text2);width:22px;height:22px;cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;padding:0">›</button>
+        <button id="scNavLeft"  onclick="shiftScorecard(-1)" style="background:var(--bg3);border:1px solid var(--border2);border-radius:5px;color:var(--text);width:26px;height:26px;cursor:pointer;font-size:16px;line-height:1;display:flex;align-items:center;justify-content:center;padding:0;opacity:0.35">‹</button>
+        <button id="scNavRight" onclick="shiftScorecard(1)"  style="background:var(--bg3);border:1px solid var(--border2);border-radius:5px;color:var(--text);width:26px;height:26px;cursor:pointer;font-size:16px;line-height:1;display:flex;align-items:center;justify-content:center;padding:0">›</button>
       </div>
       <div class="theme-dd-wrap">
         <button class="theme-dd-btn" id="scGlobalBtn" onclick="toggleDD('scGlobalMenu','scGlobalBtn')">🏷 Theme <span id="scGlobalLbl">All</span> ▾</button>
@@ -1082,8 +1082,8 @@ function renderScorecardCards() {
   // Update nav button states
   const lBtn = document.getElementById('scNavLeft');
   const rBtn = document.getElementById('scNavRight');
-  if (lBtn) { lBtn.style.opacity = scCardOffset === 0 ? '0.3' : '1'; lBtn.style.pointerEvents = scCardOffset === 0 ? 'none' : ''; }
-  if (rBtn) { rBtn.style.opacity = scCardOffset >= maxOffset ? '0.3' : '1'; rBtn.style.pointerEvents = scCardOffset >= maxOffset ? 'none' : ''; }
+  if (lBtn) { const dis = scCardOffset === 0; lBtn.style.opacity = dis ? '0.25' : '1'; lBtn.style.cursor = dis ? 'default' : 'pointer'; lBtn.disabled = dis; }
+  if (rBtn) { const dis = scCardOffset >= maxOffset; rBtn.style.opacity = dis ? '0.25' : '1'; rBtn.style.cursor = dis ? 'default' : 'pointer'; rBtn.disabled = dis; }
 }
 
 function scGlobalPick(theme, item) {
