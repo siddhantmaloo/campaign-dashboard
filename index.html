@@ -305,6 +305,11 @@ body{background:var(--bg);color:var(--text);font-family:'Manrope',sans-serif;fon
     <span style="color:var(--border2);padding:0 4px">|</span>
     <button class="fi" id="btnActive" onclick="toggleStatus('active',this)">● Active</button>
     <button class="fi" id="btnPaused" onclick="toggleStatus('paused',this)">⏸ Paused</button>
+    <span style="color:var(--border2);padding:0 4px">|</span>
+    <div class="theme-dd-wrap">
+      <button class="theme-dd-btn" id="allMonthBtn" onclick="toggleDD('allMonthMenu','allMonthBtn')">🗓 <span id="allMonthLbl">All</span> ▾</button>
+      <div class="theme-dd-menu" id="allMonthMenu" style="min-width:140px"></div>
+    </div>
     <span class="cnt" id="all-cnt"></span>
   </div>
   <div class="tbl-wrap">
@@ -350,6 +355,11 @@ body{background:var(--bg);color:var(--text);font-family:'Manrope',sans-serif;fon
     <span style="color:var(--border2);padding:0 4px">|</span>
     <button class="fi" id="cplBtnActive" onclick="toggleTabStatus(cplS,'active','cplBtnActive','cplBtnPaused',renderCpl)">● Active</button>
     <button class="fi" id="cplBtnPaused" onclick="toggleTabStatus(cplS,'paused','cplBtnActive','cplBtnPaused',renderCpl)">⏸ Paused</button>
+    <span style="color:var(--border2);padding:0 4px">|</span>
+    <div class="theme-dd-wrap">
+      <button class="theme-dd-btn" id="cplMonthBtn" onclick="toggleDD('cplMonthMenu','cplMonthBtn')">🗓 <span id="cplMonthLbl">All</span> ▾</button>
+      <div class="theme-dd-menu" id="cplMonthMenu" style="min-width:140px"></div>
+    </div>
     <span class="cnt" id="cpl-cnt"></span>
   </div>
   <div class="tbl-wrap">
@@ -392,6 +402,11 @@ body{background:var(--bg);color:var(--text);font-family:'Manrope',sans-serif;fon
     <span style="color:var(--border2);padding:0 4px">|</span>
     <button class="fi" id="d3BtnActive" onclick="toggleTabStatus(d3S,'active','d3BtnActive','d3BtnPaused',renderD3)">● Active</button>
     <button class="fi" id="d3BtnPaused" onclick="toggleTabStatus(d3S,'paused','d3BtnActive','d3BtnPaused',renderD3)">⏸ Paused</button>
+    <span style="color:var(--border2);padding:0 4px">|</span>
+    <div class="theme-dd-wrap">
+      <button class="theme-dd-btn" id="d3MonthBtn" onclick="toggleDD('d3MonthMenu','d3MonthBtn')">🗓 <span id="d3MonthLbl">All</span> ▾</button>
+      <div class="theme-dd-menu" id="d3MonthMenu" style="min-width:140px"></div>
+    </div>
     <span class="cnt" id="d3-cnt"></span>
   </div>
   <div class="tbl-wrap">
@@ -431,6 +446,11 @@ body{background:var(--bg);color:var(--text);font-family:'Manrope',sans-serif;fon
     <span style="color:var(--border2);padding:0 4px">|</span>
     <button class="fi" id="roBtnActive" onclick="toggleTabStatus(roS,'active','roBtnActive','roBtnPaused',renderRo)">● Active</button>
     <button class="fi" id="roBtnPaused" onclick="toggleTabStatus(roS,'paused','roBtnActive','roBtnPaused',renderRo)">⏸ Paused</button>
+    <span style="color:var(--border2);padding:0 4px">|</span>
+    <div class="theme-dd-wrap">
+      <button class="theme-dd-btn" id="roMonthBtn" onclick="toggleDD('roMonthMenu','roMonthBtn')">🗓 <span id="roMonthLbl">All</span> ▾</button>
+      <div class="theme-dd-menu" id="roMonthMenu" style="min-width:140px"></div>
+    </div>
     <span class="cnt" id="ro-cnt"></span>
   </div>
   <div class="tbl-wrap">
@@ -665,10 +685,10 @@ function initOverview(){
 }
 
 // ── TABLE STATES ──
-const allS={q:'',actions:new Set(),themes:new Set(['Date Hook','Problem Statement','Generic','Social Proof','AI Creative']),status:'',sort:'health_score',dir:-1,p:1};
-const cplS={q:'',cpl_tag:'',_paused:'',status:'',themes:new Set(),sort:'age',dir:-1,p:1};
-const d3S={q:'',d3f:'',d7f:'',status:'',themes:new Set(),sort:'age',dir:-1,p:1};
-const roS={q:'',roas_tag:'',status:'',themes:new Set(),sort:'age',dir:-1,p:1};
+const allS={q:'',actions:new Set(),themes:new Set(['Date Hook','Problem Statement','Generic','Social Proof','AI Creative']),status:'',month:'',sort:'health_score',dir:-1,p:1};
+const cplS={q:'',cpl_tag:'',_paused:'',status:'',themes:new Set(),month:'',sort:'age',dir:-1,p:1};
+const d3S={q:'',d3f:'',d7f:'',status:'',themes:new Set(),month:'',sort:'age',dir:-1,p:1};
+const roS={q:'',roas_tag:'',status:'',themes:new Set(),month:'',sort:'age',dir:-1,p:1};
 
 function toggleF(state,val,key,btn,render){
   state[key]=state[key]===val?'':val; state.p=1;
@@ -749,6 +769,7 @@ function getAll(){
   if(allS.themes.size>0&&allS.themes.size<5) r=r.filter(c=>allS.themes.has(c.theme));
   if(allS.status==='active') r=r.filter(c=>!c.paused_from);
   if(allS.status==='paused') r=r.filter(c=>!!c.paused_from);
+  r=applyMonthFilter(r,allS);
   r.sort((a,b)=>{const av=a[allS.sort]??'',bv=b[allS.sort]??'';return typeof av==='string'?allS.dir*av.localeCompare(bv):allS.dir*((av||0)-(bv||0));});
   return r;
 }
@@ -774,6 +795,9 @@ function renderAll(){
   pag('allPag',s,pages,renderAll);
 }
 function sortA(col){if(allS.sort===col)allS.dir*=-1;else{allS.sort=col;allS.dir=-1;}allS.p=1;renderAll();}
+
+const STATE_MAP = () => ({allS, cplS, d3S, roS});
+const RENDER_MAP = () => ({renderAll, renderCpl, renderD3, renderRo});
 
 function showTT(e, label, idsHtml){
   const tt = document.getElementById('global-tt');
@@ -880,6 +904,65 @@ function updateThemeLbl(tab){
   else { lbl.textContent=state.themes.size+' selected'; btn.classList.add('has-sel'); }
 }
 
+function populateMonthBtns() {
+  const months = [...new Set(C.map(c => c.go_live.slice(0,7)))].sort().reverse();
+
+  const TABS = [
+    {menu:'allMonthMenu', btn:'allMonthBtn', lbl:'allMonthLbl', state:allS, render:'renderAll'},
+    {menu:'cplMonthMenu', btn:'cplMonthBtn', lbl:'cplMonthLbl', state:cplS, render:'renderCpl'},
+    {menu:'d3MonthMenu',  btn:'d3MonthBtn',  lbl:'d3MonthLbl',  state:d3S,  render:'renderD3'},
+    {menu:'roMonthMenu',  btn:'roMonthBtn',  lbl:'roMonthLbl',  state:roS,  render:'renderRo'},
+  ];
+
+  TABS.forEach(t => {
+    const menu = document.getElementById(t.menu);
+    if (!menu) return;
+    const cur = t.state.month || '';
+    menu.innerHTML = [
+      {val:'',    label:'All'},
+      {val:'7d',  label:'Last 7 days'},
+      {val:'14d', label:'Last 14 days'},
+      ...months.map(m => ({val:m, label:m}))
+    ].map(opt => `
+      <div class="theme-dd-item" onclick="pickMonth('${t.menu}','${t.btn}','${t.lbl}','${t.state===allS?'allS':t.state===cplS?'cplS':t.state===d3S?'d3S':'roS'}','${opt.val}','${t.render}',this)">
+        <span style="width:14px;display:inline-block;color:var(--blue)">${cur===opt.val?'✓':''}</span>${opt.label}
+      </div>`).join('');
+  });
+}
+
+
+function pickMonth(menuId, btnId, lblId, stateKey, val, renderKey, item) {
+  event.stopPropagation();
+  const state = STATE_MAP()[stateKey];
+  const render = RENDER_MAP()[renderKey];
+  state.month = val;
+  state.p = 1;
+  const lbl = document.getElementById(lblId);
+  const btn = document.getElementById(btnId);
+  if (val === '')    { lbl.textContent='All';     btn.classList.remove('has-sel'); }
+  else if (val==='7d')  { lbl.textContent='7 days';  btn.classList.add('has-sel'); }
+  else if (val==='14d') { lbl.textContent='14 days'; btn.classList.add('has-sel'); }
+  else               { lbl.textContent=val;       btn.classList.add('has-sel'); }
+  // Refresh checkmarks
+  document.getElementById(menuId).querySelectorAll('.theme-dd-item span:first-child').forEach(s=>s.textContent='');
+  item.querySelector('span:first-child').textContent='✓';
+  document.getElementById(menuId).classList.remove('open');
+  render();
+}
+
+function applyMonthFilter(r, state) {
+  if (!state.month) return r;
+  if (state.month === '7d') {
+    const cutoff = new Date(); cutoff.setDate(cutoff.getDate()-7);
+    return r.filter(c => new Date(c.go_live) >= cutoff);
+  }
+  if (state.month === '14d') {
+    const cutoff = new Date(); cutoff.setDate(cutoff.getDate()-14);
+    return r.filter(c => new Date(c.go_live) >= cutoff);
+  }
+  return r.filter(c => c.go_live.startsWith(state.month));
+}
+
 function toggleTabStatus(state, val, activeId, pausedId, render){
   state.status = state.status===val ? '' : val;
   state.p=1;
@@ -895,6 +978,7 @@ function getCpl(){
   if(cplS.status==='active') r=r.filter(c=>!c.paused_from);
   if(cplS.status==='paused') r=r.filter(c=>!!c.paused_from);
   if(cplS.themes.size>0) r=r.filter(c=>cplS.themes.has(c.theme));
+  r=applyMonthFilter(r,cplS);
   r.sort((a,b)=>{const av=a[cplS.sort]??'',bv=b[cplS.sort]??'';return typeof av==='string'?cplS.dir*av.localeCompare(bv):cplS.dir*((av||0)-(bv||0));});
   return r;
 }
@@ -927,6 +1011,7 @@ function getD3(){
   if(d3S.status==='active') r=r.filter(c=>!c.paused_from);
   if(d3S.status==='paused') r=r.filter(c=>!!c.paused_from);
   if(d3S.themes.size>0) r=r.filter(c=>d3S.themes.has(c.theme));
+  r=applyMonthFilter(r,d3S);
   r.sort((a,b)=>d3S.dir*((a[d3S.sort]||0)-(b[d3S.sort]||0)));
   return r;
 }
@@ -958,6 +1043,7 @@ function getRo(){
   if(roS.status==='active') r=r.filter(c=>!c.paused_from);
   if(roS.status==='paused') r=r.filter(c=>!!c.paused_from);
   if(roS.themes.size>0) r=r.filter(c=>roS.themes.has(c.theme));
+  r=applyMonthFilter(r,roS);
   r.sort((a,b)=>{const av=a[roS.sort]??'',bv=b[roS.sort]??'';return typeof av==='string'?roS.dir*av.localeCompare(bv):roS.dir*((av||0)-(bv||0));});
   return r;
 }
@@ -1150,6 +1236,7 @@ function handleCSVUpload(input) {
       initOverview();
       updateActionMenuOptions();
       updateAllThemeLbl();
+      populateMonthBtns();
       // Re-render active tab tables
       renderAll(); renderCpl(); renderD3(); renderRo();
       const dates = RAW.creatives.map(c => c.go_live).sort();
@@ -1549,6 +1636,7 @@ function updateScorecard(monthStr, tbodyId, themes) {
 initOverview();
 updateActionMenuOptions();
 updateAllThemeLbl();
+populateMonthBtns();
 </script>
 </body>
 </html>
