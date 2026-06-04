@@ -1163,7 +1163,7 @@ function renderScorecardCards() {
       </div>
       <table class="sc-table">
         <thead><tr><th>Metric</th><th>Total</th><th>🟢</th><th>🟡</th><th>🔴</th></tr></thead>
-        <tbody id="scTbodyDyn${i}">${renderScorecardTable(scorecardForMonth(month, scSelectedThemes.size===0||scSelectedThemes.size===5?'':scSelectedThemes), month)}</tbody>
+        <tbody id="scTbodyDyn${i}">${renderScorecardTable(scorecardForMonth(month, scSelectedThemes), month)}</tbody>
       </table>
     </div>`).join('');
 
@@ -2572,11 +2572,9 @@ function processCSV(text) {
 
 function scorecardForMonth(monthStr, themes) {
   let mc = C.filter(c => c.go_live.startsWith(monthStr));
-  // themes can be: '' (all), a string, or an array
-  if (themes && themes.length > 0 && themes.length < 5) {
-    const arr = Array.isArray(themes) ? themes : [themes];
-    mc = mc.filter(c => arr.includes(c.theme));
-  }
+  // themes can be: '' (all), a string, array, or Set. Empty or full-5 = no filter.
+  const arr = themes instanceof Set ? [...themes] : Array.isArray(themes) ? themes : themes ? [themes] : [];
+  if (arr.length > 0 && arr.length < 5) mc = mc.filter(c => arr.includes(c.theme));
   return [['CPL','cpl_tag'],['Cost D3','cost_d3_tag'],['Cost D7','cost_d7_tag'],['ROAS','roas_tag']].map(([metric,key]) => {
     const eligible = mc.filter(c => c[key] !== 'Not Eligible Yet');
     return {
