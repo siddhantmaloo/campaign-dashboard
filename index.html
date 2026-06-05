@@ -2851,18 +2851,16 @@ function cleanId(v){
 function toNum(v){ if(typeof v==='number') return isNaN(v)?0:v; const n=parseFloat(String(v||'').replace(/,/g,'')); return isNaN(n)?0:n; }
 function toDate(v){
   if(!v) return null;
-  const IST=330*60*1000; // +5:30
   if(v instanceof Date){
     if(isNaN(v)) return null;
-    // SheetJS stores Excel dates as UTC. Add IST offset to get correct calendar date.
-    // e.g. 2026-06-02T18:30:00Z + 5:30 = 2026-06-03T00:00 IST → date = June 3
-    const ist=new Date(v.getTime()+IST);
-    return new Date(Date.UTC(ist.getUTCFullYear(),ist.getUTCMonth(),ist.getUTCDate()));
+    // Excel dates are calendar-only (no timezone). Data is IST, display is IST.
+    // Take the date parts as-is — no offset adjustment needed.
+    return new Date(Date.UTC(v.getUTCFullYear(),v.getUTCMonth(),v.getUTCDate()));
   }
   if(typeof v==='number'){
+    // Excel serial → UTC midnight of that calendar date, no offset
     const d=new Date(Math.round((v-25569)*86400*1000));
-    const ist=new Date(d.getTime()+IST);
-    return new Date(Date.UTC(ist.getUTCFullYear(),ist.getUTCMonth(),ist.getUTCDate()));
+    return new Date(Date.UTC(d.getUTCFullYear(),d.getUTCMonth(),d.getUTCDate()));
   }
   const s=String(v).trim();
   if(!s) return null;
@@ -2875,7 +2873,7 @@ function toDate(v){
   if(mon) return new Date(Date.UTC(parseInt(mon[3]),months[mon[2].toLowerCase().slice(0,3)]??0,parseInt(mon[1])));
   const mon2=s.match(/([A-Za-z]{3})[a-z]*\s+(\d{1,2})[,.]?\s+(\d{4})/);
   if(mon2) return new Date(Date.UTC(parseInt(mon2[3]),months[mon2[1].toLowerCase().slice(0,3)]??0,parseInt(mon2[2])));
-  if(/^\d+$/.test(s)){const d=new Date(Math.round((parseInt(s)-25569)*86400*1000));const ist=new Date(d.getTime()+IST);return new Date(Date.UTC(ist.getUTCFullYear(),ist.getUTCMonth(),ist.getUTCDate()));}
+  if(/^\d+$/.test(s)){const d=new Date(Math.round((parseInt(s)-25569)*86400*1000));return new Date(Date.UTC(d.getUTCFullYear(),d.getUTCMonth(),d.getUTCDate()));}
   return null;
 }
 // Always use UTC-based date string to avoid browser timezone issues
