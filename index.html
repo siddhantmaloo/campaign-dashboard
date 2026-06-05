@@ -1873,12 +1873,12 @@ function renderTree(d){
     const totSpend  = weeks.reduce((s,w)=>s+(c.weekly[w.key]?.spend||0),0);
     const totLeads  = weeks.reduce((s,w)=>{const wd=c.weekly[w.key];return s+(wd?.spend>0?wd.leads||0:0);},0);
     const totClicks = weeks.reduce((s,w)=>{const wd=c.weekly[w.key];return s+(wd?.spend>0?wd.clicks||0:0);},0);
-    const totImpr   = weeks.reduce((s,w)=>{const wd=c.weekly[w.key];return s+(wd?.spend>0&&wd.cpm>0?wd.spend/wd.cpm*1000:0);},0);
+    const totImpr   = weeks.reduce((s,w)=>s+(c.weekly[w.key]?.impr||0),0);
     const totRev    = weeks.reduce((s,w)=>{const wd=c.weekly[w.key];return s+(wd?.spend>0?wd.rev||0:0);},0);
-    const totD3att  = weeks.reduce((s,w)=>{const wd=c.weekly[w.key];return s+(wd?.spend>0&&wd.leads&&wd.d3pct?Math.round(wd.leads*wd.d3pct/100):0);},0);
-    const totD7att  = weeks.reduce((s,w)=>{const wd=c.weekly[w.key];return s+(wd?.spend>0&&wd.leads&&wd.d7pct?Math.round(wd.leads*wd.d7pct/100):0);},0);
-    const totD1att  = weeks.reduce((s,w)=>{const wd=c.weekly[w.key];return s+(wd?.spend>0&&wd.leads&&wd.d1pct?Math.round(wd.leads*wd.d1pct/100):0);},0);
-    const totD10att = weeks.reduce((s,w)=>{const wd=c.weekly[w.key];return s+(wd?.spend>0&&wd.leads&&wd.d10pct?Math.round(wd.leads*wd.d10pct/100):0);},0);
+    const totD3att  = weeks.reduce((s,w)=>s+(c.weekly[w.key]?.d3||0),0);
+    const totD7att  = weeks.reduce((s,w)=>s+(c.weekly[w.key]?.d7||0),0);
+    const totD1att  = weeks.reduce((s,w)=>s+(c.weekly[w.key]?.d1||0),0);
+    const totD10att = weeks.reduce((s,w)=>s+(c.weekly[w.key]?.d10||0),0);
     const subs   = weeks.reduce((s,w)=>{const wd=c.weekly[w.key];return s+(wd?.spend>0?wd.subs||0:0);},0);
 
     const cpl    = totLeads>0?totSpend/totLeads:null;
@@ -1913,14 +1913,14 @@ function renderTree(d){
   function grandAgg(){
     const totSpend  = camps.reduce((s,c)=>s+weeks.reduce((ss,w)=>ss+(c.weekly[w.key]?.spend||0),0),0);
     const totLeads  = camps.reduce((s,c)=>s+weeks.reduce((ss,w)=>{const wd=c.weekly[w.key];return ss+(wd?.spend>0?wd.leads||0:0);},0),0);
-    const totClicks = camps.reduce((s,c)=>s+weeks.reduce((ss,w)=>{const wd=c.weekly[w.key];return ss+(wd?.spend>0?wd.clicks||0:0);},0),0);
-    const totImpr   = camps.reduce((s,c)=>s+weeks.reduce((ss,w)=>{const wd=c.weekly[w.key];return ss+(wd?.spend>0&&wd.cpm>0?wd.spend/wd.cpm*1000:0);},0),0);
-    const totRev    = camps.reduce((s,c)=>s+weeks.reduce((ss,w)=>{const wd=c.weekly[w.key];return ss+(wd?.spend>0?wd.rev||0:0);},0),0);
-    const totSubs   = camps.reduce((s,c)=>s+weeks.reduce((ss,w)=>{const wd=c.weekly[w.key];return ss+(wd?.spend>0?wd.subs||0:0);},0),0);
-    const totD3att  = camps.reduce((s,c)=>s+weeks.reduce((ss,w)=>{const wd=c.weekly[w.key];return ss+(wd?.spend>0&&wd.leads&&wd.d3pct?Math.round(wd.leads*wd.d3pct/100):0);},0),0);
-    const totD7att  = camps.reduce((s,c)=>s+weeks.reduce((ss,w)=>{const wd=c.weekly[w.key];return ss+(wd?.spend>0&&wd.leads&&wd.d7pct?Math.round(wd.leads*wd.d7pct/100):0);},0),0);
-    const totD1att  = camps.reduce((s,c)=>s+weeks.reduce((ss,w)=>{const wd=c.weekly[w.key];return ss+(wd?.spend>0&&wd.leads&&wd.d1pct?Math.round(wd.leads*wd.d1pct/100):0);},0),0);
-    const totD10att = camps.reduce((s,c)=>s+weeks.reduce((ss,w)=>{const wd=c.weekly[w.key];return ss+(wd?.spend>0&&wd.leads&&wd.d10pct?Math.round(wd.leads*wd.d10pct/100):0);},0),0);
+    const totClicks = camps.reduce((s,c)=>s+weeks.reduce((ss,w)=>ss+(c.weekly[w.key]?.clicks||0),0),0);
+    const totImpr   = camps.reduce((s,c)=>s+weeks.reduce((ss,w)=>ss+(c.weekly[w.key]?.impr||0),0),0);
+    const totRev    = camps.reduce((s,c)=>s+weeks.reduce((ss,w)=>ss+(c.weekly[w.key]?.rev||0),0),0);
+    const totSubs   = camps.reduce((s,c)=>s+weeks.reduce((ss,w)=>ss+(c.weekly[w.key]?.subs||0),0),0);
+    const totD3att  = camps.reduce((s,c)=>s+weeks.reduce((ss,w)=>ss+(c.weekly[w.key]?.d3||0),0),0);
+    const totD7att  = camps.reduce((s,c)=>s+weeks.reduce((ss,w)=>ss+(c.weekly[w.key]?.d7||0),0),0);
+    const totD1att  = camps.reduce((s,c)=>s+weeks.reduce((ss,w)=>ss+(c.weekly[w.key]?.d1||0),0),0);
+    const totD10att = camps.reduce((s,c)=>s+weeks.reduce((ss,w)=>ss+(c.weekly[w.key]?.d10||0),0),0);
     const cpl=totLeads>0?totSpend/totLeads:null;
     const roas=totSpend>0&&totRev>0?totRev/totSpend:null;
     const cpm=totImpr>0?totSpend/totImpr*1000:null;
@@ -2339,11 +2339,11 @@ function renderAdsets(d){
     const totClicks = weeks.reduce((s,w)=>{const wd=a.weekly?.[w.key];return s+(wd?.spend>0?wd.clicks||0:0);},0);
     const totRev    = weeks.reduce((s,w)=>{const wd=a.weekly?.[w.key];return s+(wd?.spend>0?wd.rev||0:0);},0);
     const totSubs   = weeks.reduce((s,w)=>{const wd=a.weekly?.[w.key];return s+(wd?.spend>0?wd.subs||0:0);},0);
-    const totD3att  = weeks.reduce((s,w)=>{const wd=a.weekly?.[w.key];return s+(wd?.spend>0&&wd.leads&&wd.d3pct?Math.round(wd.leads*wd.d3pct/100):0);},0);
-    const totD7att  = weeks.reduce((s,w)=>{const wd=a.weekly?.[w.key];return s+(wd?.spend>0&&wd.leads&&wd.d7pct?Math.round(wd.leads*wd.d7pct/100):0);},0);
-    const totD1att  = weeks.reduce((s,w)=>{const wd=a.weekly?.[w.key];return s+(wd?.spend>0&&wd.leads&&wd.d1pct?Math.round(wd.leads*wd.d1pct/100):0);},0);
-    const totD10att = weeks.reduce((s,w)=>{const wd=a.weekly?.[w.key];return s+(wd?.spend>0&&wd.leads&&wd.d10pct?Math.round(wd.leads*wd.d10pct/100):0);},0);
-    const totImpr   = weeks.reduce((s,w)=>{const wd=a.weekly?.[w.key];return s+(wd?.spend>0&&wd.cpm>0?wd.spend/wd.cpm*1000:0);},0);
+    const totD3att  = weeks.reduce((s,w)=>s+(a.weekly?.[w.key]?.d3||0),0);
+    const totD7att  = weeks.reduce((s,w)=>s+(a.weekly?.[w.key]?.d7||0),0);
+    const totD1att  = weeks.reduce((s,w)=>s+(a.weekly?.[w.key]?.d1||0),0);
+    const totD10att = weeks.reduce((s,w)=>s+(a.weekly?.[w.key]?.d10||0),0);
+    const totImpr   = weeks.reduce((s,w)=>s+(a.weekly?.[w.key]?.impr||0),0);
     const cpl=totLeads>0?totSpend/totLeads:null;
     const roas=totSpend>0&&totRev>0?totRev/totSpend:null;
     const cpm=totImpr>0?totSpend/totImpr*1000:null;
@@ -2549,11 +2549,11 @@ function renderCreatives(d){
     const totClicks = weeks.reduce((s,w)=>{const wd=cr.weekly?.[w.key];return s+(wd?.spend>0?wd.clicks||0:0);},0);
     const totRev    = weeks.reduce((s,w)=>{const wd=cr.weekly?.[w.key];return s+(wd?.spend>0?wd.rev||0:0);},0);
     const totSubs   = weeks.reduce((s,w)=>{const wd=cr.weekly?.[w.key];return s+(wd?.spend>0?wd.subs||0:0);},0);
-    const totD3att  = weeks.reduce((s,w)=>{const wd=cr.weekly?.[w.key];return s+(wd?.spend>0&&wd.leads&&wd.d3pct?Math.round(wd.leads*wd.d3pct/100):0);},0);
-    const totD7att  = weeks.reduce((s,w)=>{const wd=cr.weekly?.[w.key];return s+(wd?.spend>0&&wd.leads&&wd.d7pct?Math.round(wd.leads*wd.d7pct/100):0);},0);
-    const totD1att  = weeks.reduce((s,w)=>{const wd=cr.weekly?.[w.key];return s+(wd?.spend>0&&wd.leads&&wd.d1pct?Math.round(wd.leads*wd.d1pct/100):0);},0);
-    const totD10att = weeks.reduce((s,w)=>{const wd=cr.weekly?.[w.key];return s+(wd?.spend>0&&wd.leads&&wd.d10pct?Math.round(wd.leads*wd.d10pct/100):0);},0);
-    const totImpr   = weeks.reduce((s,w)=>{const wd=cr.weekly?.[w.key];return s+(wd?.spend>0&&wd.cpm>0?wd.spend/wd.cpm*1000:0);},0);
+    const totD3att  = weeks.reduce((s,w)=>s+(cr.weekly?.[w.key]?.d3||0),0);
+    const totD7att  = weeks.reduce((s,w)=>s+(cr.weekly?.[w.key]?.d7||0),0);
+    const totD1att  = weeks.reduce((s,w)=>s+(cr.weekly?.[w.key]?.d1||0),0);
+    const totD10att = weeks.reduce((s,w)=>s+(cr.weekly?.[w.key]?.d10||0),0);
+    const totImpr   = weeks.reduce((s,w)=>s+(cr.weekly?.[w.key]?.impr||0),0);
     const cpl=totLeads>0?totSpend/totLeads:null;
     const roas=totSpend>0&&totRev>0?totRev/totSpend:null;
     const cpm=totImpr>0?totSpend/totImpr*1000:null;
@@ -3195,17 +3195,15 @@ function parseXlsx(wb){
       const revDaily=(revByCamp[cid]?.daily)||{};
       const subsDaily=(subsByCamp[cid]?.daily)||{};
 
-      if(attByDate[cid]){
-        Object.entries(attByDate[cid]).forEach(([dateStr,dat])=>{
-          if(weekKey(new Date(dateStr+'T00:00:00Z'))!==isoWk) return;
-          // Only count dates that have attendance
-          const sd=spDaily[dateStr]||{};
-          spend+=sd.spend||0; clicks+=sd.clicks||0; impr+=sd.impr||0;
-          rev+=revDaily[dateStr]||0;
-          wkSubs+=subsDaily[dateStr]||0;
-          leads+=dat.leads||0; d1+=dat.d1||0; d3+=dat.d3||0; d7+=dat.d7||0; d10+=dat.d10||0;
-        });
-      }
+      // Iterate ALL spend dates, join attendance where available (fixes Overview vs Campaign discrepancy)
+      Object.entries(spDaily).forEach(([dateStr,sd])=>{
+        if(weekKey(new Date(dateStr+'T00:00:00Z'))!==isoWk) return;
+        spend+=sd.spend||0; clicks+=sd.clicks||0; impr+=sd.impr||0;
+        rev+=revDaily[dateStr]||0;
+        wkSubs+=subsDaily[dateStr]||0;
+        const dat=(attByDate[cid]&&attByDate[cid][dateStr])||{leads:0,d1:0,d3:0,d7:0,d10:0};
+        leads+=dat.leads||0; d1+=dat.d1||0; d3+=dat.d3||0; d7+=dat.d7||0; d10+=dat.d10||0;
+      });
 
       const cpl=leads>0?spend/leads:null;
       const roas=spend>0&&rev>0?rev/spend:null;
@@ -3219,7 +3217,8 @@ function parseXlsx(wb){
       }
 
       weekly[wkey]={spend,leads,cpl,roas,rev,subs:wkSubs,
-        clicks,
+        clicks,impr,
+        d1,d3,d7,d10,
         daily:wkDaily,
         dailySpend:spDaily,
         dailyRev:revDaily,
@@ -3278,17 +3277,18 @@ function parseXlsx(wb){
         const revDailyAs=revByAdset[ak]?.daily||{};
         const subsDailyAs=subsByAdset[ak]?.daily||{};
         const attDailyAs=attByAdset[ak]?.daily||{};
-        // Sum only dates with attendance in this ISO week
-        Object.entries(attDailyAs).forEach(([dateStr,dat])=>{
+        // Iterate ALL spend dates, join attendance where available
+        Object.entries(spDailyAs).forEach(([dateStr,sd])=>{
           if(weekKey(new Date(dateStr+'T00:00:00Z'))!==isoWk) return;
-          const sd=spDailyAs[dateStr]||{};
           asSpend+=sd.spend||0; asClicks+=sd.clicks||0; asImpr+=sd.impr||0;
           asRev+=revDailyAs[dateStr]||0; asSubs+=subsDailyAs[dateStr]||0;
+          const dat=attDailyAs[dateStr]||{leads:0,d1:0,d3:0,d7:0,d10:0};
           asLeads+=dat.leads||0; asD1+=dat.d1||0; asD3+=dat.d3||0; asD7+=dat.d7||0; asD10+=dat.d10||0;
         });
         const asCpl=asLeads>0?asSpend/asLeads:null;
         const asRoas=asSpend>0&&asRev>0?asRev/asSpend:null;
-        asWeekly[wkey]={spend:asSpend,leads:asLeads,rev:asRev,subs:asSubs,clicks:asClicks,
+        asWeekly[wkey]={spend:asSpend,leads:asLeads,rev:asRev,subs:asSubs,clicks:asClicks,impr:asImpr,
+          d1:asD1,d3:asD3,d7:asD7,d10:asD10,
           cpl:asCpl,roas:asRoas,
           d3cost:asD3>0?asSpend/asD3:null, d7cost:asD7>0?asSpend/asD7:null,
           d1pct:asLeads>0?Math.round(asD1/asLeads*100):0,
@@ -3378,7 +3378,8 @@ function parseXlsx(wb){
       }
       const crCpl=crLeads>0?crSpend/crLeads:null;
       const crRoas=crSpend>0&&crRev>0?crRev/crSpend:null;
-      crWeeklyData[wkey]={spend:crSpend,leads:crLeads,rev:crRev,subs:crSubs,clicks:crClicks,
+      crWeeklyData[wkey]={spend:crSpend,leads:crLeads,rev:crRev,subs:crSubs,clicks:crClicks,impr:crImpr,
+        d1:crD1,d3:crD3,d7:crD7,d10:crD10,
         cpl:crCpl,roas:crRoas,
         d3cost:crD3>0?crSpend/crD3:null, d7cost:crD7>0?crSpend/crD7:null,
         d1pct:crLeads>0?Math.round(crD1/crLeads*100):0,
@@ -3539,14 +3540,9 @@ function parseXlsx(wb){
       ['spend','leads','rev','subs','clicks'].forEach(k=>{
         platAgg.all[k]+=(wk[k]||0); platAgg[p][k]+=(wk[k]||0);
       });
-      const impr=wk.cpm>0?wk.spend/wk.cpm*1000:0;
-      platAgg.all.impr+=impr; platAgg[p].impr+=impr;
-      if(wk.leads){
-        const d3=Math.round(wk.leads*(wk.d3pct||0)/100), d7=Math.round(wk.leads*(wk.d7pct||0)/100);
-        const d1=Math.round(wk.leads*(wk.d1pct||0)/100), d10=Math.round(wk.leads*(wk.d10pct||0)/100);
-        platAgg.all.d3+=d3; platAgg.all.d7+=d7; platAgg.all.d1+=d1; platAgg.all.d10+=d10;
-        platAgg[p].d3+=d3; platAgg[p].d7+=d7; platAgg[p].d1+=d1; platAgg[p].d10+=d10;
-      }
+      platAgg.all.impr+=(wk.impr||0); platAgg[p].impr+=(wk.impr||0);
+      platAgg.all.d1+=(wk.d1||0); platAgg.all.d3+=(wk.d3||0); platAgg.all.d7+=(wk.d7||0); platAgg.all.d10+=(wk.d10||0);
+      platAgg[p].d1+=(wk.d1||0); platAgg[p].d3+=(wk.d3||0); platAgg[p].d7+=(wk.d7||0); platAgg[p].d10+=(wk.d10||0);
     });
 
     function mkWkObj(pa){
