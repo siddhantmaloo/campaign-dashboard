@@ -1525,27 +1525,28 @@ function renderWeeklyOv(d){
 function makeOvMetricRow(obj){
   const cpl=obj.leads>0?obj.spend/obj.leads:null;
   const roas=obj.spend>0&&obj.rev>0?obj.rev/obj.spend:null;
-  const impr=obj.impr||(obj.cpm>0?obj.spend/obj.cpm*1000:0);
-  const clicks=obj.clicks||(obj.cpc>0?obj.spend/obj.cpc:0);
-  const d3cost=obj.d3cost||(obj.leads>0&&obj.d3pct>0?obj.spend/(obj.leads*obj.d3pct/100):null);
-  const d7cost=obj.d7cost||(obj.leads>0&&obj.d7pct>0?obj.spend/(obj.leads*obj.d7pct/100):null);
+  const impr=obj.impr||0;
+  const clicks=obj.clicks||0;
+  // d3cost/d7cost: use stored value only — never back-derive from rounded percentages
+  const d3cost=obj.d3cost||null;
+  const d7cost=obj.d7cost||null;
   const health=obj.health!==undefined?obj.health:healthScore(tagCPL(cpl),'na','na',tagROAS(roas));
   const conf=obj.conf!==undefined?obj.conf:tagConf(obj.spend||0);
   return {
     health, conf,
-    spend:obj.spend,
+    spend:obj.spend||null,
     cpm:impr>0?obj.spend/impr*1000:null,
     cpc:clicks>0?obj.spend/clicks:null,
     ctr:impr>0?clicks/impr*100:null,
     c2db:clicks>0&&obj.leads>0?obj.leads/clicks*100:null,
-    leads:obj.leads,cpl,
-    subs:obj.subs||0,
+    leads:obj.leads||null,cpl,
+    subs:obj.subs||null,
     cps:obj.subs>0?obj.spend/obj.subs:null,
-    rev:obj.rev||0,roas,
+    rev:obj.rev||null,roas,
     l2s:obj.leads>0&&obj.subs>0?obj.subs/obj.leads*100:null,
-    d1pct:obj.d1pct||0,d3pct:obj.d3pct||0,d3cost,
-    d7pct:obj.d7pct||0,d7cost,
-    d10pct:obj.d10pct||0, paidroas:roas||null
+    d1pct:obj.d1pct||null,d3pct:obj.d3pct||null,d3cost,
+    d7pct:obj.d7pct||null,d7cost,
+    d10pct:obj.d10pct||null, paidroas:roas||null
   };
 }
 
@@ -1598,25 +1599,25 @@ function cellVal(row, col, mature){
         <span style="width:6px;height:6px;border-radius:50%;background:${color};flex-shrink:0"></span>${c}
       </span>`;
     }
-    case 'spend':    return fmt.inrK(v);
-    case 'cpm':      return '₹'+Math.round(v);
-    case 'cpc':      return '₹'+(Math.round(v*10)/10);
-    case 'ctr':      return fmt.pct(v);
-    case 'c2db':     return fmt.pct(v);
-    case 'leads':    return fmt.numK(v);
+    case 'spend':    return v ? fmt.inrK(v) : na;
+    case 'cpm':      return v ? '₹'+Math.round(v) : na;
+    case 'cpc':      return v ? '₹'+(Math.round(v*10)/10) : na;
+    case 'ctr':      return v ? fmt.pct(v) : na;
+    case 'c2db':     return v ? fmt.pct(v) : na;
+    case 'leads':    return v ? fmt.numK(v) : na;
     case 'cpl':      return v ? (mature ? mTag(tagCPL(v),v,fmt.inr) : `<span style="color:var(--text3)">${fmt.inr(v)}</span>`) : na;
-    case 'subs':     return fmt.numK(v);
+    case 'subs':     return v ? fmt.numK(v) : na;
     case 'cps':      return v ? fmt.inr(v) : na;
     case 'rev':      return v ? fmt.inrK(v) : na;
     case 'roas':     return v ? (mature ? mTag(tagROAS(v),v,fmt.roas) : `<span style="color:var(--text3)">${fmt.roas(v)}</span>`) : na;
     case 'projroas': return v ? `<span style="color:var(--text3)">${fmt.roas(v)}</span>` : na;
-    case 'l2s':      return `${Math.round(v*10)/10}%`;
-    case 'd1pct':    return `<span style="color:var(--text2)">${v}%</span>`;
-    case 'd3pct':    return `<span style="color:var(--text2)">${v}%</span>`;
+    case 'l2s':      return v ? `${Math.round(v*10)/10}%` : na;
+    case 'd1pct':    return v ? `<span style="color:var(--text2)">${v}%</span>` : na;
+    case 'd3pct':    return (v && mature) ? `<span style="color:var(--text2)">${v}%</span>` : na;
     case 'd3cost':   return v ? (mature ? mTag(tagD3(v),v,fmt.inr) : `<span style="color:var(--text3)">${fmt.inr(v)}</span>`) : na;
-    case 'd7pct':    return `<span style="color:var(--text2)">${v}%</span>`;
+    case 'd7pct':    return (v && mature) ? `<span style="color:var(--text2)">${v}%</span>` : na;
     case 'd7cost':   return v ? (mature ? mTag(tagD7(v),v,fmt.inr) : `<span style="color:var(--text3)">${fmt.inr(v)}</span>`) : na;
-    case 'd10pct':   return `<span style="color:var(--text2)">${v}%</span>`;
+    case 'd10pct':   return (v && mature) ? `<span style="color:var(--text2)">${v}%</span>` : na;
     case 'paidroas': return v ? (mature ? mTag(tagROAS(v),v,fmt.roas) : `<span style="color:var(--text3)">${fmt.roas(v)}</span>`) : na;
     default: return na;
   }
@@ -2357,6 +2358,7 @@ function renderAdsets(d){
     return {health,conf,spend:totSpend,cpm,cpc,ctr,c2db,leads:totLeads,cpl,
       subs:totSubs,cps:totSubs>0?totSpend/totSubs:null,
       rev:totRev,roas,l2s:totLeads>0&&totSubs>0?totSubs/totLeads*100:null,
+      d1att:totD1att,d3att:totD3att,d7att:totD7att,d10att:totD10att,
       d1pct:totLeads>0?Math.round(totD1att/totLeads*100):0,
       d3pct:totLeads>0?Math.round(totD3att/totLeads*100):0, d3cost,
       d7pct:totLeads>0?Math.round(totD7att/totLeads*100):0, d7cost,
@@ -2458,14 +2460,14 @@ function renderAdsets(d){
   const _aggs=adsets.map(a=>asAgg(a));
   const totSpend  = _aggs.reduce((s,ag)=>s+(ag.spend||0),0);
   const totLeads  = _aggs.reduce((s,ag)=>s+(ag.leads||0),0);
-  const totClicks = _aggs.reduce((s,ag)=>s+(ag.cpc>0?ag.spend/ag.cpc:0),0);
-  const totImpr   = _aggs.reduce((s,ag)=>s+(ag.cpm>0?ag.spend/ag.cpm*1000:0),0);
+  const totClicks = adsets.reduce((s,a)=>s+weeks.reduce((ss,w)=>ss+(a.weekly?.[w.key]?.clicks||0),0),0);
+  const totImpr   = adsets.reduce((s,a)=>s+weeks.reduce((ss,w)=>ss+(a.weekly?.[w.key]?.impr||0),0),0);
   const totRev    = _aggs.reduce((s,ag)=>s+(ag.rev||0),0);
   const totSubs   = _aggs.reduce((s,ag)=>s+(ag.subs||0),0);
-  const totD3att  = _aggs.reduce((s,ag)=>s+(ag.leads&&ag.d3pct?Math.round(ag.leads*ag.d3pct/100):0),0);
-  const totD7att  = _aggs.reduce((s,ag)=>s+(ag.leads&&ag.d7pct?Math.round(ag.leads*ag.d7pct/100):0),0);
-  const totD1att  = _aggs.reduce((s,ag)=>s+(ag.leads&&ag.d1pct?Math.round(ag.leads*ag.d1pct/100):0),0);
-  const totD10att = _aggs.reduce((s,ag)=>s+(ag.leads&&ag.d10pct?Math.round(ag.leads*ag.d10pct/100):0),0);
+  const totD3att  = _aggs.reduce((s,ag)=>s+(ag.d3att||0),0);
+  const totD7att  = _aggs.reduce((s,ag)=>s+(ag.d7att||0),0);
+  const totD1att  = _aggs.reduce((s,ag)=>s+(ag.d1att||0),0);
+  const totD10att = _aggs.reduce((s,ag)=>s+(ag.d10att||0),0);
   const totCpl=totLeads>0?totSpend/totLeads:null;
   const totRoas=totSpend>0&&totRev>0?totRev/totSpend:null;
   const totCpm=totImpr>0?totSpend/totImpr*1000:null;
