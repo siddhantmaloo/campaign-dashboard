@@ -2002,12 +2002,9 @@ function renderTree(d){
           const dailyRev=c._dailyRev||{};
           const dailySubs=c._dailySubs||{};
 
-          // Get dates in this week — union of attendance AND spend dates
-          const wkDates=[...new Set([
-            ...Object.keys(dailyAtt),
-            ...Object.keys(dailySpend)
-          ])].filter(dateStr=>{
-            if(dateStr>'2026-12-31') return false; // filter non-date keys like 'daily'
+          // Get dates in this week — spend dates only (attendance without spend = residual UTM, not paid acquisition)
+          const wkDates=[...new Set(Object.keys(dailySpend))].filter(dateStr=>{
+            if(dateStr>'2026-12-31') return false;
             const dt2=new Date(dateStr+'T00:00:00Z');
             return weekKey(dt2)===w.isoWk;
           }).sort();
@@ -2431,7 +2428,7 @@ function renderAdsets(d){
         if(wOpen){
           const dailyAtt=a._dailyAtt||{}, dailySpend=a._dailySpend||{};
           const dailyRev=a._dailyRev||{}, dailySubs=a._dailySubs||{};
-          const wkDates=[...new Set([...Object.keys(dailyAtt),...Object.keys(dailySpend)])].filter(ds=>{
+          const wkDates=[...new Set(Object.keys(dailySpend))].filter(ds=>{
             if(ds>'2099-12-31') return false;
             return weekKey(new Date(ds+'T00:00:00Z'))===w.isoWk;
           }).sort();
@@ -2649,7 +2646,7 @@ function renderCreatives(d){
         if(wOpen){
           const dailyAtt=cr._dailyAtt||{}, dailySpend=cr._dailySpend||{};
           const dailyRev=cr._dailyRev||{}, dailySubs=cr._dailySubs||{};
-          const wkDates=[...new Set([...Object.keys(dailyAtt),...Object.keys(dailySpend)])].filter(ds=>{
+          const wkDates=[...new Set(Object.keys(dailySpend))].filter(ds=>{
             if(ds>'2099-12-31') return false;
             return weekKey(new Date(ds+'T00:00:00Z'))===w.isoWk;
           }).sort();
