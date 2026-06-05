@@ -2853,9 +2853,10 @@ function toDate(v){
   if(!v) return null;
   if(v instanceof Date){
     if(isNaN(v)) return null;
-    // Excel dates are calendar-only (no timezone). Data is IST, display is IST.
-    // Take the date parts as-is — no offset adjustment needed.
-    return new Date(Date.UTC(v.getUTCFullYear(),v.getUTCMonth(),v.getUTCDate()));
+    // SheetJS creates dates as LOCAL midnight (not UTC).
+    // In IST browser: May 23 local = 2026-05-22T18:30Z → getUTCDate()=22 (wrong).
+    // Use LOCAL date methods to get the correct calendar date.
+    return new Date(Date.UTC(v.getFullYear(),v.getMonth(),v.getDate()));
   }
   if(typeof v==='number'){
     // Excel serial → UTC midnight of that calendar date, no offset
