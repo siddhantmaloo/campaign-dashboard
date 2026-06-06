@@ -2084,7 +2084,7 @@ function renderTree(d){
   const gt=grandAgg();
   let gc=`<td style="position:sticky;left:0;background:var(--bg3);z-index:1">
     <div class="tree-name tree-indent-1"><span style="width:14px;display:inline-block"></span>
-      <div class="tree-name-main" style="color:var(--text2)">TOTAL · ${camps.length} campaigns · ${weeks.length} weeks</div>
+      <div class="tree-name-main" style="color:var(--text2)">TOTAL · ${rows.filter(r=>r.includes('row-camp')).length} active · ${camps.length} total · ${weeks.length} wks</div>
     </div></td>`;
   COLS.forEach((col,ci)=>{ gc+=`<td class="${ci===0?'col-sep':''}">${cellVal(gt,col,weeks.length>0?isMature(weeks[weeks.length-1].key,col.k):true)}</td>`; });
   rows.push(`<tr class="row-total">${gc}</tr>`);
@@ -2133,23 +2133,62 @@ function renderBatch(d){
   if(TS.plat!=='all') camps=camps.filter(c=>c.platform===TS.plat);
   const batches=d.batches.filter(b=>BS.selected[b.id]!==false);
 
+  // Build metrics from batch attendance object + actual spend from registration weeks
+  function batchMetrics(bd, weeklyData){
+    const bLeads=bd.leads||0, d1=bd.d1||0, d3=bd.d3||0, d7=bd.d7||0, d10=bd.d10||0;
+    // Sum spend/impr/clicks from weeks when these leads registered
+    let spend=0, impr=0, clicks=0;
+    if(weeklyData && bd.wks){
+      bd.wks.forEach(wk=>{ const wd=weeklyData[wk]; if(wd){spend+=wd.spend||0;impr+=wd.impr||0;clicks+=wd.clicks||0;} });
+    }
+    const cpl=bLeads>0&&spend>0?spend/bLeads:null;
+    const d1pct=bLeads>0?Math.round(d1/bLeads*100):0;
+    const d3pct=bLeads>0?Math.round(d3/bLeads*100):0;
+    const d7pct=bLeads>0?Math.round(d7/bLeads*100):0;
+    const d10pct=bLeads>0?Math.round(d10/bLeads*100):0;
+    const d3cost=d3>0&&spend>0?spend/d3:null;
+    const d7cost=d7>0&&spend>0?spend/d7:null;
+    const cpm=impr>0?spend/impr*1000:null;
+    const cpc=clicks>0?spend/clicks:null;
+    const ctr=impr>0?clicks/impr*100:null;
+    const c2db=clicks>0&&bLeads>0?bLeads/clicks*100:null;
+    const health=healthScore(tagCPL(cpl),d3cost?tagD3(d3cost):'na',d7cost?tagD7(d7cost):'na','na');
+    const conf=tagConf(spend);
+    return {health,conf,spend:spend||null,cpm,cpc,ctr,c2db,leads:bLeads||null,cpl,
+      subs:null,cps:null,rev:null,roas:null,l2s:null,
+      d1pct:d1pct||null,d3pct:d3pct||null,d3cost,
+      d7pct:d7pct||null,d7cost,d10pct:d10pct||null,paidroas:null};
+  }
   function batchCampData(b,c){
-    const wkey=b.id==='b1'?'w23':b.id==='b2'?'w22':b.id==='b3'?'w21':'w20';
-    const wd=c.weekly[wkey]||{spend:0,leads:0,roas:null};
-    const d3pct=b.data[c.id]||0, d7pct=b.data.d7?.[c.id]||0;
-    const leads=wd.leads||0, spend=wd.spend||0, roas=wd.roas;
-    const cpl=leads>0?spend/leads:null;
-    return {spend,cpm:18,cpc:cpl?cpl*0.15:2.2,ctr:0.83,c2db:18.4,leads,cpl,subs:Math.round(leads*0.007),cps:leads>0?spend/(leads*0.007):null,rev:Math.round(spend*(roas||1)),roas,projroas:roas?roas*1.1:null,l2s:0.7,d1pct:64,d3pct,d3cost:leads>0&&d3pct>0?spend/Math.round(leads*(d3pct/100)):null,d7pct,d7cost:leads>0&&d7pct>0?spend/Math.round(leads*(d7pct/100)):null,d10pct:Math.round(d7pct*0.6),paidroas:roas||null};
+    const bd=b.data[c.id]||{leads:0,d1:0,d3:0,d7:0,d10:0,wks:new Set()};
+    return batchMetrics(bd, c.weekly);
   }
   function batchAgg(b){
-    const rows=camps.map(c=>batchCampData(b,c));
-    const totSpend=rows.reduce((s,r)=>s+r.spend,0), totLeads=rows.reduce((s,r)=>s+r.leads,0);
-    const roasW=rows.reduce((s,r)=>s+(r.roas?r.roas*r.spend:0),0), roasS=rows.reduce((s,r)=>s+(r.roas?r.spend:0),0);
-    const roas=roasS>0?roasW/roasS:null, cpl=totLeads>0?totSpend/totLeads:null;
-    const d3pct=rows.reduce((s,r)=>s+r.d3pct,0)/rows.length, d7pct=rows.reduce((s,r)=>s+r.d7pct,0)/rows.length;
-    const _cT3=tagCPL(totLeads>0?totSpend/totLeads:null),_d3T3=totLeads>0&&d3pct>0?tagD3(totSpend/Math.round(totLeads*(d3pct/100))):'na',_d7T3=totLeads>0&&d7pct>0?tagD7(totSpend/Math.round(totLeads*(d7pct/100))):'na',_rT3=tagROAS(roas);
-    const _h3=healthScore(_cT3,_d3T3,_d7T3,_rT3),_cf3=tagConf(totSpend);
-    return {health:_h3,conf:_cf3,spend:totSpend,leads:totLeads,cpl,roas,cpm:18,cpc:cpl?cpl*0.15:2.2,ctr:0.83,c2db:18.4,subs:Math.round(totLeads*0.007),cps:totLeads>0?totSpend/(totLeads*0.007):null,rev:Math.round(totSpend*(roas||1)),projroas:roas?roas*1.1:null,l2s:0.7,d1pct:64,d3pct:Math.round(d3pct),d3cost:totLeads>0&&d3pct>0?totSpend/Math.round(totLeads*(d3pct/100)):null,d7pct:Math.round(d7pct),d7cost:totLeads>0&&d7pct>0?totSpend/Math.round(totLeads*(d7pct/100)):null,d10pct:Math.round(d7pct*0.6),paidroas:roas||null};
+    // Aggregate over all campaigns (active) + other + organic
+    let totSpend=0,totLeads=0,totImpr=0,totClicks=0,totD1=0,totD3=0,totD7=0,totD10=0;
+    Object.entries(b.data).forEach(([key,bd])=>{
+      const weeklyData = key==='__organic__'||!d.camps.find(c=>c.id===key) ? null : d.camps.find(c=>c.id===key)?.weekly;
+      let sp=0,im=0,cl=0;
+      if(weeklyData&&bd.wks) bd.wks.forEach(wk=>{const wd=weeklyData[wk];if(wd){sp+=wd.spend||0;im+=wd.impr||0;cl+=wd.clicks||0;}});
+      totSpend+=sp; totImpr+=im; totClicks+=cl;
+      totLeads+=bd.leads||0; totD1+=bd.d1||0; totD3+=bd.d3||0; totD7+=bd.d7||0; totD10+=bd.d10||0;
+    });
+    const cpl=totLeads>0&&totSpend>0?totSpend/totLeads:null;
+    const d3pct=totLeads>0?Math.round(totD3/totLeads*100):0;
+    const d7pct=totLeads>0?Math.round(totD7/totLeads*100):0;
+    const d3cost=totD3>0&&totSpend>0?totSpend/totD3:null;
+    const d7cost=totD7>0&&totSpend>0?totSpend/totD7:null;
+    const cpm=totImpr>0?totSpend/totImpr*1000:null;
+    const cpc=totClicks>0?totSpend/totClicks:null;
+    const ctr=totImpr>0?totClicks/totImpr*100:null;
+    const c2db=totClicks>0&&totLeads>0?totLeads/totClicks*100:null;
+    const health=healthScore(tagCPL(cpl),d3cost?tagD3(d3cost):'na',d7cost?tagD7(d7cost):'na','na');
+    const conf=tagConf(totSpend);
+    return {health,conf,spend:totSpend||null,cpm,cpc,ctr,c2db,leads:totLeads||null,cpl,
+      subs:null,cps:null,rev:null,roas:null,l2s:null,
+      d1pct:totLeads>0?Math.round(totD1/totLeads*100)||null:null,
+      d3pct:d3pct||null,d3cost,d7pct:d7pct||null,d7cost,
+      d10pct:totLeads>0?Math.round(totD10/totLeads*100)||null:null,paidroas:null};
   }
   function bMature(bid,col){
     const late=['roas','paidroas','d10pct'], mid=['d7pct'];
@@ -2181,7 +2220,11 @@ function renderBatch(d){
       rows.push(`<tr class="row-camp${isOpen?' open':''}" onclick="toggleBatchRow('${b.id}')">${bc}</tr>`);
 
       if(isOpen){
+        // Active campaigns (have spend data)
+        const activeCampIds=new Set(camps.map(c=>c.id));
         camps.forEach(c=>{
+          const bd=b.data[c.id];
+          if(!bd||bd.leads===0) return; // skip campaigns with no leads in this batch
           const cd=batchCampData(b,c);
           let cc=`<td style="position:sticky;left:0;background:var(--bg);z-index:1">
             <div class="tree-name tree-indent-2">
@@ -2195,6 +2238,43 @@ function renderBatch(d){
           COLS.forEach((col,ci)=>{ cc+=`<td class="${ci===0?'col-sep':''}" style="background:var(--bg3)">${cellVal(cd,col,bMature(b.id,col.k))}</td>`; });
           rows.push(`<tr class="row-week">${cc}</tr>`);
         });
+
+        // "Other" row — leads from campaigns with no spend data (old/paused campaigns)
+        const otherBd={leads:0,d1:0,d3:0,d7:0,d10:0,wks:new Set()};
+        Object.entries(b.data).forEach(([key,bd])=>{
+          if(key==='__organic__'||activeCampIds.has(key)) return;
+          otherBd.leads+=bd.leads||0; otherBd.d1+=bd.d1||0; otherBd.d3+=bd.d3||0;
+          otherBd.d7+=bd.d7||0; otherBd.d10+=bd.d10||0;
+        });
+        if(otherBd.leads>0){
+          const od=batchMetrics(otherBd,null);
+          let oc=`<td style="position:sticky;left:0;background:var(--bg);z-index:1">
+            <div class="tree-name tree-indent-2">
+              <span style="width:14px;display:inline-block;flex-shrink:0"></span>
+              <div>
+                <div class="tree-name-main" style="font-size:10px;color:var(--text3)">Other (no spend data)</div>
+                <div class="tree-name-sub" style="color:var(--text3);font-size:9px">Leads from inactive/paused campaigns</div>
+              </div>
+            </div></td>`;
+          COLS.forEach((col,ci)=>{ oc+=`<td class="${ci===0?'col-sep':''}" style="background:var(--bg3)">${cellVal(od,col,false)}</td>`; });
+          rows.push(`<tr class="row-week">${oc}</tr>`);
+        }
+
+        // "Organic" row — leads with no utm_campaign
+        const organicBd=b.data['__organic__'];
+        if(organicBd&&organicBd.leads>0){
+          const orgd=batchMetrics(organicBd,null);
+          let ogc=`<td style="position:sticky;left:0;background:var(--bg);z-index:1">
+            <div class="tree-name tree-indent-2">
+              <span style="width:14px;display:inline-block;flex-shrink:0"></span>
+              <div>
+                <div class="tree-name-main" style="font-size:10px;color:var(--text3)">Organic</div>
+                <div class="tree-name-sub" style="color:var(--text3);font-size:9px">No UTM / direct registrations</div>
+              </div>
+            </div></td>`;
+          COLS.forEach((col,ci)=>{ ogc+=`<td class="${ci===0?'col-sep':''}" style="background:var(--bg3)">${cellVal(orgd,col,false)}</td>`; });
+          rows.push(`<tr class="row-week">${ogc}</tr>`);
+        }
       }
     });
   }
@@ -3008,9 +3088,10 @@ function parseXlsx(wb){
     if(bid){
       const bk=cid||'__organic__';
       if(!attByBatch[bid]) attByBatch[bid]={};
-      if(!attByBatch[bid][bk]) attByBatch[bid][bk]={leads:0,d1:0,d3:0,d7:0,d10:0};
+      if(!attByBatch[bid][bk]) attByBatch[bid][bk]={leads:0,d1:0,d3:0,d7:0,d10:0,wks:new Set()};
       attByBatch[bid][bk].leads+=leads; attByBatch[bid][bk].d1+=d1;
       attByBatch[bid][bk].d3+=d3; attByBatch[bid][bk].d7+=d7; attByBatch[bid][bk].d10+=d10;
+      attByBatch[bid][bk].wks.add(wk); // track registration weeks for spend lookup
     }
 
     // Campaign/adset/creative — only if spend exists
