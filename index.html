@@ -3774,26 +3774,6 @@ function parseXlsx(wb){
 }
 
 // ═══════════════════════════════════════
-// CATEGORY FILTER
-// ═══════════════════════════════════════
-const CAT={active:'all'};
-
-function detectCat(name){
-  const n=(name||'').toLowerCase();
-  if(n.includes('womenhealth')) return 'WomenHealthYoga';
-  if(n.includes('faceyoga')||n.includes('fymc')) return 'FaceYoga';
-  if(n.includes('directselling')||n.includes('autopay')) return 'DirectSelling';
-  return '14DayYoga';
-}
-function setCat(cat,btn){
-  CAT.active=cat;
-  document.querySelectorAll('.cat-chip').forEach(b=>b.classList.remove('active'));
-  btn.classList.add('active');
-  if(S.data) renderAll(S.data);
-}
-function catMatch(name){ return CAT.active==='all'||detectCat(name)===CAT.active; }
-
-// ═══════════════════════════════════════
 // SAMPLE DATA LOADER
 // ═══════════════════════════════════════
 function loadSample(){
