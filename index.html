@@ -2467,6 +2467,7 @@ function renderAdsets(d){
   adsets.forEach(a=>{
     const isOpen=!!AS.expanded[a.id];
     const agg=asAgg(a);
+    if(!agg.spend||agg.spend===0) return; // hide adsets with no spend in selected weeks
     let ac=`<td style="position:sticky;left:0;background:${isOpen?'var(--bg3)':'var(--bg2)'};z-index:1">
       <div class="tree-name tree-indent-1">
         <span class="tree-toggle${isOpen?' open':''}">›</span>
