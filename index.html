@@ -68,6 +68,9 @@ input[type=file]{display:none;}
 .tb-btn{padding:3px 10px;border-radius:3px;border:1px solid var(--border);background:transparent;color:var(--text3);font-family:var(--font-mono);font-size:10px;cursor:pointer;transition:all .12s;}
 .tb-btn:hover{color:var(--text2);border-color:var(--border2);}
 .tb-btn.active{background:var(--bg4);color:var(--text);border-color:var(--border2);}
+.tb-btn.act-all{background:var(--bg4);color:var(--text);border-color:var(--border2);}
+.tb-btn.act-meta{background:var(--meta-dim);color:var(--meta);border-color:var(--meta);}
+.tb-btn.act-google{background:var(--google-dim);color:var(--google);border-color:var(--google);}
 .tb-sep{width:1px;height:18px;background:var(--border);}
 
 /* ── MAIN ── */
@@ -330,7 +333,7 @@ td:first-child{text-align:left;}
 .wk-dd-btn:hover{background:var(--bg4);}
 .wk-dd-arrow{color:var(--text3);font-size:9px;transition:transform .15s;}
 .wk-dd-btn.open .wk-dd-arrow{transform:rotate(180deg);}
-.wk-dd-menu{position:absolute;top:calc(100% + 4px);left:0;background:var(--bg3);border:1px solid var(--border2);border-radius:5px;z-index:50;min-width:240px;box-shadow:0 8px 24px rgba(0,0,0,.4);display:none;max-height:320px;overflow-y:auto;overscroll-behavior:contain;}
+.wk-dd-menu{position:absolute;top:calc(100% + 4px);left:0;background:var(--bg3);border:1px solid var(--border2);border-radius:5px;z-index:500;min-width:240px;box-shadow:0 8px 24px rgba(0,0,0,.4);display:none;max-height:320px;overflow-y:auto;overscroll-behavior:contain;}
 .wk-dd-menu.open{display:block;}
 .wk-dd-actions{display:flex;gap:12px;padding:7px 12px 5px;border-bottom:1px solid var(--border);}
 .wk-dd-link{font-family:var(--font-mono);font-size:9px;color:var(--accent);cursor:pointer;}
@@ -1869,7 +1872,6 @@ function renderTree(d){
   const weeks=d.weeks.filter(w=>TS.weeks&&TS.weeks[w.key]!==false);
   let camps=[...d.camps];
   if(TS.plat!=='all') camps=camps.filter(c=>c.platform===TS.plat);
-
   function campAgg(c){
     const totSpend  = weeks.reduce((s,w)=>s+(c.weekly[w.key]?.spend||0),0);
     const totLeads  = weeks.reduce((s,w)=>{const wd=c.weekly[w.key];return s+(wd?.spend>0?wd.leads||0:0);},0);
@@ -1944,6 +1946,9 @@ function renderTree(d){
 
   let thCells=`<th style="min-width:240px;text-align:left;padding:7px 10px;background:var(--bg3);border-bottom:1px solid var(--border);position:sticky;left:0;z-index:3;font-family:var(--font-mono);font-size:9px;letter-spacing:.08em;color:var(--text3);text-transform:uppercase">Campaign</th>`;
   COLS.forEach((col,ci)=>{ thCells+=`<th class="${ci===0?'col-sep':''}">${col.label}</th>`; });
+
+  // Sort campaigns by spend in selected weeks (descending)
+  camps.sort((a,b)=>(weeks.reduce((s,w)=>s+(b.weekly[w.key]?.spend||0),0))-(weeks.reduce((s,w)=>s+(a.weekly[w.key]?.spend||0),0)));
 
   const rows=[];
   camps.forEach(c=>{
@@ -2620,7 +2625,7 @@ function renderCreatives(d){
   }
   crs=crs.filter(cr=>cr.spend>0);
   if(CR.sort==='health') crs.sort((a,b)=>(crAgg(b).health||0)-(crAgg(a).health||0));
-  else if(CR.sort==='spend') crs.sort((a,b)=>(crAgg(b).spend||0)-(crAgg(a).spend||0));
+  else crs.sort((a,b)=>(crAgg(b).spend||0)-(crAgg(a).spend||0)); // default: spend
   else if(CR.sort==='cpl') crs.sort((a,b)=>{const ca=crAgg(a).cpl,cb=crAgg(b).cpl;if(!ca)return 1;if(!cb)return -1;return ca-cb;});
 
   function crAgg(cr){
@@ -2681,6 +2686,7 @@ function renderCreatives(d){
   crs.forEach(cr=>{
     const isOpen=!!CR.expanded[cr.id];
     const agg=crAgg(cr);
+    if(!agg.spend||agg.spend===0) return; // hide creatives with no spend in selected weeks
     let cc=`<td style="position:sticky;left:0;background:${isOpen?'var(--bg3)':'var(--bg2)'};z-index:1">
       <div class="tree-name tree-indent-1">
         <span class="tree-toggle${isOpen?' open':''}">›</span>
