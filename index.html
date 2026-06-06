@@ -598,8 +598,8 @@ td:first-child{text-align:left;}
 <!-- CATEGORY FILTER -->
 <div style="background:var(--bg2);border-bottom:1px solid var(--border);padding:6px 24px;display:flex;align-items:center;gap:8px;">
   <span style="font-family:var(--font-mono);font-size:9px;color:var(--text3);letter-spacing:.1em;text-transform:uppercase">Model</span>
-  <button class="cat-chip active" onclick="setCat('all',this)">All</button>
-  <button class="cat-chip" onclick="setCat('14DayYoga',this)">14 Day Yoga</button>
+  <button class="cat-chip" onclick="setCat('all',this)">All</button>
+  <button class="cat-chip active" onclick="setCat('14DayYoga',this)">14 Day Yoga</button>
   <button class="cat-chip" onclick="setCat('DirectSelling',this)">Direct Selling</button>
   <button class="cat-chip" onclick="setCat('FaceYoga',this)">Face Yoga</button>
   <button class="cat-chip" onclick="setCat('WomenHealthYoga',this)">Women Health Yoga</button>
@@ -1101,7 +1101,7 @@ const S={
 // ═══════════════════════════════════════
 // CATEGORY FILTER
 // ═══════════════════════════════════════
-const CAT={active:'all'};
+const CAT={active:'14DayYoga'};
 
 function detectCat(name){
   const n=(name||'').toLowerCase();
@@ -3408,7 +3408,7 @@ function parseXlsx(wb){
   const weeks=sortedWks.map((wk,i)=>makeWkDef(wk,i));
   // Keep all weeks — pills will show all, default select last 10
   const recentWeeks=weeks;
-  const defaultSelectedWks=new Set(weeks.slice(-10).map(w=>w.key));
+  const defaultSelectedWks=new Set(weeks.slice(-6).map(w=>w.key));
   const recentWkKeys=new Set(recentWeeks.map(w=>w.isoWk));
 
   // ── 6. Build campaigns ──
@@ -3851,10 +3851,10 @@ function parseXlsx(wb){
 function loadSample(){
   S.data=genData();
   // Default select only last 10 weeks
-  const _last10=new Set(S.data.weeks.slice(-10).map(w=>w.key));
-  TS.weeks={}; S.data.weeks.forEach(w=>{ TS.weeks[w.key]=_last10.has(w.key); });
-  AS.weeks={}; S.data.weeks.forEach(w=>{ AS.weeks[w.key]=_last10.has(w.key); });
-  CR.weeks={}; S.data.weeks.forEach(w=>{ CR.weeks[w.key]=_last10.has(w.key); });
+  const _last6s=new Set(S.data.weeks.slice(-6).map(w=>w.key));
+  TS.weeks={}; S.data.weeks.forEach(w=>{ TS.weeks[w.key]=_last6s.has(w.key); });
+  AS.weeks={}; S.data.weeks.forEach(w=>{ AS.weeks[w.key]=_last6s.has(w.key); });
+  CR.weeks={}; S.data.weeks.forEach(w=>{ CR.weeks[w.key]=_last6s.has(w.key); });
   S.data.batches.forEach(b=>{ BS.selected[b.id]=true; });
   document.getElementById('xlsxDot')?.classList.add('active');
   document.getElementById('cohortBadge').textContent='Sample Data';
@@ -3898,14 +3898,14 @@ document.addEventListener('DOMContentLoaded', async ()=>{
     const parsed = parseXlsx(wb);
     if(parsed){
       S.data = parsed;
-      const _last10b=new Set(S.data.weeks.slice(-10).map(w=>w.key));
-      TS.weeks={}; S.data.weeks.forEach(w=>{ TS.weeks[w.key]=_last10b.has(w.key); });
-      AS.weeks={}; S.data.weeks.forEach(w=>{ AS.weeks[w.key]=_last10b.has(w.key); });
-      CR.weeks={}; S.data.weeks.forEach(w=>{ CR.weeks[w.key]=_last10b.has(w.key); });
+      const _last6b=new Set(S.data.weeks.slice(-6).map(w=>w.key));
+      TS.weeks={}; S.data.weeks.forEach(w=>{ TS.weeks[w.key]=_last6b.has(w.key); });
+      AS.weeks={}; S.data.weeks.forEach(w=>{ AS.weeks[w.key]=_last6b.has(w.key); });
+      CR.weeks={}; S.data.weeks.forEach(w=>{ CR.weeks[w.key]=_last6b.has(w.key); });
       S.data.batches.forEach(b=>{ BS.selected[b.id]=true; });
       document.getElementById('xlsxDot')?.classList.add('active');
       document.getElementById('cohortBadge').textContent='Live Data';
-      const _last5wk=new Set(S.data.weeklyOv.slice(-5).map(w=>w.key));
+      const _last5wk=new Set(S.data.weeklyOv.slice(-6).map(w=>w.key));
       OVW.weeks={}; S.data.weeklyOv.forEach(w=>{ OVW.weeks[w.key]=_last5wk.has(w.key); });
       buildWkDropItems(S.data);
       buildBatchDropItems(S.data);
