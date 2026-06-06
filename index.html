@@ -737,10 +737,10 @@ td:first-child{text-align:left;}
         <div class="tb-sep"></div>
         <span class="dr-label">or</span>
         <div class="dr-wrap">
-          <input type="date" id="tsDrFrom" class="dr-input" onchange="applyTsDr()">
+          <input type="date" id="tsDrFrom" class="dr-input" oninput="applyTsDr()" onchange="applyTsDr()">
           <span class="dr-label">→</span>
-          <input type="date" id="tsDrTo" class="dr-input" onchange="applyTsDr()">
-          <span class="dr-clear" id="tsDrClear" style="display:none" onclick="clearTsDr()">✕</span>
+          <input type="date" id="tsDrTo" class="dr-input" oninput="applyTsDr()" onchange="applyTsDr()">
+          <button class="tb-btn" onclick="applyTsDr()" style="padding:3px 10px;font-size:10px">Apply</button><span class="dr-clear" id="tsDrClear" style="display:none" onclick="clearTsDr()">✕</span>
         </div>
       </div>
       <div style="display:flex;align-items:center;gap:6px">
@@ -815,10 +815,10 @@ td:first-child{text-align:left;}
         <div class="tb-sep"></div>
         <span class="dr-label">or</span>
         <div class="dr-wrap">
-          <input type="date" id="asDrFrom" class="dr-input" onchange="applyAsDr()">
+          <input type="date" id="asDrFrom" class="dr-input" oninput="applyAsDr()" onchange="applyAsDr()">
           <span class="dr-label">→</span>
-          <input type="date" id="asDrTo" class="dr-input" onchange="applyAsDr()">
-          <span class="dr-clear" id="asDrClear" style="display:none" onclick="clearAsDr()">✕</span>
+          <input type="date" id="asDrTo" class="dr-input" oninput="applyAsDr()" onchange="applyAsDr()">
+          <button class="tb-btn" onclick="applyAsDr()" style="padding:3px 10px;font-size:10px">Apply</button><span class="dr-clear" id="asDrClear" style="display:none" onclick="clearAsDr()">✕</span>
         </div>
       </div>
       <div style="display:flex;align-items:center;gap:6px">
@@ -856,10 +856,10 @@ td:first-child{text-align:left;}
         <div class="tb-sep"></div>
         <span class="dr-label">or</span>
         <div class="dr-wrap">
-          <input type="date" id="crDrFrom" class="dr-input" onchange="applyCrDr()">
+          <input type="date" id="crDrFrom" class="dr-input" oninput="applyCrDr()" onchange="applyCrDr()">
           <span class="dr-label">→</span>
-          <input type="date" id="crDrTo" class="dr-input" onchange="applyCrDr()">
-          <span class="dr-clear" id="crDrClear" style="display:none" onclick="clearCrDr()">✕</span>
+          <input type="date" id="crDrTo" class="dr-input" oninput="applyCrDr()" onchange="applyCrDr()">
+          <button class="tb-btn" onclick="applyCrDr()" style="padding:3px 10px;font-size:10px">Apply</button><span class="dr-clear" id="crDrClear" style="display:none" onclick="clearCrDr()">✕</span>
         </div>
         <div class="tb-sep"></div>
         <div class="tb-group">
