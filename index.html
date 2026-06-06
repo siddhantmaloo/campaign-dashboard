@@ -3494,8 +3494,9 @@ function parseXlsx(wb){
     const cpc=totClicks>0?totSpend/totClicks:null;
     const ctr=totImpr>0?totClicks/totImpr*100:null;
     const c2db=totClicks>0&&totLeads>0?totLeads/totClicks*100:null;
-    const parentCamp=camps.find(c=>c.adsets.some(a=>Object.keys(spendByCr[crid]||{}).length>0&&a.id&&Object.keys(spendByAdset[c.id+'_'+a.id]||{}).length>0));
-    const platform=parentCamp?.platform||platformFromId(crid);
+    const parentCampId=crToCamp[crid];
+    const parentCamp=parentCampId?camps.find(c=>c.id===parentCampId):null;
+    const platform=parentCamp?.platform||campPlatform[parentCampId]||platformFromId(crid);
     const crCplTag=tagCPL(cpl);
     const crD3Tag=age>=14?tagD3(d3cost):'na';
     const crD7Tag=age>=21?tagD7(d7cost):'na';
