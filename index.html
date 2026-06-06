@@ -435,6 +435,18 @@ td:first-child{text-align:left;}
 .wk-pill.on{background:rgba(124,106,247,.15);border-color:rgba(124,106,247,.5);color:var(--accent);}
 .wk-pill:hover{border-color:var(--accent);color:var(--text2);}
 
+
+/* ── DATE RANGE FILTER ── */
+.dr-wrap{display:flex;align-items:center;gap:6px;}
+.dr-input{background:var(--bg3);border:1px solid var(--border2);border-radius:3px;color:var(--text);font-family:var(--font-mono);font-size:10px;padding:3px 7px;outline:none;cursor:pointer;transition:border-color .12s;}
+.dr-input:focus{border-color:var(--accent);}
+.dr-input::-webkit-calendar-picker-indicator{filter:invert(0.7);cursor:pointer;}
+.dr-input.active{border-color:var(--accent);background:rgba(124,106,247,.1);}
+.dr-clear{cursor:pointer;color:var(--text3);font-size:13px;padding:0 4px;transition:color .12s;}
+.dr-clear:hover{color:var(--text);}
+.dr-label{font-family:var(--font-mono);font-size:9px;color:var(--text3);letter-spacing:.06em;}
+.wk-dd-btn.dimmed{opacity:.4;pointer-events:none;}
+
 .fade-in{animation:fadeIn .28s ease both;}
 @keyframes fadeIn{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:none}}
 </style>
@@ -722,6 +734,14 @@ td:first-child{text-align:left;}
             <div id="tsWkItems"></div>
           </div>
         </div>
+        <div class="tb-sep"></div>
+        <span class="dr-label">or</span>
+        <div class="dr-wrap">
+          <input type="date" id="tsDrFrom" class="dr-input" onchange="applyTsDr()">
+          <span class="dr-label">→</span>
+          <input type="date" id="tsDrTo" class="dr-input" onchange="applyTsDr()">
+          <span class="dr-clear" id="tsDrClear" style="display:none" onclick="clearTsDr()">✕</span>
+        </div>
       </div>
       <div style="display:flex;align-items:center;gap:6px">
         <button class="tb-btn" onclick="expandAll()">Expand All</button>
@@ -792,6 +812,14 @@ td:first-child{text-align:left;}
             <div id="asWkItems"></div>
           </div>
         </div>
+        <div class="tb-sep"></div>
+        <span class="dr-label">or</span>
+        <div class="dr-wrap">
+          <input type="date" id="asDrFrom" class="dr-input" onchange="applyAsDr()">
+          <span class="dr-label">→</span>
+          <input type="date" id="asDrTo" class="dr-input" onchange="applyAsDr()">
+          <span class="dr-clear" id="asDrClear" style="display:none" onclick="clearAsDr()">✕</span>
+        </div>
       </div>
       <div style="display:flex;align-items:center;gap:6px">
         <button class="tb-btn" onclick="asExpandAll()">Expand All</button>
@@ -824,6 +852,14 @@ td:first-child{text-align:left;}
             </div>
             <div id="crWkItems"></div>
           </div>
+        </div>
+        <div class="tb-sep"></div>
+        <span class="dr-label">or</span>
+        <div class="dr-wrap">
+          <input type="date" id="crDrFrom" class="dr-input" onchange="applyCrDr()">
+          <span class="dr-label">→</span>
+          <input type="date" id="crDrTo" class="dr-input" onchange="applyCrDr()">
+          <span class="dr-clear" id="crDrClear" style="display:none" onclick="clearCrDr()">✕</span>
         </div>
         <div class="tb-sep"></div>
         <div class="tb-group">
@@ -1848,7 +1884,7 @@ function renderSignals(d){
     </div>`).join('');
 }
 // ── TREE STATE ──
-const TS={plat:'all',weeks:null,expanded:{},weekExpanded:{}};
+const TS={plat:'all',weeks:null,expanded:{},weekExpanded:{},drFrom:null,drTo:null};
 
 function treePlat(p,btn){
   TS.plat=p;
@@ -1910,6 +1946,96 @@ function toggleAsDrop(e){ e.stopPropagation(); /* overridden below */ }
 function toggleCrDrop(e){ e.stopPropagation(); /* overridden below */ }
 function updateAsWkLabel(){}
 function updateCrWkLabel(){}
+
+// ═══════════════════════════════════════
+// DATE RANGE AGGREGATION
+// ═══════════════════════════════════════
+function aggByDateRange(entity, from, to){
+  const spDaily=entity._dailySpend||{}, attDaily=entity._dailyAtt||{};
+  const revDaily=entity._dailyRev||{}, subsDaily=entity._dailySubs||{};
+  let spend=0,impr=0,clicks=0,leads=0,d1=0,d3=0,d7=0,d10=0,rev=0,subs=0;
+  Object.entries(spDaily).forEach(([ds,sp])=>{
+    if(ds<from||ds>to) return;
+    spend+=sp.spend||0; impr+=sp.impr||0; clicks+=sp.clicks||0;
+    rev+=revDaily[ds]||0; subs+=subsDaily[ds]||0;
+    const att=attDaily[ds]||{};
+    leads+=att.leads||0; d1+=att.d1||0; d3+=att.d3||0; d7+=att.d7||0; d10+=att.d10||0;
+  });
+  const cpl=leads>0&&spend>0?spend/leads:null;
+  const roas=spend>0&&rev>0?rev/spend:null;
+  const cpm=impr>0?spend/impr*1000:null;
+  const cpc=clicks>0?spend/clicks:null;
+  const ctr=impr>0?clicks/impr*100:null;
+  const c2db=clicks>0&&leads>0?leads/clicks*100:null;
+  const d3cost=d3>0&&spend>0?spend/d3:null;
+  const d7cost=d7>0&&spend>0?spend/d7:null;
+  const d1pct=leads>0?Math.round(d1/leads*100)||null:null;
+  const d3pct=leads>0?Math.round(d3/leads*100)||null:null;
+  const d7pct=leads>0?Math.round(d7/leads*100)||null:null;
+  const d10pct=leads>0?Math.round(d10/leads*100)||null:null;
+  return {
+    health:healthScore(tagCPL(cpl),d3cost?tagD3(d3cost):'na',d7cost?tagD7(d7cost):'na','na'),
+    conf:tagConf(spend),
+    spend:spend||null,cpm,cpc,ctr,c2db,
+    leads:leads||null,cpl,
+    subs:subs||null,cps:subs>0?spend/subs:null,
+    rev:rev||null,roas,l2s:leads>0&&subs>0?subs/leads*100:null,
+    d1pct,d3pct,d3cost,d7pct,d7cost,d10pct,paidroas:roas||null
+  };
+}
+function _drActive(state){ return !!(state.drFrom&&state.drTo&&state.drFrom<=state.drTo); }
+function _drSetUI(fromId,toId,clearId,wkBtnId,state){
+  const active=_drActive(state);
+  const clr=document.getElementById(clearId); if(clr) clr.style.display=active?'':'none';
+  const wkBtn=document.getElementById(wkBtnId);
+  if(wkBtn) wkBtn.classList.toggle('dimmed',active);
+  [fromId,toId].forEach(id=>{ const el=document.getElementById(id); if(el) el.classList.toggle('active',active); });
+}
+
+// ── Campaigns date range ──
+function applyTsDr(){
+  TS.drFrom=document.getElementById('tsDrFrom').value||null;
+  TS.drTo=document.getElementById('tsDrTo').value||null;
+  _drSetUI('tsDrFrom','tsDrTo','tsDrClear','tsWkBtn',TS);
+  if(S.data) renderTree(S.data);
+}
+function clearTsDr(){
+  TS.drFrom=null; TS.drTo=null;
+  document.getElementById('tsDrFrom').value='';
+  document.getElementById('tsDrTo').value='';
+  _drSetUI('tsDrFrom','tsDrTo','tsDrClear','tsWkBtn',TS);
+  if(S.data) renderTree(S.data);
+}
+
+// ── Ad Sets date range ──
+function applyAsDr(){
+  AS.drFrom=document.getElementById('asDrFrom').value||null;
+  AS.drTo=document.getElementById('asDrTo').value||null;
+  _drSetUI('asDrFrom','asDrTo','asDrClear','asWkBtn',AS);
+  if(S.data) renderAdsets(S.data);
+}
+function clearAsDr(){
+  AS.drFrom=null; AS.drTo=null;
+  document.getElementById('asDrFrom').value='';
+  document.getElementById('asDrTo').value='';
+  _drSetUI('asDrFrom','asDrTo','asDrClear','asWkBtn',AS);
+  if(S.data) renderAdsets(S.data);
+}
+
+// ── Creatives date range ──
+function applyCrDr(){
+  CR.drFrom=document.getElementById('crDrFrom').value||null;
+  CR.drTo=document.getElementById('crDrTo').value||null;
+  _drSetUI('crDrFrom','crDrTo','crDrClear','crWkBtn',CR);
+  if(S.data) renderCreatives(S.data);
+}
+function clearCrDr(){
+  CR.drFrom=null; CR.drTo=null;
+  document.getElementById('crDrFrom').value='';
+  document.getElementById('crDrTo').value='';
+  _drSetUI('crDrFrom','crDrTo','crDrClear','crWkBtn',CR);
+  if(S.data) renderCreatives(S.data);
+}
 
 // ── S2: CAMPAIGN TREE ──
 function renderTree(d){
@@ -2130,7 +2256,7 @@ function renderTree(d){
     }
   });
 
-  const gt=grandAgg();
+  const gt=_tsDrOn?(() => { let totS=0,totL=0,totR=0; camps.forEach(c=>{const a=aggByDateRange(c,TS.drFrom,TS.drTo);totS+=a.spend||0;totL+=a.leads||0;totR+=a.rev||0;}); return aggByDateRange({_dailySpend:Object.fromEntries(camps.flatMap(c=>Object.entries(c._dailySpend||{}).filter(([d])=>d>=TS.drFrom&&d<=TS.drTo))),_dailyAtt:Object.fromEntries(camps.flatMap(c=>Object.entries(c._dailyAtt||{}).filter(([d])=>d>=TS.drFrom&&d<=TS.drTo).map(([d,v])=>[d,v]))),_dailyRev:{},_dailySubs:{}},TS.drFrom,TS.drTo); })():grandAgg();
   let gc=`<td style="position:sticky;left:0;background:var(--bg3);z-index:1">
     <div class="tree-name tree-indent-1"><span style="width:14px;display:inline-block"></span>
       <div class="tree-name-main" style="color:var(--text2)">TOTAL · ${rows.filter(r=>r.includes('row-camp')).length} active · ${camps.length} total · ${weeks.length} wks</div>
@@ -2381,7 +2507,7 @@ function scrollToPivotRow(id){
 // ═══════════════════════════════════════
 // AD SETS TREE STATE
 // ═══════════════════════════════════════
-const AS={plat:'all',weeks:null,expanded:{},filterAdset:null,filterCamp:null,sort:'spend'};
+const AS={plat:'all',weeks:null,expanded:{},filterAdset:null,filterCamp:null,sort:'spend',drFrom:null,drTo:null};
 const CR_FILTER={adset:null};
 
 // ── DRILL-THROUGH NAVIGATION ──
@@ -2514,10 +2640,11 @@ function renderAdsets(d){
   COLS.forEach((col,ci)=>{ thCells+=`<th class="${ci===0?'col-sep':''}">${col.label}</th>`; });
 
   const rows=[];
+  const _asDrOn=_drActive(AS);
   adsets.forEach(a=>{
     const isOpen=!!AS.expanded[a.id];
-    const agg=asAgg(a);
-    if(!agg.spend||agg.spend===0) return; // hide adsets with no spend in selected weeks
+    const agg=_asDrOn?aggByDateRange(a,AS.drFrom,AS.drTo):asAgg(a);
+    if(!agg.spend||agg.spend===0) return;
     let ac=`<td style="position:sticky;left:0;background:${isOpen?'var(--bg3)':'var(--bg2)'};z-index:1">
       <div class="tree-name tree-indent-1">
         <span class="tree-toggle${isOpen?' open':''}">›</span>
@@ -2623,7 +2750,7 @@ function renderAdsets(d){
 // ═══════════════════════════════════════
 // CREATIVES TREE STATE
 // ═══════════════════════════════════════
-const CR={plat:'all',weeks:null,expanded:{},sort:'spend'};
+const CR={plat:'all',weeks:null,expanded:{},sort:'spend',drFrom:null,drTo:null};
 const themeColor={'Date Hook':'blue','Generic':'gray','Problem Statement':'purple','Social Proof':'yellow','AI Creative':'green'};
 
 function crPlat(p,btn){ CR.plat=p; btn.closest('.tb-group').querySelectorAll('.tb-btn').forEach(b=>b.className='tb-btn'); btn.className='tb-btn act-'+p; if(S.data) renderCreatives(S.data); }
@@ -2728,10 +2855,11 @@ function renderCreatives(d){
   COLS.forEach((col,ci)=>{ thCells+=`<th class="${ci===0?'col-sep':''}">${col.label}</th>`; });
 
   const rows=[];
+  const _crDrOn=_drActive(CR);
   crs.forEach(cr=>{
     const isOpen=!!CR.expanded[cr.id];
-    const agg=crAgg(cr);
-    if(!agg.spend||agg.spend===0) return; // hide creatives with no spend in selected weeks
+    const agg=_crDrOn?aggByDateRange(cr,CR.drFrom,CR.drTo):crAgg(cr);
+    if(!agg.spend||agg.spend===0) return;
     let cc=`<td style="position:sticky;left:0;background:${isOpen?'var(--bg3)':'var(--bg2)'};z-index:1">
       <div class="tree-name tree-indent-1">
         <span class="tree-toggle${isOpen?' open':''}">›</span>
