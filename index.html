@@ -1395,8 +1395,80 @@ function setKvMonth(key){
   document.getElementById('kvMonthMenu').classList.remove('open');
   if(S.data) renderKvStrip(S.data);
 }
+// ── Recompute Overview monthly/weekly for active category filter ──
+function filteredOvData(d){
+  if(CAT.active==='all') return d;
+  const camps=d.camps.filter(c=>catMatch(c.name));
+  // Rebuild monthMap from matching camps daily data
+  const monthMap={all:{},meta:{},google:{}};
+  camps.forEach(c=>{
+    const p=c.platform==='meta'?'meta':'google';
+    const spDaily=c._dailySpend||{}, attDaily=c._dailyAtt||{};
+    const revDaily=c._dailyRev||{}, subsDaily=c._dailySubs||{};
+    Object.entries(spDaily).forEach(([ds,sp])=>{
+      const mk=ds.slice(0,7);
+      ['all',p].forEach(b=>{
+        if(!monthMap[b][mk]) monthMap[b][mk]={spend:0,leads:0,rev:0,subs:0,clicks:0,impr:0};
+        monthMap[b][mk].spend+=sp.spend||0; monthMap[b][mk].clicks+=sp.clicks||0; monthMap[b][mk].impr+=sp.impr||0;
+        monthMap[b][mk].leads+=(attDaily[ds]?.leads)||0;
+        monthMap[b][mk].rev+=revDaily[ds]||0; monthMap[b][mk].subs+=subsDaily[ds]||0;
+      });
+    });
+  });
+  // Rebuild months array reusing existing structure but replacing totals
+  const months=d.months.map(m=>{
+    const mk=m.key.length===6?m.key.slice(0,4)+'-'+m.key.slice(4):m.key;
+    const base=monthMap.all[mk]||{spend:0,leads:0,rev:0,subs:0,clicks:0,impr:0};
+    const meta=monthMap.meta[mk]||{spend:0,leads:0,rev:0,subs:0,clicks:0,impr:0};
+    const goog=monthMap.google[mk]||{spend:0,leads:0,rev:0,subs:0,clicks:0,impr:0};
+    function mk2(d){ return {spend:d.spend||null,leads:d.leads||null,rev:d.rev||null,subs:d.subs||null,clicks:d.clicks,impr:d.impr,cpm:d.impr>0?d.spend/d.impr*1000:null,cpc:d.clicks>0?d.spend/d.clicks:null,ctr:d.impr>0?d.clicks/d.impr*100:null,c2db:null}; }
+    // Rebuild daily rows for this month
+    const dailyMap={all:{},meta:{},google:{}};
+    camps.forEach(c=>{
+      const p=c.platform==='meta'?'meta':'google';
+      const spDaily=c._dailySpend||{}, attDaily=c._dailyAtt||{}, revDaily=c._dailyRev||{};
+      Object.entries(spDaily).forEach(([ds,sp])=>{
+        if(!ds.startsWith(mk)) return;
+        ['all',p].forEach(b=>{
+          if(!dailyMap[b][ds]) dailyMap[b][ds]={spend:0,leads:0,rev:0,subs:0,clicks:0,impr:0};
+          dailyMap[b][ds].spend+=sp.spend||0; dailyMap[b][ds].clicks+=sp.clicks||0; dailyMap[b][ds].impr+=sp.impr||0;
+          dailyMap[b][ds].leads+=(attDaily[ds]?.leads)||0; dailyMap[b][ds].rev+=revDaily[ds]||0;
+        });
+      });
+    });
+    const allDates=[...new Set([...Object.keys(dailyMap.all),...Object.keys(dailyMap.meta),...Object.keys(dailyMap.google)])].sort();
+    const dayNames=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    const days=allDates.map(ds=>{
+      const dt=new Date(ds+'T00:00:00Z');
+      const d=dailyMap.all[ds]||{}; 
+      return {label:`${ds} ${dayNames[dt.getUTCDay()]}`,today:m.days.find(d2=>d2.label.startsWith(ds))?.today||false,
+        ...mk2(d), meta:mk2(dailyMap.meta[ds]||{}), google:mk2(dailyMap.google[ds]||{})};
+    });
+    return {...m, ...mk2(base), meta:mk2(meta), google:mk2(goog), days, sub:`${days.length} days`};
+  }).filter(m=>m.spend);
+
+  // Rebuild weeklyOv from matching camps
+  const weeklyOv=d.weeklyOv.map(w=>{
+    const platAgg={all:{spend:0,leads:0,rev:0,subs:0,clicks:0,impr:0,d1:0,d3:0,d7:0,d10:0},
+                   meta:{spend:0,leads:0,rev:0,subs:0,clicks:0,impr:0,d1:0,d3:0,d7:0,d10:0},
+                   google:{spend:0,leads:0,rev:0,subs:0,clicks:0,impr:0,d1:0,d3:0,d7:0,d10:0}};
+    camps.forEach(c=>{
+      const wk=c.weekly[w.key]; if(!wk||!wk.spend) return;
+      const p=c.platform==='meta'?'meta':'google';
+      ['spend','leads','rev','subs','clicks'].forEach(k=>{platAgg.all[k]+=(wk[k]||0);platAgg[p][k]+=(wk[k]||0);});
+      platAgg.all.impr+=(wk.impr||0); platAgg[p].impr+=(wk.impr||0);
+      ['d1','d3','d7','d10'].forEach(k=>{platAgg.all[k]+=(wk[k]||0);platAgg[p][k]+=(wk[k]||0);});
+    });
+    function mkWk(pa){ return {spend:pa.spend||null,leads:pa.leads||null,rev:pa.rev||null,subs:pa.subs||null,clicks:pa.clicks,impr:pa.impr,cpm:pa.impr>0?pa.spend/pa.impr*1000:null,cpc:pa.clicks>0?pa.spend/pa.clicks:null,ctr:pa.impr>0?pa.clicks/pa.impr*100:null,c2db:null,d1pct:pa.leads>0?Math.round(pa.d1/pa.leads*100)||null:null,d3pct:pa.leads>0?Math.round(pa.d3/pa.leads*100)||null:null,d3cost:pa.d3>0&&pa.spend>0?pa.spend/pa.d3:null,d7pct:pa.leads>0?Math.round(pa.d7/pa.leads*100)||null:null,d7cost:pa.d7>0&&pa.spend>0?pa.spend/pa.d7:null,d10pct:pa.leads>0?Math.round(pa.d10/pa.leads*100)||null:null}; }
+    return {...w, ...mkWk(platAgg.all), meta:mkWk(platAgg.meta), google:mkWk(platAgg.google), metaDays:w.metaDays, googleDays:w.googleDays, days:w.days};
+  }).filter(w=>w.spend);
+
+  return {...d, months, weeklyOv};
+}
+
 function renderKvStrip(d){
-  const months = OV.kvMonth==='all' ? d.months : d.months.filter(m=>m.key===OV.kvMonth);
+  const fd=filteredOvData(d);
+  const months = OV.kvMonth==='all' ? fd.months : fd.months.filter(m=>m.key===OV.kvMonth);
   const plat=OV.plat;
   const src = m => plat==='meta'?m.meta:plat==='google'?m.google:m;
   const totSpend  = months.reduce((s,m)=>s+(src(m).spend||0),0);
@@ -1417,11 +1489,11 @@ function renderKvStrip(d){
 }
 
 function renderOverview(d){
-  // KPI strip — driven by month filter + platform filter
+  const fd=filteredOvData(d);
   renderKvStrip(d);
 
   // Monthly tree
-  const months=d.months;
+  const months=fd.months;
 
   // Build a metric row from a data object
   function makeMetricRow(obj){ return makeOvMetricRow(obj); }
@@ -1488,7 +1560,7 @@ function renderOverview(d){
   document.getElementById('ovMonthTable').innerHTML=`<table class="tree-table"><thead><tr>${thCells}</tr></thead><tbody>${rows.join('')}</tbody></table>`;
 
   // Also render weekly table (shares OV.plat filter)
-  if(d.weeklyOv) renderWeeklyOv(d);
+  if(fd.weeklyOv) renderWeeklyOv(fd);
 }
 
 function applyPlatMonth(m, plat){
@@ -1545,7 +1617,7 @@ function ovWkSelectAll(){ if(!S.data) return; S.data.weeklyOv.forEach(w=>OVW.wee
 function ovWkSelectNone(){ if(!S.data) return; S.data.weeklyOv.forEach(w=>OVW.weeks[w.key]=false); document.querySelectorAll('#ovWkItems input').forEach(cb=>cb.checked=false); updateOvWkLabel(S.data); renderWeeklyOv(S.data); }
 
 function renderWeeklyOv(d){
-  const allWks=d.weeklyOv;
+  const fd2=filteredOvData(d); const allWks=fd2.weeklyOv;
   const wks=OVW.weeks?allWks.filter(w=>OVW.weeks[w.key]!==false):allWks;
   const wkPlat=OVW.plat;
 
