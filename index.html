@@ -2039,7 +2039,21 @@ function clearCrDr(){
 
 // ── S2: CAMPAIGN TREE ──
 function renderTree(d){
-  const weeks=d.weeks.filter(w=>TS.weeks&&TS.weeks[w.key]!==false);
+  const weeks=d.weeks.filter(w=>{
+    if(TS.weeks&&TS.weeks[w.key]===false) return false;
+    if(_tsDrOn){
+      // only keep weeks that overlap with the date range
+      // week key "2026-W22" → start Mon May 25, end Sun May 31
+      const yr=parseInt(w.key.split('-W')[0]), wn=parseInt(w.key.split('-W')[1]);
+      const jan4=new Date(Date.UTC(yr,0,4));
+      const mon=new Date(Date.UTC(yr,0,4-(((jan4.getUTCDay()+6)%7))+(wn-1)*7));
+      const sun=new Date(mon.getTime()+6*86400000);
+      const wStart=mon.getUTCFullYear()+'-'+String(mon.getUTCMonth()+1).padStart(2,'0')+'-'+String(mon.getUTCDate()).padStart(2,'0');
+      const wEnd=sun.getUTCFullYear()+'-'+String(sun.getUTCMonth()+1).padStart(2,'0')+'-'+String(sun.getUTCDate()).padStart(2,'0');
+      return wEnd>=(TS.drFrom||'0000-01-01') && wStart<=(TS.drTo||'9999-12-31');
+    }
+    return true;
+  });
   let camps=[...d.camps];
   if(TS.plat!=='all') camps=camps.filter(c=>c.platform===TS.plat);
   function campAgg(c){
