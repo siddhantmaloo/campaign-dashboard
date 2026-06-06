@@ -631,9 +631,9 @@ td:first-child{text-align:left;}
     <div class="tbl-hdr">
       <div style="display:flex;align-items:center;gap:10px">
         <div class="tb-group">
-          <button class="tb-btn act-all" onclick="ovPlat('all',this)">ALL</button>
-          <button class="tb-btn" onclick="ovPlat('meta',this)">META</button>
-          <button class="tb-btn" onclick="ovPlat('google',this)">GOOGLE</button>
+          <button class="tb-btn act-all" onclick="ovmPlat('all',this)">ALL</button>
+          <button class="tb-btn" onclick="ovmPlat('meta',this)">META</button>
+          <button class="tb-btn" onclick="ovmPlat('google',this)">GOOGLE</button>
         </div>
       </div>
       <div style="display:flex;align-items:center;gap:6px">
@@ -1321,6 +1321,9 @@ function genData(){
 // ═══════════════════════════════════════
 // ── OVERVIEW STATE ──
 const OV={plat:'all', expanded:{}, kvMonth:'all'};
+const OVM={plat:'all'}; // Monthly Performance independent platform filter
+
+function ovmPlat(p,btn){ OVM.plat=p; btn.closest('.tb-group').querySelectorAll('.tb-btn').forEach(b=>b.className='tb-btn'); btn.className='tb-btn act-'+p; if(S.data) renderOverview(S.data); }
 
 function ovPlat(p,btn){
   OV.plat=p;
@@ -1397,7 +1400,7 @@ function renderOverview(d){
 
   months.forEach(m=>{
     const isOpen=OV.expanded[m.key]!==undefined ? OV.expanded[m.key] : m.current;
-    const mr=makeMetricRow(applyPlatMonth(m,OV.plat));
+    const mr=makeMetricRow(applyPlatMonth(m,OVM.plat));
     const isCurrent=m.current;
 
     let mc=`<td style="position:sticky;left:0;background:${isOpen?'var(--bg3)':'var(--bg2)'};z-index:1">
@@ -1413,7 +1416,7 @@ function renderOverview(d){
 
     if(isOpen){
       m.days.forEach((day,di)=>{
-        const dr=makeMetricRow(applyPlatDay(day,OV.plat));
+        const dr=makeMetricRow(applyPlatDay(day,OVM.plat));
         const isToday=day.today||false;
         // Age of this specific date = days since that date
         // Month index: jan=0,feb=1,...jun=5. Day index di is 0-based.
@@ -1436,9 +1439,9 @@ function renderOverview(d){
 
   // Grand total row
   const allMonths=months;
-  const totSpend=allMonths.reduce((s,m)=>s+applyPlatMonth(m,OV.plat).spend,0);
-  const totLeads=allMonths.reduce((s,m)=>s+applyPlatMonth(m,OV.plat).leads,0);
-  const totRev=allMonths.reduce((s,m)=>s+applyPlatMonth(m,OV.plat).rev,0);
+  const totSpend=allMonths.reduce((s,m)=>s+applyPlatMonth(m,OVM.plat).spend,0);
+  const totLeads=allMonths.reduce((s,m)=>s+applyPlatMonth(m,OVM.plat).leads,0);
+  const totRev=allMonths.reduce((s,m)=>s+applyPlatMonth(m,OVM.plat).rev,0);
   const gt2={spend:totSpend,leads:totLeads,rev:totRev};
   const gtr=makeMetricRow(gt2);
   let gc=`<td style="position:sticky;left:0;background:var(--bg3);z-index:1">
@@ -3791,7 +3794,8 @@ document.addEventListener('DOMContentLoaded', async ()=>{
       S.data.batches.forEach(b=>{ BS.selected[b.id]=true; });
       document.getElementById('xlsxDot')?.classList.add('active');
       document.getElementById('cohortBadge').textContent='Live Data';
-      OVW.weeks={}; S.data.weeklyOv.forEach(w=>{ OVW.weeks[w.key]=true; });
+      const _last5wk=new Set(S.data.weeklyOv.slice(-5).map(w=>w.key));
+      OVW.weeks={}; S.data.weeklyOv.forEach(w=>{ OVW.weeks[w.key]=_last5wk.has(w.key); });
       buildWkDropItems(S.data);
       buildBatchDropItems(S.data);
       buildAsWkItems(S.data);
