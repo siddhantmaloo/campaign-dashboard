@@ -590,23 +590,6 @@ td:first-child{text-align:left;}
   <div class="nav-tab"         onclick="switchTab('creatives')">Creatives</div>
 </nav>
 
-<!-- TOOLBAR -->
-<div class="toolbar" id="mainToolbar" style="display:none">
-  <span class="tb-label">Platform</span>
-  <div class="tb-group">
-    <button class="tb-btn active" onclick="setPlat('all',this)">All</button>
-    <button class="tb-btn"        onclick="setPlat('meta',this)">Meta</button>
-    <button class="tb-btn"        onclick="setPlat('google',this)">Google</button>
-  </div>
-  <div class="tb-sep"></div>
-  <span class="tb-label">Action</span>
-  <div class="tb-group">
-    <button class="tb-btn active" onclick="setActionFilter('all',this)">All</button>
-    <button class="tb-btn"        onclick="setActionFilter('scale',this)">Scale</button>
-    <button class="tb-btn"        onclick="setActionFilter('watch',this)">Watch</button>
-    <button class="tb-btn"        onclick="setActionFilter('pause',this)">Pause</button>
-  </div>
-</div>
 
 <!-- MAIN -->
 <main class="main">
@@ -2834,10 +2817,7 @@ function switchTab(t){
   S.tab=t;
   document.querySelectorAll('.nav-tab').forEach((el,i)=>el.classList.toggle('active',['overview','campaigns','adsets','creatives'][i]===t));
   document.querySelectorAll('.tab-content').forEach(el=>el.classList.toggle('active',el.id===`tab-${t}`));
-  document.getElementById('mainToolbar').style.display = t==='overview' ? 'none' : '';
 }
-function setPlat(p,btn){ S.plat=p; btn.closest('.tb-group').querySelectorAll('.tb-btn').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); }
-function setActionFilter(a,btn){ S.action=a; btn.closest('.tb-group').querySelectorAll('.tb-btn').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); }
 function setCrSort(s,btn){ /* handled above */ }
 
 function pivPlat(p,btn){ /* legacy — treePlat used instead */ }
