@@ -1827,13 +1827,13 @@ function buildWkPills(data, containerId, stateObj, renderFn){
 // ── CAMPAIGNS WEEK DROPDOWN ──
 function toggleWkDrop(e){
   e.stopPropagation();
-  if(!document.getElementById('tsWkMenu').classList.contains('open')&&S.data) buildWkDropItems(S.data);
+  if(S.data) buildWkDropItems(S.data); // always rebuild to reflect latest state
   document.getElementById('tsWkBtn').classList.toggle('open');
   document.getElementById('tsWkMenu').classList.toggle('open');
 }
 function buildWkDropItems(data){
   const el=document.getElementById('tsWkItems'); if(!el||!data) return;
-  el.innerHTML=data.weeks.map(w=>`
+  el.innerHTML=[...data.weeks].reverse().map(w=>`
     <div class="wk-dd-item${w.now?' now':''}" onclick="event.stopPropagation()">
       <input type="checkbox" id="tswk_${w.key}" ${TS.weeks&&TS.weeks[w.key]!==false?'checked':''}
         onchange="toggleTsWk('${w.key}',this.checked)">
@@ -2368,13 +2368,13 @@ function asCollapseAll(){ if(!S.data) return; Object.keys(AS.expanded).forEach(k
 
 function toggleAsDrop(e){
   e.stopPropagation();
-  if(!document.getElementById('asWkMenu').classList.contains('open')&&S.data) buildAsWkItems(S.data);
+    if(S.data) buildAsWkItems(S.data);
   document.getElementById('asWkBtn').classList.toggle('open');
   document.getElementById('asWkMenu').classList.toggle('open');
 }
 function buildAsWkItems(data){
   const el=document.getElementById('asWkItems'); if(!el||!data) return;
-  el.innerHTML=data.weeks.map(w=>`
+  el.innerHTML=[...data.weeks].reverse().map(w=>`
     <div class="wk-dd-item${w.now?' now':''}" onclick="event.stopPropagation()">
       <input type="checkbox" id="aswk_${w.key}" ${AS.weeks&&AS.weeks[w.key]!==false?'checked':''}
         onchange="toggleAsWk('${w.key}',this.checked)">
@@ -2584,13 +2584,13 @@ function setCrSort(s,btn){ CR.sort=s; btn.closest('.tb-group').querySelectorAll(
 
 function toggleCrDrop(e){
   e.stopPropagation();
-  if(!document.getElementById('crWkMenu').classList.contains('open')&&S.data) buildCrWkItems(S.data);
+  if(S.data) buildCrWkItems(S.data);
   document.getElementById('crWkBtn').classList.toggle('open');
   document.getElementById('crWkMenu').classList.toggle('open');
 }
 function buildCrWkItems(data){
   const el=document.getElementById('crWkItems'); if(!el||!data) return;
-  el.innerHTML=data.weeks.map(w=>`
+  el.innerHTML=[...data.weeks].reverse().map(w=>`
     <div class="wk-dd-item${w.now?' now':''}" onclick="event.stopPropagation()">
       <input type="checkbox" id="crwk_${w.key}" ${CR.weeks&&CR.weeks[w.key]!==false?'checked':''}
         onchange="toggleCrWk('${w.key}',this.checked)">
