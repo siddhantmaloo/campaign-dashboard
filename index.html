@@ -435,18 +435,6 @@ td:first-child{text-align:left;}
 .wk-pill.on{background:rgba(124,106,247,.15);border-color:rgba(124,106,247,.5);color:var(--accent);}
 .wk-pill:hover{border-color:var(--accent);color:var(--text2);}
 
-
-/* ── DATE RANGE FILTER ── */
-.dr-wrap{display:flex;align-items:center;gap:6px;}
-.dr-input{background:var(--bg3);border:1px solid var(--border2);border-radius:3px;color:var(--text);font-family:var(--font-mono);font-size:10px;padding:3px 7px;outline:none;cursor:pointer;transition:border-color .12s;}
-.dr-input:focus{border-color:var(--accent);}
-.dr-input::-webkit-calendar-picker-indicator{filter:invert(0.7);cursor:pointer;}
-.dr-input.active{border-color:var(--accent);background:rgba(124,106,247,.1);}
-.dr-clear{cursor:pointer;color:var(--text3);font-size:13px;padding:0 4px;transition:color .12s;}
-.dr-clear:hover{color:var(--text);}
-.dr-label{font-family:var(--font-mono);font-size:9px;color:var(--text3);letter-spacing:.06em;}
-.wk-dd-btn.dimmed{opacity:.4;pointer-events:none;}
-
 .fade-in{animation:fadeIn .28s ease both;}
 @keyframes fadeIn{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:none}}
 </style>
@@ -734,14 +722,6 @@ td:first-child{text-align:left;}
             <div id="tsWkItems"></div>
           </div>
         </div>
-        <div class="tb-sep"></div>
-        <span class="dr-label">or</span>
-        <div class="dr-wrap">
-          <input type="date" id="tsDrFrom" class="dr-input" oninput="applyTsDr()" onchange="applyTsDr()">
-          <span class="dr-label">→</span>
-          <input type="date" id="tsDrTo" class="dr-input" oninput="applyTsDr()" onchange="applyTsDr()">
-          <button class="tb-btn" onclick="applyTsDr()" style="padding:3px 10px;font-size:10px">Apply</button><span class="dr-clear" id="tsDrClear" style="display:none" onclick="clearTsDr()">✕</span>
-        </div>
       </div>
       <div style="display:flex;align-items:center;gap:6px">
         <button class="tb-btn" onclick="expandAll()">Expand All</button>
@@ -812,14 +792,6 @@ td:first-child{text-align:left;}
             <div id="asWkItems"></div>
           </div>
         </div>
-        <div class="tb-sep"></div>
-        <span class="dr-label">or</span>
-        <div class="dr-wrap">
-          <input type="date" id="asDrFrom" class="dr-input" oninput="applyAsDr()" onchange="applyAsDr()">
-          <span class="dr-label">→</span>
-          <input type="date" id="asDrTo" class="dr-input" oninput="applyAsDr()" onchange="applyAsDr()">
-          <button class="tb-btn" onclick="applyAsDr()" style="padding:3px 10px;font-size:10px">Apply</button><span class="dr-clear" id="asDrClear" style="display:none" onclick="clearAsDr()">✕</span>
-        </div>
       </div>
       <div style="display:flex;align-items:center;gap:6px">
         <button class="tb-btn" onclick="asExpandAll()">Expand All</button>
@@ -852,14 +824,6 @@ td:first-child{text-align:left;}
             </div>
             <div id="crWkItems"></div>
           </div>
-        </div>
-        <div class="tb-sep"></div>
-        <span class="dr-label">or</span>
-        <div class="dr-wrap">
-          <input type="date" id="crDrFrom" class="dr-input" oninput="applyCrDr()" onchange="applyCrDr()">
-          <span class="dr-label">→</span>
-          <input type="date" id="crDrTo" class="dr-input" oninput="applyCrDr()" onchange="applyCrDr()">
-          <button class="tb-btn" onclick="applyCrDr()" style="padding:3px 10px;font-size:10px">Apply</button><span class="dr-clear" id="crDrClear" style="display:none" onclick="clearCrDr()">✕</span>
         </div>
         <div class="tb-sep"></div>
         <div class="tb-group">
@@ -1884,7 +1848,7 @@ function renderSignals(d){
     </div>`).join('');
 }
 // ── TREE STATE ──
-const TS={plat:'all',weeks:null,expanded:{},weekExpanded:{},drFrom:null,drTo:null};
+const TS={plat:'all',weeks:null,expanded:{},weekExpanded:{}};
 
 function treePlat(p,btn){
   TS.plat=p;
@@ -1947,113 +1911,9 @@ function toggleCrDrop(e){ e.stopPropagation(); /* overridden below */ }
 function updateAsWkLabel(){}
 function updateCrWkLabel(){}
 
-// ═══════════════════════════════════════
-// DATE RANGE AGGREGATION
-// ═══════════════════════════════════════
-function aggByDateRange(entity, from, to){
-  const spDaily=entity._dailySpend||{}, attDaily=entity._dailyAtt||{};
-  const revDaily=entity._dailyRev||{}, subsDaily=entity._dailySubs||{};
-  let spend=0,impr=0,clicks=0,leads=0,d1=0,d3=0,d7=0,d10=0,rev=0,subs=0;
-  Object.entries(spDaily).forEach(([ds,sp])=>{
-    if(ds<from||ds>to) return;
-    spend+=sp.spend||0; impr+=sp.impr||0; clicks+=sp.clicks||0;
-    rev+=revDaily[ds]||0; subs+=subsDaily[ds]||0;
-    const att=attDaily[ds]||{};
-    leads+=att.leads||0; d1+=att.d1||0; d3+=att.d3||0; d7+=att.d7||0; d10+=att.d10||0;
-  });
-  const cpl=leads>0&&spend>0?spend/leads:null;
-  const roas=spend>0&&rev>0?rev/spend:null;
-  const cpm=impr>0?spend/impr*1000:null;
-  const cpc=clicks>0?spend/clicks:null;
-  const ctr=impr>0?clicks/impr*100:null;
-  const c2db=clicks>0&&leads>0?leads/clicks*100:null;
-  const d3cost=d3>0&&spend>0?spend/d3:null;
-  const d7cost=d7>0&&spend>0?spend/d7:null;
-  const d1pct=leads>0?Math.round(d1/leads*100)||null:null;
-  const d3pct=leads>0?Math.round(d3/leads*100)||null:null;
-  const d7pct=leads>0?Math.round(d7/leads*100)||null:null;
-  const d10pct=leads>0?Math.round(d10/leads*100)||null:null;
-  return {
-    health:healthScore(tagCPL(cpl),d3cost?tagD3(d3cost):'na',d7cost?tagD7(d7cost):'na','na'),
-    conf:tagConf(spend),
-    spend:spend||null,cpm,cpc,ctr,c2db,
-    leads:leads||null,cpl,
-    subs:subs||null,cps:subs>0?spend/subs:null,
-    rev:rev||null,roas,l2s:leads>0&&subs>0?subs/leads*100:null,
-    d1pct,d3pct,d3cost,d7pct,d7cost,d10pct,paidroas:roas||null
-  };
-}
-function _drActive(state){ return !!(state.drFrom&&state.drTo&&state.drFrom<=state.drTo); }
-function _drSetUI(fromId,toId,clearId,wkBtnId,state){
-  const active=_drActive(state);
-  const clr=document.getElementById(clearId); if(clr) clr.style.display=active?'':'none';
-  const wkBtn=document.getElementById(wkBtnId);
-  if(wkBtn) wkBtn.classList.toggle('dimmed',active);
-  [fromId,toId].forEach(id=>{ const el=document.getElementById(id); if(el) el.classList.toggle('active',active); });
-}
-
-// ── Campaigns date range ──
-function applyTsDr(){
-  TS.drFrom=document.getElementById('tsDrFrom').value||null;
-  TS.drTo=document.getElementById('tsDrTo').value||null;
-  _drSetUI('tsDrFrom','tsDrTo','tsDrClear','tsWkBtn',TS);
-  if(S.data) renderTree(S.data);
-}
-function clearTsDr(){
-  TS.drFrom=null; TS.drTo=null;
-  document.getElementById('tsDrFrom').value='';
-  document.getElementById('tsDrTo').value='';
-  _drSetUI('tsDrFrom','tsDrTo','tsDrClear','tsWkBtn',TS);
-  if(S.data) renderTree(S.data);
-}
-
-// ── Ad Sets date range ──
-function applyAsDr(){
-  AS.drFrom=document.getElementById('asDrFrom').value||null;
-  AS.drTo=document.getElementById('asDrTo').value||null;
-  _drSetUI('asDrFrom','asDrTo','asDrClear','asWkBtn',AS);
-  if(S.data) renderAdsets(S.data);
-}
-function clearAsDr(){
-  AS.drFrom=null; AS.drTo=null;
-  document.getElementById('asDrFrom').value='';
-  document.getElementById('asDrTo').value='';
-  _drSetUI('asDrFrom','asDrTo','asDrClear','asWkBtn',AS);
-  if(S.data) renderAdsets(S.data);
-}
-
-// ── Creatives date range ──
-function applyCrDr(){
-  CR.drFrom=document.getElementById('crDrFrom').value||null;
-  CR.drTo=document.getElementById('crDrTo').value||null;
-  _drSetUI('crDrFrom','crDrTo','crDrClear','crWkBtn',CR);
-  if(S.data) renderCreatives(S.data);
-}
-function clearCrDr(){
-  CR.drFrom=null; CR.drTo=null;
-  document.getElementById('crDrFrom').value='';
-  document.getElementById('crDrTo').value='';
-  _drSetUI('crDrFrom','crDrTo','crDrClear','crWkBtn',CR);
-  if(S.data) renderCreatives(S.data);
-}
-
 // ── S2: CAMPAIGN TREE ──
 function renderTree(d){
-  const weeks=d.weeks.filter(w=>{
-    if(TS.weeks&&TS.weeks[w.key]===false) return false;
-    if(_tsDrOn){
-      // only keep weeks that overlap with the date range
-      // week key "2026-W22" → start Mon May 25, end Sun May 31
-      const yr=parseInt(w.key.split('-W')[0]), wn=parseInt(w.key.split('-W')[1]);
-      const jan4=new Date(Date.UTC(yr,0,4));
-      const mon=new Date(Date.UTC(yr,0,4-(((jan4.getUTCDay()+6)%7))+(wn-1)*7));
-      const sun=new Date(mon.getTime()+6*86400000);
-      const wStart=mon.getUTCFullYear()+'-'+String(mon.getUTCMonth()+1).padStart(2,'0')+'-'+String(mon.getUTCDate()).padStart(2,'0');
-      const wEnd=sun.getUTCFullYear()+'-'+String(sun.getUTCMonth()+1).padStart(2,'0')+'-'+String(sun.getUTCDate()).padStart(2,'0');
-      return wEnd>=(TS.drFrom||'0000-01-01') && wStart<=(TS.drTo||'9999-12-31');
-    }
-    return true;
-  });
+  const weeks=d.weeks.filter(w=>TS.weeks&&TS.weeks[w.key]!==false);
   let camps=[...d.camps];
   if(TS.plat!=='all') camps=camps.filter(c=>c.platform===TS.plat);
   function campAgg(c){
@@ -2131,18 +1991,14 @@ function renderTree(d){
   let thCells=`<th style="min-width:240px;text-align:left;padding:7px 10px;background:var(--bg3);border-bottom:1px solid var(--border);position:sticky;left:0;z-index:3;font-family:var(--font-mono);font-size:9px;letter-spacing:.08em;color:var(--text3);text-transform:uppercase">Campaign</th>`;
   COLS.forEach((col,ci)=>{ thCells+=`<th class="${ci===0?'col-sep':''}">${col.label}</th>`; });
 
-  const _tsDrOn=_drActive(TS);
-  // Sort by spend (date range mode uses daily data, week mode uses weekly)
-  camps.sort((a,b)=>{
-    const sa=_tsDrOn?aggByDateRange(a,TS.drFrom,TS.drTo).spend||0:weeks.reduce((s,w)=>s+(a.weekly[w.key]?.spend||0),0);
-    const sb=_tsDrOn?aggByDateRange(b,TS.drFrom,TS.drTo).spend||0:weeks.reduce((s,w)=>s+(b.weekly[w.key]?.spend||0),0);
-    return sb-sa;
-  });
+  // Sort campaigns by spend in selected weeks (descending)
+  camps.sort((a,b)=>(weeks.reduce((s,w)=>s+(b.weekly[w.key]?.spend||0),0))-(weeks.reduce((s,w)=>s+(a.weekly[w.key]?.spend||0),0)));
 
   const rows=[];
   camps.forEach(c=>{
     const isOpen=!!TS.expanded[c.id];
-    const agg=_tsDrOn?aggByDateRange(c,TS.drFrom,TS.drTo):campAgg(c);
+    const agg=campAgg(c);
+    // Skip campaigns with no spend in selected weeks
     if(!agg.spend||agg.spend===0) return;
     const ps=projSignal(c,d); // projected signal for action tag in name
     let cc=`<td style="position:sticky;left:0;background:${isOpen?'var(--bg3)':'var(--bg2)'};z-index:1">
@@ -2274,35 +2130,7 @@ function renderTree(d){
     }
   });
 
-  // Grand total: sum aggByDateRange across all visible camps (date mode) or use grandAgg (week mode)
-  let gt;
-  if(_tsDrOn){
-    const drAggs=camps.map(c=>aggByDateRange(c,TS.drFrom,TS.drTo)).filter(a=>a.spend);
-    const totSpend=drAggs.reduce((s,a)=>s+(a.spend||0),0);
-    const totLeads=drAggs.reduce((s,a)=>s+(a.leads||0),0);
-    const totRev=drAggs.reduce((s,a)=>s+(a.rev||0),0);
-    const totImpr=drAggs.reduce((s,a)=>s+(a.cpm>0?a.spend/a.cpm*1000:0),0);
-    const totClicks=drAggs.reduce((s,a)=>s+(a.cpc>0?a.spend/a.cpc:0),0);
-    const totD3=drAggs.reduce((s,a)=>s+(a.d3cost>0&&a.leads?Math.round(a.leads*(a.d3pct||0)/100):0),0);
-    const totD7=drAggs.reduce((s,a)=>s+(a.d7cost>0&&a.leads?Math.round(a.leads*(a.d7pct||0)/100):0),0);
-    const cpl=totLeads>0&&totSpend>0?totSpend/totLeads:null;
-    const roas=totSpend>0&&totRev>0?totRev/totSpend:null;
-    gt={health:0,conf:tagConf(totSpend),
-      spend:totSpend||null,
-      cpm:totImpr>0?totSpend/totImpr*1000:null,
-      cpc:totClicks>0?totSpend/totClicks:null,
-      ctr:totImpr>0?totClicks/totImpr*100:null,
-      c2db:totClicks>0&&totLeads>0?totLeads/totClicks*100:null,
-      leads:totLeads||null,cpl,
-      subs:null,cps:null,rev:totRev||null,roas,l2s:null,
-      d3pct:totLeads>0&&totD3>0?Math.round(totD3/totLeads*100):null,
-      d3cost:totD3>0?totSpend/totD3:null,
-      d7pct:totLeads>0&&totD7>0?Math.round(totD7/totLeads*100):null,
-      d7cost:totD7>0?totSpend/totD7:null,
-      d1pct:null,d10pct:null,paidroas:roas||null};
-  } else {
-    gt=grandAgg();
-  }
+  const gt=grandAgg();
   let gc=`<td style="position:sticky;left:0;background:var(--bg3);z-index:1">
     <div class="tree-name tree-indent-1"><span style="width:14px;display:inline-block"></span>
       <div class="tree-name-main" style="color:var(--text2)">TOTAL · ${rows.filter(r=>r.includes('row-camp')).length} active · ${camps.length} total · ${weeks.length} wks</div>
@@ -2553,7 +2381,7 @@ function scrollToPivotRow(id){
 // ═══════════════════════════════════════
 // AD SETS TREE STATE
 // ═══════════════════════════════════════
-const AS={plat:'all',weeks:null,expanded:{},filterAdset:null,filterCamp:null,sort:'spend',drFrom:null,drTo:null};
+const AS={plat:'all',weeks:null,expanded:{},filterAdset:null,filterCamp:null,sort:'spend'};
 const CR_FILTER={adset:null};
 
 // ── DRILL-THROUGH NAVIGATION ──
@@ -2686,11 +2514,10 @@ function renderAdsets(d){
   COLS.forEach((col,ci)=>{ thCells+=`<th class="${ci===0?'col-sep':''}">${col.label}</th>`; });
 
   const rows=[];
-  const _asDrOn=_drActive(AS);
   adsets.forEach(a=>{
     const isOpen=!!AS.expanded[a.id];
-    const agg=_asDrOn?aggByDateRange(a,AS.drFrom,AS.drTo):asAgg(a);
-    if(!agg.spend||agg.spend===0) return;
+    const agg=asAgg(a);
+    if(!agg.spend||agg.spend===0) return; // hide adsets with no spend in selected weeks
     let ac=`<td style="position:sticky;left:0;background:${isOpen?'var(--bg3)':'var(--bg2)'};z-index:1">
       <div class="tree-name tree-indent-1">
         <span class="tree-toggle${isOpen?' open':''}">›</span>
@@ -2796,7 +2623,7 @@ function renderAdsets(d){
 // ═══════════════════════════════════════
 // CREATIVES TREE STATE
 // ═══════════════════════════════════════
-const CR={plat:'all',weeks:null,expanded:{},sort:'spend',drFrom:null,drTo:null};
+const CR={plat:'all',weeks:null,expanded:{},sort:'spend'};
 const themeColor={'Date Hook':'blue','Generic':'gray','Problem Statement':'purple','Social Proof':'yellow','AI Creative':'green'};
 
 function crPlat(p,btn){ CR.plat=p; btn.closest('.tb-group').querySelectorAll('.tb-btn').forEach(b=>b.className='tb-btn'); btn.className='tb-btn act-'+p; if(S.data) renderCreatives(S.data); }
@@ -2901,11 +2728,10 @@ function renderCreatives(d){
   COLS.forEach((col,ci)=>{ thCells+=`<th class="${ci===0?'col-sep':''}">${col.label}</th>`; });
 
   const rows=[];
-  const _crDrOn=_drActive(CR);
   crs.forEach(cr=>{
     const isOpen=!!CR.expanded[cr.id];
-    const agg=_crDrOn?aggByDateRange(cr,CR.drFrom,CR.drTo):crAgg(cr);
-    if(!agg.spend||agg.spend===0) return;
+    const agg=crAgg(cr);
+    if(!agg.spend||agg.spend===0) return; // hide creatives with no spend in selected weeks
     let cc=`<td style="position:sticky;left:0;background:${isOpen?'var(--bg3)':'var(--bg2)'};z-index:1">
       <div class="tree-name tree-indent-1">
         <span class="tree-toggle${isOpen?' open':''}">›</span>
