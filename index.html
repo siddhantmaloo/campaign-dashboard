@@ -2256,7 +2256,35 @@ function renderTree(d){
     }
   });
 
-  const gt=_tsDrOn?(() => { let totS=0,totL=0,totR=0; camps.forEach(c=>{const a=aggByDateRange(c,TS.drFrom,TS.drTo);totS+=a.spend||0;totL+=a.leads||0;totR+=a.rev||0;}); return aggByDateRange({_dailySpend:Object.fromEntries(camps.flatMap(c=>Object.entries(c._dailySpend||{}).filter(([d])=>d>=TS.drFrom&&d<=TS.drTo))),_dailyAtt:Object.fromEntries(camps.flatMap(c=>Object.entries(c._dailyAtt||{}).filter(([d])=>d>=TS.drFrom&&d<=TS.drTo).map(([d,v])=>[d,v]))),_dailyRev:{},_dailySubs:{}},TS.drFrom,TS.drTo); })():grandAgg();
+  // Grand total: sum aggByDateRange across all visible camps (date mode) or use grandAgg (week mode)
+  let gt;
+  if(_tsDrOn){
+    const drAggs=camps.map(c=>aggByDateRange(c,TS.drFrom,TS.drTo)).filter(a=>a.spend);
+    const totSpend=drAggs.reduce((s,a)=>s+(a.spend||0),0);
+    const totLeads=drAggs.reduce((s,a)=>s+(a.leads||0),0);
+    const totRev=drAggs.reduce((s,a)=>s+(a.rev||0),0);
+    const totImpr=drAggs.reduce((s,a)=>s+(a.cpm>0?a.spend/a.cpm*1000:0),0);
+    const totClicks=drAggs.reduce((s,a)=>s+(a.cpc>0?a.spend/a.cpc:0),0);
+    const totD3=drAggs.reduce((s,a)=>s+(a.d3cost>0&&a.leads?Math.round(a.leads*(a.d3pct||0)/100):0),0);
+    const totD7=drAggs.reduce((s,a)=>s+(a.d7cost>0&&a.leads?Math.round(a.leads*(a.d7pct||0)/100):0),0);
+    const cpl=totLeads>0&&totSpend>0?totSpend/totLeads:null;
+    const roas=totSpend>0&&totRev>0?totRev/totSpend:null;
+    gt={health:0,conf:tagConf(totSpend),
+      spend:totSpend||null,
+      cpm:totImpr>0?totSpend/totImpr*1000:null,
+      cpc:totClicks>0?totSpend/totClicks:null,
+      ctr:totImpr>0?totClicks/totImpr*100:null,
+      c2db:totClicks>0&&totLeads>0?totLeads/totClicks*100:null,
+      leads:totLeads||null,cpl,
+      subs:null,cps:null,rev:totRev||null,roas,l2s:null,
+      d3pct:totLeads>0&&totD3>0?Math.round(totD3/totLeads*100):null,
+      d3cost:totD3>0?totSpend/totD3:null,
+      d7pct:totLeads>0&&totD7>0?Math.round(totD7/totLeads*100):null,
+      d7cost:totD7>0?totSpend/totD7:null,
+      d1pct:null,d10pct:null,paidroas:roas||null};
+  } else {
+    gt=grandAgg();
+  }
   let gc=`<td style="position:sticky;left:0;background:var(--bg3);z-index:1">
     <div class="tree-name tree-indent-1"><span style="width:14px;display:inline-block"></span>
       <div class="tree-name-main" style="color:var(--text2)">TOTAL · ${rows.filter(r=>r.includes('row-camp')).length} active · ${camps.length} total · ${weeks.length} wks</div>
