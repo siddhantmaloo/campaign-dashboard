@@ -652,7 +652,26 @@ td:first-child{text-align:left;}
   </div>
   <div class="tbl-wrap fade-in">
     <div class="tbl-hdr">
-      <div></div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <div class="tb-group">
+          <button class="tb-btn act-all" onclick="ovWkPlat('all',this)">ALL</button>
+          <button class="tb-btn" onclick="ovWkPlat('meta',this)">META</button>
+          <button class="tb-btn" onclick="ovWkPlat('google',this)">GOOGLE</button>
+        </div>
+        <div class="tb-sep"></div>
+        <div class="wk-dd-wrap">
+          <button class="wk-dd-btn" id="ovWkBtn" onclick="toggleOvWkDrop(event)" style="min-width:180px">
+            <span id="ovWkLabel">Weeks: —</span><span class="wk-dd-arrow">▾</span>
+          </button>
+          <div class="wk-dd-menu" id="ovWkMenu" onwheel="event.stopPropagation()">
+            <div class="wk-dd-actions">
+              <span class="wk-dd-link" onclick="ovWkSelectAll()">Select all</span>
+              <span class="wk-dd-link" onclick="ovWkSelectNone()">Clear</span>
+            </div>
+            <div id="ovWkItems"></div>
+          </div>
+        </div>
+      </div>
       <div style="display:flex;align-items:center;gap:6px">
         <button class="tb-btn" onclick="ovWkExpandAll()">Expand All</button>
         <button class="tb-btn" onclick="ovWkCollapseAll()">Collapse All</button>
@@ -721,6 +740,12 @@ td:first-child{text-align:left;}
   <div class="tbl-wrap fade-in" style="overflow:visible">
     <div class="tbl-hdr">
       <div style="display:flex;align-items:center;gap:10px">
+        <div class="tb-group">
+          <button class="tb-btn act-all" onclick="batchPlat('all',this)">ALL</button>
+          <button class="tb-btn" onclick="batchPlat('meta',this)">META</button>
+          <button class="tb-btn" onclick="batchPlat('google',this)">GOOGLE</button>
+        </div>
+        <div class="tb-sep"></div>
         <div class="wk-dd-wrap" id="batchDropWrap">
           <button class="wk-dd-btn" id="batchDropBtn" onclick="toggleBatchDrop(event)">
             <span id="batchDropLabel">Batches: —</span><span class="wk-dd-arrow">▾</span>
@@ -1446,13 +1471,46 @@ function applyPlatDays(week, plat){
 }
 
 // ── WEEKLY OVERVIEW STATE ──
-const OVW={expanded:{}};
+const OVW={expanded:{},plat:'all',weeks:null};
 function toggleOvWeek(key){ OVW.expanded[key]=!OVW.expanded[key]; if(S.data) renderWeeklyOv(S.data); }
 function ovWkExpandAll(){ if(!S.data) return; S.data.weeklyOv.forEach(w=>OVW.expanded[w.key]=true); renderWeeklyOv(S.data); }
 function ovWkCollapseAll(){ if(!S.data) return; Object.keys(OVW.expanded).forEach(k=>OVW.expanded[k]=false); renderWeeklyOv(S.data); }
+// ── WEEKLY OVERVIEW: platform filter ──
+function ovWkPlat(p,btn){ OVW.plat=p; btn.closest('.tb-group').querySelectorAll('.tb-btn').forEach(b=>b.className='tb-btn'); btn.className='tb-btn act-'+p; if(S.data) renderWeeklyOv(S.data); }
+
+// ── WEEKLY OVERVIEW: week filter dropdown ──
+function toggleOvWkDrop(e){
+  e.stopPropagation();
+  if(S.data) buildOvWkItems(S.data);
+  const btn=document.getElementById('ovWkBtn'), menu=document.getElementById('ovWkMenu');
+  const opening=!menu.classList.contains('open');
+  btn.classList.toggle('open'); menu.classList.toggle('open');
+}
+function buildOvWkItems(data){
+  const el=document.getElementById('ovWkItems'); if(!el||!data) return;
+  el.innerHTML=[...data.weeklyOv].reverse().map(w=>`
+    <div class="wk-dd-item${w.now?' now':''}" onclick="event.stopPropagation()">
+      <input type="checkbox" id="ovwk_${w.key}" ${OVW.weeks&&OVW.weeks[w.key]!==false?'checked':''}
+        onchange="toggleOvWk('${w.key}',this.checked)">
+      <label class="wk-dd-item-label" for="ovwk_${w.key}">${w.full}${w.now?' ← now':''}</label>
+      <span class="wk-dd-item-sub">${maturityLabel(w.key)}</span>
+    </div>`).join('');
+  updateOvWkLabel(data);
+}
+function updateOvWkLabel(data){
+  if(!data||!OVW.weeks) return;
+  const on=data.weeklyOv.filter(w=>OVW.weeks[w.key]!==false);
+  const lbl=on.length===data.weeklyOv.length?`All ${on.length} weeks`:on.length===0?'No weeks':on.length===1?on[0].label:`${on[0].label} – ${on[on.length-1].label} (${on.length})`;
+  const el=document.getElementById('ovWkLabel'); if(el) el.textContent='Weeks: '+lbl;
+}
+function toggleOvWk(key,checked){ OVW.weeks[key]=checked; if(S.data){updateOvWkLabel(S.data);renderWeeklyOv(S.data);} }
+function ovWkSelectAll(){ if(!S.data) return; S.data.weeklyOv.forEach(w=>OVW.weeks[w.key]=true); document.querySelectorAll('#ovWkItems input').forEach(cb=>cb.checked=true); updateOvWkLabel(S.data); renderWeeklyOv(S.data); }
+function ovWkSelectNone(){ if(!S.data) return; S.data.weeklyOv.forEach(w=>OVW.weeks[w.key]=false); document.querySelectorAll('#ovWkItems input').forEach(cb=>cb.checked=false); updateOvWkLabel(S.data); renderWeeklyOv(S.data); }
 
 function renderWeeklyOv(d){
-  const wks=d.weeklyOv;
+  const allWks=d.weeklyOv;
+  const wks=OVW.weeks?allWks.filter(w=>OVW.weeks[w.key]!==false):allWks;
+  const wkPlat=OVW.plat;
 
   let thCells=`<th style="min-width:200px;text-align:left;padding:7px 10px;background:var(--bg3);border-bottom:1px solid var(--border);position:sticky;left:0;z-index:3;font-family:var(--font-mono);font-size:9px;letter-spacing:.08em;color:var(--text3);text-transform:uppercase">Week / Day</th>`;
   COLS.forEach((col,ci)=>{ thCells+=`<th class="${ci===0?'col-sep':''}">${col.label}</th>`; });
@@ -1460,7 +1518,7 @@ function renderWeeklyOv(d){
   const rows=[];
   wks.forEach(w=>{
     const isOpen=OVW.expanded[w.key]!==undefined ? OVW.expanded[w.key] : false;
-    const src=applyPlatDay(w, OV.plat);
+    const src=applyPlatDay(w, wkPlat);
     const wr=makeOvMetricRow(src);
     const mature=!w.now;
 
@@ -1476,7 +1534,7 @@ function renderWeeklyOv(d){
     rows.push(`<tr class="row-camp${isOpen?' open':''}" onclick="toggleOvWeek('${w.key}')">${wc}</tr>`);
 
     if(isOpen){
-      const platDays=applyPlatDays(w, OV.plat);
+      const platDays=applyPlatDays(w, wkPlat);
       platDays.forEach((day,di)=>{
         const dsrc=day;
         const dr=makeOvMetricRow(dsrc);
@@ -1497,9 +1555,9 @@ function renderWeeklyOv(d){
   });
 
   // Total row
-  const totSpend=wks.reduce((s,w)=>s+applyPlatDay(w,OV.plat).spend,0);
-  const totLeads=wks.reduce((s,w)=>s+applyPlatDay(w,OV.plat).leads,0);
-  const totRev=wks.reduce((s,w)=>s+applyPlatDay(w,OV.plat).rev,0);
+  const totSpend=wks.reduce((s,w)=>s+applyPlatDay(w,wkPlat).spend,0);
+  const totLeads=wks.reduce((s,w)=>s+applyPlatDay(w,wkPlat).leads,0);
+  const totRev=wks.reduce((s,w)=>s+applyPlatDay(w,wkPlat).rev,0);
   const gtr=makeOvMetricRow({spend:totSpend,leads:totLeads,rev:totRev,cpm:22,cpc:2.2,ctr:0.93,c2db:23.5,subs:Math.round(totLeads*0.007),l2s:0.76,d1pct:64,d3pct:28,d7pct:12,d10pct:8});
   let gc=`<td style="position:sticky;left:0;background:var(--bg3);z-index:1"><div class="tree-name tree-indent-1"><span style="width:14px;display:inline-block"></span><div class="tree-name-main" style="color:var(--text2)">TOTAL · ${wks.length} weeks</div></div></td>`;
   COLS.forEach((col,ci)=>{ gc+=`<td class="${ci===0?'col-sep':''}">${cellVal(gtr,col,true)}</td>`; });
@@ -2082,7 +2140,8 @@ function renderTree(d){
 }
 
 // ── BATCH DROPDOWN + STATE ──
-const BS={selected:{},expanded:{}};
+const BS={selected:{},expanded:{},plat:'all'};
+function batchPlat(p,btn){ BS.plat=p; btn.closest('.tb-group').querySelectorAll('.tb-btn').forEach(b=>b.className='tb-btn'); btn.className='tb-btn act-'+p; if(S.data) renderBatch(S.data); }
 
 function toggleBatchDrop(e){
   e.stopPropagation();
@@ -2118,7 +2177,7 @@ function batchCollapseAll(){ if(!S.data) return; Object.keys(BS.expanded).forEac
 // ── S3: BATCH DIAGNOSTIC TREE ──
 function renderBatch(d){
   let camps=[...d.camps];
-  if(TS.plat!=='all') camps=camps.filter(c=>c.platform===TS.plat);
+  if(BS.plat!=='all') camps=camps.filter(c=>c.platform===BS.plat);
   const batches=d.batches.filter(b=>BS.selected[b.id]!==false);
 
   // Build metrics from batch attendance object + actual spend from registration weeks
@@ -3732,10 +3791,12 @@ document.addEventListener('DOMContentLoaded', async ()=>{
       S.data.batches.forEach(b=>{ BS.selected[b.id]=true; });
       document.getElementById('xlsxDot')?.classList.add('active');
       document.getElementById('cohortBadge').textContent='Live Data';
+      OVW.weeks={}; S.data.weeklyOv.forEach(w=>{ OVW.weeks[w.key]=true; });
       buildWkDropItems(S.data);
       buildBatchDropItems(S.data);
       buildAsWkItems(S.data);
       buildCrWkItems(S.data);
+      buildOvWkItems(S.data);
       buildKvMonthItems(S.data);
       renderAll(S.data);
       showToast('Data loaded ✓', `${parsed.camps.length} campaigns · ${parsed.creatives.length} creatives`);
