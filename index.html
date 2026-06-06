@@ -2256,7 +2256,7 @@ function renderBatch(d){
                 <div class="tree-name-sub" style="color:var(--text3);font-size:9px">Leads from inactive/paused campaigns</div>
               </div>
             </div></td>`;
-          COLS.forEach((col,ci)=>{ oc+=`<td class="${ci===0?'col-sep':''}" style="background:var(--bg3)">${cellVal(od,col,false)}</td>`; });
+          COLS.forEach((col,ci)=>{ oc+=`<td class="${ci===0?'col-sep':''}" style="background:var(--bg3)">${cellVal(od,col,true)}</td>`; });
           rows.push(`<tr class="row-week">${oc}</tr>`);
         }
 
@@ -2272,7 +2272,7 @@ function renderBatch(d){
                 <div class="tree-name-sub" style="color:var(--text3);font-size:9px">No UTM / direct registrations</div>
               </div>
             </div></td>`;
-          COLS.forEach((col,ci)=>{ ogc+=`<td class="${ci===0?'col-sep':''}" style="background:var(--bg3)">${cellVal(orgd,col,false)}</td>`; });
+          COLS.forEach((col,ci)=>{ ogc+=`<td class="${ci===0?'col-sep':''}" style="background:var(--bg3)">${cellVal(orgd,col,true)}</td>`; });
           rows.push(`<tr class="row-week">${ogc}</tr>`);
         }
       }
