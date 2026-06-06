@@ -3806,10 +3806,12 @@ function loadSample(){
   S.data.batches.forEach(b=>{ BS.selected[b.id]=true; });
   document.getElementById('xlsxDot')?.classList.add('active');
   document.getElementById('cohortBadge').textContent='Sample Data';
+  OVW.weeks={}; S.data.weeklyOv.forEach(w=>{ OVW.weeks[w.key]=true; });
   buildWkDropItems(S.data);
   buildBatchDropItems(S.data);
   buildAsWkItems(S.data);
   buildCrWkItems(S.data);
+  buildOvWkItems(S.data);
   buildKvMonthItems(S.data);
   renderAll(S.data);
   showToast('Sample data loaded','Week 23 · Meta + Google · 6 campaigns');
