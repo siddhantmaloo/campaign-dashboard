@@ -333,7 +333,7 @@ td:first-child{text-align:left;}
 .wk-dd-btn:hover{background:var(--bg4);}
 .wk-dd-arrow{color:var(--text3);font-size:9px;transition:transform .15s;}
 .wk-dd-btn.open .wk-dd-arrow{transform:rotate(180deg);}
-.wk-dd-menu{position:absolute;top:calc(100% + 4px);left:0;background:var(--bg3);border:1px solid var(--border2);border-radius:5px;z-index:500;min-width:240px;box-shadow:0 8px 24px rgba(0,0,0,.4);display:none;max-height:320px;overflow-y:auto;overscroll-behavior:contain;}
+.wk-dd-menu{position:fixed;background:var(--bg3);border:1px solid var(--border2);border-radius:5px;z-index:9999;min-width:240px;box-shadow:0 8px 24px rgba(0,0,0,.4);display:none;max-height:320px;overflow-y:auto;overscroll-behavior:contain;}
 .wk-dd-menu.open{display:block;}
 .wk-dd-actions{display:flex;gap:12px;padding:7px 12px 5px;border-bottom:1px solid var(--border);}
 .wk-dd-link{font-family:var(--font-mono);font-size:9px;color:var(--accent);cursor:pointer;}
@@ -1331,8 +1331,10 @@ function ovCollapseAll(){ if(!S.data) return; Object.keys(OV.expanded).forEach(k
 // KPI month filter
 function toggleKvMonthDrop(e){
   e.stopPropagation();
-  document.getElementById('kvMonthBtn').classList.toggle('open');
-  document.getElementById('kvMonthMenu').classList.toggle('open');
+  const btn=document.getElementById('kvMonthBtn'), menu=document.getElementById('kvMonthMenu');
+  const opening=!menu.classList.contains('open');
+  btn.classList.toggle('open'); menu.classList.toggle('open');
+  if(opening) positionDrop(btn,menu);
 }
 function buildKvMonthItems(data){
   const el=document.getElementById('kvMonthItems');
@@ -1830,9 +1832,11 @@ function buildWkPills(data, containerId, stateObj, renderFn){
 // ── CAMPAIGNS WEEK DROPDOWN ──
 function toggleWkDrop(e){
   e.stopPropagation();
-  if(S.data) buildWkDropItems(S.data); // always rebuild to reflect latest state
-  document.getElementById('tsWkBtn').classList.toggle('open');
-  document.getElementById('tsWkMenu').classList.toggle('open');
+  if(S.data) buildWkDropItems(S.data);
+  const btn=document.getElementById('tsWkBtn'), menu=document.getElementById('tsWkMenu');
+  const opening=!menu.classList.contains('open');
+  btn.classList.toggle('open'); menu.classList.toggle('open');
+  if(opening) positionDrop(btn,menu);
 }
 function buildWkDropItems(data){
   const el=document.getElementById('tsWkItems'); if(!el||!data) return;
@@ -2103,9 +2107,11 @@ const BS={selected:{},expanded:{}};
 
 function toggleBatchDrop(e){
   e.stopPropagation();
-  if(!document.getElementById('batchDropMenu').classList.contains('open')&&S.data) buildBatchDropItems(S.data);
-  document.getElementById('batchDropBtn').classList.toggle('open');
-  document.getElementById('batchDropMenu').classList.toggle('open');
+  if(S.data) buildBatchDropItems(S.data);
+  const btn=document.getElementById('batchDropBtn'), menu=document.getElementById('batchDropMenu');
+  const opening=!menu.classList.contains('open');
+  btn.classList.toggle('open'); menu.classList.toggle('open');
+  if(opening) positionDrop(btn,menu);
 }
 function buildBatchDropItems(data){
   const el=document.getElementById('batchDropItems');
@@ -2373,9 +2379,11 @@ function asCollapseAll(){ if(!S.data) return; Object.keys(AS.expanded).forEach(k
 
 function toggleAsDrop(e){
   e.stopPropagation();
-    if(S.data) buildAsWkItems(S.data);
-  document.getElementById('asWkBtn').classList.toggle('open');
-  document.getElementById('asWkMenu').classList.toggle('open');
+  if(S.data) buildAsWkItems(S.data);
+  const btn=document.getElementById('asWkBtn'), menu=document.getElementById('asWkMenu');
+  const opening=!menu.classList.contains('open');
+  btn.classList.toggle('open'); menu.classList.toggle('open');
+  if(opening) positionDrop(btn,menu);
 }
 function buildAsWkItems(data){
   const el=document.getElementById('asWkItems'); if(!el||!data) return;
@@ -2590,8 +2598,10 @@ function setCrSort(s,btn){ CR.sort=s; btn.closest('.tb-group').querySelectorAll(
 function toggleCrDrop(e){
   e.stopPropagation();
   if(S.data) buildCrWkItems(S.data);
-  document.getElementById('crWkBtn').classList.toggle('open');
-  document.getElementById('crWkMenu').classList.toggle('open');
+  const btn=document.getElementById('crWkBtn'), menu=document.getElementById('crWkMenu');
+  const opening=!menu.classList.contains('open');
+  btn.classList.toggle('open'); menu.classList.toggle('open');
+  if(opening) positionDrop(btn,menu);
 }
 function buildCrWkItems(data){
   const el=document.getElementById('crWkItems'); if(!el||!data) return;
@@ -3728,6 +3738,14 @@ function showToast(title,sub){
 }
 
 // ── INIT ──
+// Position a fixed-position dropdown under its button
+function positionDrop(btnEl, menuEl){
+  const r=btnEl.getBoundingClientRect();
+  menuEl.style.top=(r.bottom+4)+'px';
+  menuEl.style.left=r.left+'px';
+  menuEl.style.minWidth=r.width+'px';
+}
+
 // Close all wk-dd dropdowns on outside click
 document.addEventListener('click', ()=>{
   document.querySelectorAll('.wk-dd-btn.open').forEach(b=>b.classList.remove('open'));
