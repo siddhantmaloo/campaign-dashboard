@@ -2117,14 +2117,18 @@ function renderTree(d){
   let thCells=`<th style="min-width:240px;text-align:left;padding:7px 10px;background:var(--bg3);border-bottom:1px solid var(--border);position:sticky;left:0;z-index:3;font-family:var(--font-mono);font-size:9px;letter-spacing:.08em;color:var(--text3);text-transform:uppercase">Campaign</th>`;
   COLS.forEach((col,ci)=>{ thCells+=`<th class="${ci===0?'col-sep':''}">${col.label}</th>`; });
 
-  // Sort campaigns by spend in selected weeks (descending)
-  camps.sort((a,b)=>(weeks.reduce((s,w)=>s+(b.weekly[w.key]?.spend||0),0))-(weeks.reduce((s,w)=>s+(a.weekly[w.key]?.spend||0),0)));
+  const _tsDrOn=_drActive(TS);
+  // Sort by spend (date range mode uses daily data, week mode uses weekly)
+  camps.sort((a,b)=>{
+    const sa=_tsDrOn?aggByDateRange(a,TS.drFrom,TS.drTo).spend||0:weeks.reduce((s,w)=>s+(a.weekly[w.key]?.spend||0),0);
+    const sb=_tsDrOn?aggByDateRange(b,TS.drFrom,TS.drTo).spend||0:weeks.reduce((s,w)=>s+(b.weekly[w.key]?.spend||0),0);
+    return sb-sa;
+  });
 
   const rows=[];
   camps.forEach(c=>{
     const isOpen=!!TS.expanded[c.id];
-    const agg=campAgg(c);
-    // Skip campaigns with no spend in selected weeks
+    const agg=_tsDrOn?aggByDateRange(c,TS.drFrom,TS.drTo):campAgg(c);
     if(!agg.spend||agg.spend===0) return;
     const ps=projSignal(c,d); // projected signal for action tag in name
     let cc=`<td style="position:sticky;left:0;background:${isOpen?'var(--bg3)':'var(--bg2)'};z-index:1">
