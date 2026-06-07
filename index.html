@@ -1516,21 +1516,21 @@ function renderOverview(d){
           <div class="tree-name-sub">${m.days.length} days · ${m.sub}</div>
         </div>
       </div></td>`;
-    COLS.forEach((col,ci)=>{ mc+=`<td class="${ci===0?'col-sep':''}">${cellVal(mr,col,isMature(m.key,col.k))}</td>`; });
+    // Age = days since end of that month (current month uses today)
+    const _myr=parseInt(m.key.slice(0,4)), _mmo=parseInt(m.key.slice(4,6)||m.key.slice(5,7));
+    const _mend=isCurrent?new Date():new Date(Date.UTC(_myr,_mmo,0));
+    const _mage=Math.max(0,Math.round((new Date()-_mend)/86400000));
+    COLS.forEach((col,ci)=>{ mc+=`<td class="${ci===0?'col-sep':''}">${cellVal(mr,col,isMatureByAge(_mage,col.k))}</td>`; });
     rows.push(`<tr class="row-camp${isOpen?' open':''}" onclick="toggleOvMonth('${m.key}')">${mc}</tr>`);
 
     if(isOpen){
       m.days.forEach((day,di)=>{
         const dr=makeMetricRow(applyPlatDay(day,OVM.plat));
         const isToday=day.today||false;
-        // Age of this specific date = days since that date
-        // Month index: jan=0,feb=1,...jun=5. Day index di is 0-based.
-        const monthIdx=['jan26','feb26','mar26','apr26','may26','jun26'].indexOf(m.key);
-        const daysInMonth=m.days.length;
-        // Days elapsed since this date (from Jun 4 2026)
-        const today=new Date(2026,5,4); // Jun 4 2026
-        const thisDate=new Date(2026,monthIdx,di+1);
-        const dayAge=Math.max(0,Math.round((today-thisDate)/(1000*60*60*24)));
+        // Age = days since this specific date
+        const _dstr=day.label.slice(0,10); // "YYYY-MM-DD"
+        const _ddate=new Date(_dstr+'T00:00:00Z');
+        const dayAge=Math.max(0,Math.round((new Date()-_ddate)/86400000));
         let dc=`<td style="position:sticky;left:0;background:var(--bg);z-index:1">
           <div class="tree-name tree-indent-2">
             <span style="width:14px;display:inline-block;flex-shrink:0"></span>
