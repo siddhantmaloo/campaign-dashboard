@@ -2487,7 +2487,7 @@ function renderBatch(d){
       d1pct:d1pct||null,d3pct:d3pct||null,d3cost,
       d7pct:d7pct||null,d7cost,d10pct:d10pct||null,paidroas:roas||null,
       adjroas:rev>0&&(spend+bLeads*T.waCost)>0?rev/(spend+bLeads*T.waCost):null,
-      ltvRoas:computeLtvROAS(rev,bd?bd.ord31:0,bd?bd.ordOt:0,spend)};
+      ltvRoas:computeLtvROAS(rev,rd?rd.ord31:0,rd?rd.ordOt:0,spend)};
   }
   function batchCampData(b,c){
     const bd=b.data[c.id]||{leads:0,d1:0,d3:0,d7:0,d10:0,wkLeads:{}};
