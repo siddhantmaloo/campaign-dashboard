@@ -2235,7 +2235,7 @@ function renderTree(d){
                 d1pct,d3pct,d3cost:dl>0&&d3pct>0?ds/Math.round(dl*(d3pct/100)):null,
                 d7pct,d7cost:dl>0&&d7pct>0?ds/Math.round(dl*(d7pct/100)):null,
                 d10pct,paidroas:droas||null,
-                adjroas:drev>0&&(ds+dl*3)>0?drev/(ds+dl*3):null};
+                adjroas:(dailyRev[dateStr]||0)>0&&(ds+dl*3)>0?(dailyRev[dateStr]||0)/(ds+dl*3):null};
               let dc=`<td style="position:sticky;left:0;background:var(--bg);z-index:1">
                 <div class="tree-name tree-indent-3">
                   <span style="width:14px;display:inline-block;flex-shrink:0;color:var(--text3);font-size:9px">•</span>
@@ -2759,7 +2759,7 @@ function renderAdsets(d){
               d1pct:dl>0?Math.round(dat.d1/dl*100):0,d3pct:dl>0?Math.round(dat.d3/dl*100):0,
               d3cost:dl>0&&dat.d3>0?ds/dat.d3:null,d7pct:dl>0?Math.round(dat.d7/dl*100):0,
               d7cost:dl>0&&dat.d7>0?ds/dat.d7:null,d10pct:dl>0?Math.round(dat.d10/dl*100):0,paidroas:droas||null,
-              adjroas:drev>0&&(ds+dl*3)>0?drev/(ds+dl*3):null};
+              adjroas:(dailyRev[dateStr]||0)>0&&(ds+dl*3)>0?(dailyRev[dateStr]||0)/(ds+dl*3):null};
             let dc=`<td style="position:sticky;left:0;background:var(--bg);z-index:1"><div class="tree-name tree-indent-3"><span style="width:14px;display:inline-block;flex-shrink:0;color:var(--text3);font-size:9px">•</span><div class="tree-name-main" style="font-size:10px;color:var(--text3)">${dateStr}</div></div></td>`;
             COLS.forEach((col,ci)=>{ dc+=`<td class="${ci===0?'col-sep':''}" style="background:var(--bg)">${cellVal(dd,col,isMature(w.key,col.k))}</td>`; });
             rows.push(`<tr class="row-date">${dc}</tr>`);
@@ -2980,7 +2980,7 @@ function renderCreatives(d){
               d1pct:dl>0?Math.round(dat.d1/dl*100):0,d3pct:dl>0?Math.round(dat.d3/dl*100):0,
               d3cost:dl>0&&dat.d3>0?ds/dat.d3:null,d7pct:dl>0?Math.round(dat.d7/dl*100):0,
               d7cost:dl>0&&dat.d7>0?ds/dat.d7:null,d10pct:dl>0?Math.round(dat.d10/dl*100):0,paidroas:droas||null,
-              adjroas:drev>0&&(ds+dl*3)>0?drev/(ds+dl*3):null};
+              adjroas:(dailyRev[dateStr]||0)>0&&(ds+dl*3)>0?(dailyRev[dateStr]||0)/(ds+dl*3):null};
             let dc=`<td style="position:sticky;left:0;background:var(--bg);z-index:1"><div class="tree-name tree-indent-3"><span style="width:14px;display:inline-block;flex-shrink:0;color:var(--text3);font-size:9px">•</span><div class="tree-name-main" style="font-size:10px;color:var(--text3)">${dateStr}</div></div></td>`;
             COLS.forEach((col,ci)=>{ dc+=`<td class="${ci===0?'col-sep':''}" style="background:var(--bg)">${cellVal(dd,col,isMatureByAge(approxAgeAtWeek,col.k))}</td>`; });
             rows.push(`<tr class="row-date">${dc}</tr>`);
