@@ -4106,7 +4106,7 @@ function parseXlsx(wb){
       [...new Set([...Object.keys(spDaily),...Object.keys(attDaily)])].forEach(dateStr=>{
         if(weekKey(new Date(dateStr+'T00:00:00Z'))!==w.isoWk) return;
         ['all',p].forEach(bucket=>{
-          if(!dayMap[bucket][dateStr]) dayMap[bucket][dateStr]={spend:0,leads:0,rev:0,subs:0,clicks:0,impr:0,d3:0,d7:0,d1:0,d10:0};
+          if(!dayMap[bucket][dateStr]) dayMap[bucket][dateStr]={spend:0,leads:0,rev:0,subs:0,clicks:0,impr:0,d3:0,d7:0,d1:0,d10:0,ord31:0,ordOt:0};
           const sp=spDaily[dateStr]||{}, at=attDaily[dateStr]||{};
           dayMap[bucket][dateStr].spend+=sp.spend||0;
           dayMap[bucket][dateStr].clicks+=sp.clicks||0;
@@ -4116,6 +4116,8 @@ function parseXlsx(wb){
           dayMap[bucket][dateStr].d7+=at.d7||0; dayMap[bucket][dateStr].d10+=at.d10||0;
           dayMap[bucket][dateStr].rev+=revDaily[dateStr]||0;
           dayMap[bucket][dateStr].subs+=subsDaily[dateStr]||0;
+          dayMap[bucket][dateStr].ord31+=(c._dailyOrd31&&c._dailyOrd31[dateStr])||0;
+          dayMap[bucket][dateStr].ordOt+=(c._dailyOrdOt&&c._dailyOrdOt[dateStr])||0;
         });
       });
     });
@@ -4130,7 +4132,9 @@ function parseXlsx(wb){
           d1pct:d.leads>0?Math.round(d.d1/d.leads*100):0,
           d3pct:d.leads>0?Math.round(d.d3/d.leads*100):0, d3cost:d.d3>0?d.spend/d.d3:null,
           d7pct:d.leads>0?Math.round(d.d7/d.leads*100):0, d7cost:d.d7>0?d.spend/d.d7:null,
-          d10pct:d.leads>0?Math.round(d.d10/d.leads*100):0};
+          d10pct:d.leads>0?Math.round(d.d10/d.leads*100):0,
+          ord31:d.ord31||0, ordOt:d.ordOt||0,
+          ltvRoas:computeLtvROAS(d.rev||0,d.ord31||0,d.ordOt||0,d.spend||0)};
       });
     }
 
