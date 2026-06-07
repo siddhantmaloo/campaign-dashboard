@@ -2323,7 +2323,7 @@ function updateBatchLabel(data){
 function toggleBatchChk(id,checked){ BS.selected[id]=checked; if(S.data){updateBatchLabel(S.data);renderBatch(S.data);} }
 function batchSelectAll(){ if(!S.data) return; S.data.batches.forEach(b=>BS.selected[b.id]=true); document.querySelectorAll('#batchDropItems input').forEach(cb=>cb.checked=true); updateBatchLabel(S.data); renderBatch(S.data); }
 function batchSelectNone(){ if(!S.data) return; S.data.batches.forEach(b=>BS.selected[b.id]=false); document.querySelectorAll('#batchDropItems input').forEach(cb=>cb.checked=false); updateBatchLabel(S.data); renderBatch(S.data); }
-function toggleBatchRow(id){ BS.expanded[id]=!BS.expanded[id]; if(S.data) renderBatch(S.data); }
+function toggleBatchRow(id){ BS.expanded[id]=!BS.expanded[id]; if(S.data){ try{ renderBatch(S.data); } catch(e){ console.error('renderBatch error:',e); alert('renderBatch error: '+e.message); } } }
 function batchExpandAll(){ if(!S.data) return; S.data.batches.forEach(b=>BS.expanded[b.id]=true); renderBatch(S.data); }
 function batchCollapseAll(){ if(!S.data) return; Object.keys(BS.expanded).forEach(k=>BS.expanded[k]=false); renderBatch(S.data); }
 
