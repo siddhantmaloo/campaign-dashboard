@@ -921,6 +921,18 @@ const T = {
   conv:  { green:2,  yellow:1  },
 };
 
+
+// ── Load persisted thresholds from localStorage ──
+(function(){
+  try{
+    const saved=localStorage.getItem('kw_T');
+    if(saved){ const s=JSON.parse(saved);
+      ['cpl','d3','d7','roas','adjroas'].forEach(k=>{ if(s[k]&&T[k]){ Object.assign(T[k],s[k]); }});
+      if(s.waCost) T.waCost=s.waCost;
+    }
+  }catch(e){}
+})();
+
 const tagCPL  = v => v==null||isNaN(v)?'na': v<T.cpl.green?'green':v<=T.cpl.yellow?'yellow':'red';
 const tagD3   = v => v==null||isNaN(v)?'na': v<T.d3.green?'green':v<=T.d3.yellow?'yellow':'red';
 const tagD7   = v => v==null||isNaN(v)?'na': v<T.d7.green?'green':v<=T.d7.yellow?'yellow':'red';
@@ -1062,9 +1074,11 @@ function closeSettings(){ document.getElementById('settingsModal').classList.rem
 function closeSettingsOutside(e){ if(e.target===document.getElementById('settingsModal')) closeSettings(); }
 
 function updateThreshold(metric, level, val){
+  if(metric==='waCost'){ T.waCost=parseFloat(val)||3; localStorage.setItem('kw_T',JSON.stringify(T)); if(S.data) renderAll(S.data); return; }
   const v = parseFloat(val);
   if(isNaN(v)||v<=0) return;
   T[metric][level] = v;
+  localStorage.setItem('kw_T', JSON.stringify(T)); // persist across refreshes
   // Re-enrich sample data and re-render all
   if(S.data){
     reEnrichData(S.data);
