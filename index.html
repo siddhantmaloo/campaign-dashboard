@@ -4113,13 +4113,6 @@ function parseXlsx(wb){
   return {camps, creatives, weeks:recentWeeks, batches, mt, gt, months, weeklyOv, campNames};
 }
 
-const tagLtvROAS=v=>v==null||isNaN(v)?'na':v>=T.ltvRoas.green?'green':v>=T.ltvRoas.yellow?'yellow':'red';
-function computeLtvROAS(rev,ord31,ordOt,spend){
-  if(!spend||spend<=0) return null;
-  const ltv=(rev||0)+T.ltvMult31*(ord31||0)*T.ltvAov31+(ordOt||0)*T.ltvRateLt*T.ltvAovLt;
-  return ltv>0?ltv/spend:null;
-}
-
 // ═══════════════════════════════════════
 // SAMPLE DATA LOADER
 // ═══════════════════════════════════════
