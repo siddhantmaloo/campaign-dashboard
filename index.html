@@ -528,7 +528,7 @@ td:first-child{text-align:left;}
         <div class="ts-hint">Green: D7 &lt; value · Yellow: D7 ≤ value · Red: above Yellow</div>
       </div>
 
-      <div class="ts-metric" style="border-bottom:none;margin-bottom:0;padding-bottom:0">
+      <div class="ts-metric">
         <div class="ts-metric-label">ROAS — RETURN ON AD SPEND (×) · HIGHER IS BETTER</div>
         <div class="ts-row">
           <div class="ts-dot green"></div>
@@ -544,6 +544,24 @@ td:first-child{text-align:left;}
           </div>
         </div>
         <div class="ts-hint">Green: ROAS ≥ value · Yellow: ROAS &gt; value · Red: below Yellow</div>
+      </div>
+
+      <div class="ts-metric" style="border-bottom:none;margin-bottom:0;padding-bottom:0">
+        <div class="ts-metric-label">ROAS (WA ADJ) — INCL. ₹3 WHATSAPP COST PER LEAD · HIGHER IS BETTER</div>
+        <div class="ts-row">
+          <div class="ts-dot green"></div>
+          <div class="ts-fields">
+            <div class="ts-field">
+              <label>Min × for Green</label>
+              <input type="number" id="t_adjroas_green" value="1.8" step="0.1" onchange="updateThreshold('adjroas','green',this.value)">
+            </div>
+            <div class="ts-field">
+              <label>Min × for Yellow</label>
+              <input type="number" id="t_adjroas_yellow" value="1.2" step="0.1" onchange="updateThreshold('adjroas','yellow',this.value)">
+            </div>
+          </div>
+        </div>
+        <div class="ts-hint">Green: Adj ROAS ≥ value · Yellow: Adj ROAS &gt; value · Red: below Yellow</div>
       </div>
 
       <!-- Projection Logic -->
@@ -878,6 +896,7 @@ const T = {
   d3:   { green:33,   yellow:38  },
   d7:   { green:66,   yellow:95  },
   roas: { green:1.8,  yellow:1.2 },
+  adjroas: { green:1.8,  yellow:1.2 },  // WA-adjusted ROAS thresholds
   conf: { high:20000, medium:5000 },
   d3pct: { green:32, yellow:24 },
   d7pct: { green:14, yellow:10 },
@@ -888,6 +907,7 @@ const tagCPL  = v => v==null||isNaN(v)?'na': v<T.cpl.green?'green':v<=T.cpl.yell
 const tagD3   = v => v==null||isNaN(v)?'na': v<T.d3.green?'green':v<=T.d3.yellow?'yellow':'red';
 const tagD7   = v => v==null||isNaN(v)?'na': v<T.d7.green?'green':v<=T.d7.yellow?'yellow':'red';
 const tagROAS = v => v==null||isNaN(v)?'na': v>=T.roas.green?'green':v>=T.roas.yellow?'yellow':'red';
+const tagAdjROAS = v => v==null||isNaN(v)?'na': v>=T.adjroas.green?'green':v>=T.adjroas.yellow?'yellow':'red';
 const tagConf = s => s>T.conf.high?'high':s>T.conf.medium?'medium':'low';
 const tagD3Pct= v => v>=T.d3pct.green?'green':v>=T.d3pct.yellow?'yellow':'red';
 const tagD7Pct= v => v>=T.d7pct.green?'green':v>=T.d7pct.yellow?'yellow':'red';
@@ -1789,7 +1809,7 @@ function cellVal(row, col, mature){
     case 'd7cost':   return v ? (mature ? mTag(tagD7(v),v,fmt.inr) : `<span style="color:var(--text3)">${fmt.inr(v)}</span>`) : na;
     case 'd10pct':   return (v && mature) ? `<span style="color:var(--text2)">${v}%</span>` : na;
     case 'paidroas': return v ? (mature ? mTag(tagROAS(v),v,fmt.roas) : `<span style="color:var(--text3)">${fmt.roas(v)}</span>`) : na;
-    case 'adjroas':  return v ? (mature ? mTag(tagROAS(v),v,fmt.roas) : `<span style="color:var(--text3)">${fmt.roas(v)}</span>`) : na;
+    case 'adjroas':  return v ? (mature ? mTag(tagAdjROAS(v),v,fmt.roas) : `<span style="color:var(--text3)">${fmt.roas(v)}</span>`) : na;
     default: return na;
   }
 }
@@ -2212,7 +2232,8 @@ function renderTree(d){
                 l2s:dl>0&&dSubs>=0?dSubs/dl*100:null,
                 d1pct,d3pct,d3cost:dl>0&&d3pct>0?ds/Math.round(dl*(d3pct/100)):null,
                 d7pct,d7cost:dl>0&&d7pct>0?ds/Math.round(dl*(d7pct/100)):null,
-                d10pct,paidroas:droas||null};
+                d10pct,paidroas:droas||null,
+                adjroas:drev>0&&(ds+dl*3)>0?drev/(ds+dl*3):null};
               let dc=`<td style="position:sticky;left:0;background:var(--bg);z-index:1">
                 <div class="tree-name tree-indent-3">
                   <span style="width:14px;display:inline-block;flex-shrink:0;color:var(--text3);font-size:9px">•</span>
