@@ -3556,6 +3556,8 @@ function parseXlsx(wb){
     revByCamp[cid].daily[payDateStr]+=rev;
     ord31ByCamp[cid].daily[payDateStr]=(ord31ByCamp[cid].daily[payDateStr]||0)+ord31;
     ordOtByCamp[cid].daily[payDateStr]=(ordOtByCamp[cid].daily[payDateStr]||0)+ordOt;
+    ord31ByCamp[cid][wk]=(ord31ByCamp[cid][wk]||0)+ord31; // weekly index by payment week
+    ordOtByCamp[cid][wk]=(ordOtByCamp[cid][wk]||0)+ordOt;
     if(!subsByCamp[cid].daily[payDateStr]) subsByCamp[cid].daily[payDateStr]=0;
     subsByCamp[cid].daily[payDateStr]+=subs;
     if(aid){
@@ -3570,6 +3572,8 @@ function parseXlsx(wb){
       if(!ordOtByAdset[ak]) ordOtByAdset[ak]={daily:{}};
       ord31ByAdset[ak].daily[payDateStr]=(ord31ByAdset[ak].daily[payDateStr]||0)+ord31;
       ordOtByAdset[ak].daily[payDateStr]=(ordOtByAdset[ak].daily[payDateStr]||0)+ordOt;
+      ord31ByAdset[ak][wk]=(ord31ByAdset[ak][wk]||0)+ord31;
+      ordOtByAdset[ak][wk]=(ordOtByAdset[ak][wk]||0)+ordOt;
       if(!subsByAdset[ak]) subsByAdset[ak]={daily:{}};
       if(!subsByAdset[ak].daily) subsByAdset[ak].daily={};
       if(!subsByAdset[ak][wk]) subsByAdset[ak][wk]=0;
@@ -3588,6 +3592,8 @@ function parseXlsx(wb){
       if(!ordOtByCr[crid]) ordOtByCr[crid]={daily:{}};
       ord31ByCr[crid].daily[payDateStr]=(ord31ByCr[crid].daily[payDateStr]||0)+ord31;
       ordOtByCr[crid].daily[payDateStr]=(ordOtByCr[crid].daily[payDateStr]||0)+ordOt;
+      ord31ByCr[crid][wk]=(ord31ByCr[crid][wk]||0)+ord31;
+      ordOtByCr[crid][wk]=(ordOtByCr[crid][wk]||0)+ordOt;
       if(!subsByCr[crid]) subsByCr[crid]={daily:{}};
       if(!subsByCr[crid].daily) subsByCr[crid].daily={};
       if(!subsByCr[crid][wk]) subsByCr[crid][wk]=0;
@@ -3665,8 +3671,8 @@ function parseXlsx(wb){
         spend+=sd.spend||0; clicks+=sd.clicks||0; impr+=sd.impr||0;
         rev+=revDaily[dateStr]||0;
         wkSubs+=subsDaily[dateStr]||0;
-        ord31+=(ord31ByCamp[cid]?.daily?.[dateStr])||0;
-        ordOt+=(ordOtByCamp[cid]?.daily?.[dateStr])||0;
+        // ord31/ordOt attributed by registration period not spend date
+        // (summed after loop from weekly index)
         const dat=(attByDate[cid]&&attByDate[cid][dateStr])||{leads:0,d1:0,d3:0,d7:0,d10:0};
         leads+=dat.leads||0; d1+=dat.d1||0; d3+=dat.d3||0; d7+=dat.d7||0; d10+=dat.d10||0;
       });
@@ -3682,9 +3688,11 @@ function parseXlsx(wb){
         });
       }
 
+      const wkOrd31=(ord31ByCamp[cid]?.[isoWk])||0;
+      const wkOrdOt=(ordOtByCamp[cid]?.[isoWk])||0;
       weekly[wkey]={spend,leads,cpl,roas,rev,subs:wkSubs,
         clicks,impr,
-        d1,d3,d7,d10,ord31,ordOt,
+        d1,d3,d7,d10,ord31:wkOrd31,ordOt:wkOrdOt,
         daily:wkDaily,
         dailySpend:spDaily,
         dailyRev:revDaily,
@@ -3748,14 +3756,14 @@ function parseXlsx(wb){
           if(weekKey(new Date(dateStr+'T00:00:00Z'))!==isoWk) return;
           asSpend+=sd.spend||0; asClicks+=sd.clicks||0; asImpr+=sd.impr||0;
           asRev+=revDailyAs[dateStr]||0; asSubs+=subsDailyAs[dateStr]||0;
-          asOrd31+=(ord31ByAdset[ak]?.daily?.[dateStr])||0;
-          asOrdOt+=(ordOtByAdset[ak]?.daily?.[dateStr])||0;
           const dat=attDailyAs[dateStr]||{leads:0,d1:0,d3:0,d7:0,d10:0};
           asLeads+=dat.leads||0; asD1+=dat.d1||0; asD3+=dat.d3||0; asD7+=dat.d7||0; asD10+=dat.d10||0;
         });
         const asCpl=asLeads>0?asSpend/asLeads:null;
         const asRoas=asSpend>0&&asRev>0?asRev/asSpend:null;
-        asWeekly[wkey]={spend:asSpend,leads:asLeads,rev:asRev,subs:asSubs,clicks:asClicks,impr:asImpr,ord31:asOrd31,ordOt:asOrdOt,
+        const asWkOrd31=(ord31ByAdset[ak]?.[isoWk])||0;
+        const asWkOrdOt=(ordOtByAdset[ak]?.[isoWk])||0;
+        asWeekly[wkey]={spend:asSpend,leads:asLeads,rev:asRev,subs:asSubs,clicks:asClicks,impr:asImpr,ord31:asWkOrd31,ordOt:asWkOrdOt,
           d1:asD1,d3:asD3,d7:asD7,d10:asD10,
           cpl:asCpl,roas:asRoas,
           d3cost:asD3>0?asSpend/asD3:null, d7cost:asD7>0?asSpend/asD7:null,
@@ -3827,8 +3835,6 @@ function parseXlsx(wb){
           const sd=spDailyCr[dateStr]||{};
           crSpend+=sd.spend||0; crClicks+=sd.clicks||0; crImpr+=sd.impr||0;
           crRev+=revDailyCr[dateStr]||0; crSubs+=subsDailyCr[dateStr]||0;
-          crOrd31+=(ord31ByCr[crid]?.daily?.[dateStr])||0;
-          crOrdOt+=(ordOtByCr[crid]?.daily?.[dateStr])||0;
           crLeads+=dat.leads||0; crD1+=dat.d1||0; crD3+=dat.d3||0; crD7+=dat.d7||0; crD10+=dat.d10||0;
         });
       } else {
@@ -3841,8 +3847,6 @@ function parseXlsx(wb){
           const sd=spDailyCr[dateStr]||{};
           crSpend+=sd.spend||0; crClicks+=sd.clicks||0; crImpr+=sd.impr||0;
           crRev+=revDailyCr[dateStr]||0; crSubs+=subsDailyCr[dateStr]||0;
-          crOrd31+=(ord31ByCr[crid]?.daily?.[dateStr])||0;
-          crOrdOt+=(ordOtByCr[crid]?.daily?.[dateStr])||0;
           // Proportion attendance by spend share within adset
           const asSpend=(spendByAdset[ak]?.daily?.[dateStr]?.spend)||1;
           const ratio=crSpend/asSpend;
@@ -3854,7 +3858,9 @@ function parseXlsx(wb){
       }
       const crCpl=crLeads>0?crSpend/crLeads:null;
       const crRoas=crSpend>0&&crRev>0?crRev/crSpend:null;
-      crWeeklyData[wkey]={spend:crSpend,leads:crLeads,rev:crRev,subs:crSubs,clicks:crClicks,impr:crImpr,ord31:crOrd31,ordOt:crOrdOt,
+      const crWkOrd31=(ord31ByCr[crid]?.[isoWk])||0;
+      const crWkOrdOt=(ordOtByCr[crid]?.[isoWk])||0;
+      crWeeklyData[wkey]={spend:crSpend,leads:crLeads,rev:crRev,subs:crSubs,clicks:crClicks,impr:crImpr,ord31:crWkOrd31,ordOt:crWkOrdOt,
         d1:crD1,d3:crD3,d7:crD7,d10:crD10,
         cpl:crCpl,roas:crRoas,
         d3cost:crD3>0?crSpend/crD3:null, d7cost:crD7>0?crSpend/crD7:null,
