@@ -2323,7 +2323,7 @@ function updateBatchLabel(data){
 function toggleBatchChk(id,checked){ BS.selected[id]=checked; if(S.data){updateBatchLabel(S.data);renderBatch(S.data);} }
 function batchSelectAll(){ if(!S.data) return; S.data.batches.forEach(b=>BS.selected[b.id]=true); document.querySelectorAll('#batchDropItems input').forEach(cb=>cb.checked=true); updateBatchLabel(S.data); renderBatch(S.data); }
 function batchSelectNone(){ if(!S.data) return; S.data.batches.forEach(b=>BS.selected[b.id]=false); document.querySelectorAll('#batchDropItems input').forEach(cb=>cb.checked=false); updateBatchLabel(S.data); renderBatch(S.data); }
-function toggleBatchRow(id){ BS.expanded[id]=!BS.expanded[id]; if(S.data){ try{ renderBatch(S.data); } catch(e){ console.error('renderBatch error:',e); alert('renderBatch error: '+e.message); } } }
+function toggleBatchRow(id){ BS.expanded[id]=!BS.expanded[id]; if(S.data) renderBatch(S.data); }
 function batchExpandAll(){ if(!S.data) return; S.data.batches.forEach(b=>BS.expanded[b.id]=true); renderBatch(S.data); }
 function batchCollapseAll(){ if(!S.data) return; Object.keys(BS.expanded).forEach(k=>BS.expanded[k]=false); renderBatch(S.data); }
 
@@ -2368,7 +2368,7 @@ function renderBatch(d){
       subs:subs||null,cps:subs>0&&spend>0?spend/subs:null,
       rev:rev||null,roas,l2s:bLeads>0&&subs>0?subs/bLeads*100:null,
       d1pct:d1pct||null,d3pct:d3pct||null,d3cost,
-      d7pct:d7pct||null,d7cost,d10pct:d10pct||null,paidroas:roas||null, adjroas:totRev>0&&(totSpend+totLeads*3)>0?totRev/(totSpend+totLeads*3):null};
+      d7pct:d7pct||null,d7cost,d10pct:d10pct||null,paidroas:roas||null, adjroas:rev>0&&(spend+bLeads*3)>0?rev/(spend+bLeads*3):null};
   }
   function batchCampData(b,c){
     const bd=b.data[c.id]||{leads:0,d1:0,d3:0,d7:0,d10:0,wkLeads:{}};
