@@ -2415,50 +2415,61 @@ function renderBatch(d){
       rows.push(`<tr class="row-camp${isOpen?' open':''}" onclick="toggleBatchRow('${b.id}')">${bc}</tr>`);
 
       if(isOpen){
-        // Active campaigns (have spend data)
         const activeCampIds=new Set(camps.map(c=>c.id));
+
+        // Build ALL campaign rows (active + 0-spend) sorted by spend desc
+        const campRows=[];
+
+        // Active campaigns with spend data
         camps.forEach(c=>{
           const bd=b.data[c.id];
-          if(!bd||bd.leads===0) return; // skip campaigns with no leads in this batch
+          if(!bd||bd.leads===0) return;
           const cd=batchCampData(b,c);
-          let cc=`<td style="position:sticky;left:0;background:var(--bg);z-index:1">
-            <div class="tree-name tree-indent-2">
-              <span style="width:14px;display:inline-block;flex-shrink:0"></span>
-              <span class="plat-dot ${c.platform}"></span>
-              <div>
-                <div class="tree-name-main" style="font-size:10px;color:var(--text2)">${campShort(c.name)}</div>
-                <div class="tree-name-sub">${aTag(c.action)} ${confH(c.conf)}</div>
-              </div>
-            </div></td>`;
-          COLS.forEach((col,ci)=>{ cc+=`<td class="${ci===0?'col-sep':''}" style="background:var(--bg3)">${cellVal(cd,col,bMature(b.id,col.k))}</td>`; });
-          rows.push(`<tr class="row-week">${cc}</tr>`);
+          campRows.push({spend:cd.spend||0, leads:cd.leads||0, html:()=>{
+            let cc=`<td style="position:sticky;left:0;background:var(--bg);z-index:1">
+              <div class="tree-name tree-indent-2">
+                <span style="width:14px;display:inline-block;flex-shrink:0"></span>
+                <span class="plat-dot ${c.platform}"></span>
+                <div>
+                  <div class="tree-name-main" style="font-size:10px;color:var(--text2)">${campShort(c.name)}</div>
+                  <div class="tree-name-sub">${aTag(c.action)} ${confH(c.conf)}</div>
+                </div>
+              </div></td>`;
+            COLS.forEach((col,ci)=>{ cc+=`<td class="${ci===0?'col-sep':''}" style="background:var(--bg3)">${cellVal(cd,col,bMature(b.id,col.k))}</td>`; });
+            return `<tr class="row-week">${cc}</tr>`;
+          }});
         });
 
-        // "Other" row — leads from campaigns with no spend data (old/paused campaigns)
-        const otherBd={leads:0,d1:0,d3:0,d7:0,d10:0,wkLeads:{}};
+        // Inactive/paused campaigns (in batch attendance but no spend data) — shown individually
+        const campNamesMap=d.campNames||{};
         Object.entries(b.data).forEach(([key,bd])=>{
           if(key==='__organic__'||activeCampIds.has(key)) return;
-          otherBd.leads+=bd.leads||0; otherBd.d1+=bd.d1||0; otherBd.d3+=bd.d3||0;
-          otherBd.d7+=bd.d7||0; otherBd.d10+=bd.d10||0;
+          if(!bd||bd.leads===0) return;
+          const od=batchMetrics(bd,null);
+          const cname=campNamesMap[key]?campShort(campNamesMap[key]):(key.slice(0,16)+'…');
+          campRows.push({spend:0, leads:od.leads||0, html:()=>{
+            let oc=`<td style="position:sticky;left:0;background:var(--bg);z-index:1">
+              <div class="tree-name tree-indent-2">
+                <span style="width:14px;display:inline-block;flex-shrink:0"></span>
+                <div>
+                  <div class="tree-name-main" style="font-size:10px;color:var(--text2)">${cname}</div>
+                  <div class="tree-name-sub" style="color:var(--text3);font-size:9px">0 spend (inactive/paused)</div>
+                </div>
+              </div></td>`;
+            COLS.forEach((col,ci)=>{ oc+=`<td class="${ci===0?'col-sep':''}" style="background:var(--bg3)">${cellVal(od,col,true)}</td>`; });
+            return `<tr class="row-week">${oc}</tr>`;
+          }});
         });
-        if(otherBd.leads>0){
-          const od=batchMetrics(otherBd,null);
-          let oc=`<td style="position:sticky;left:0;background:var(--bg);z-index:1">
-            <div class="tree-name tree-indent-2">
-              <span style="width:14px;display:inline-block;flex-shrink:0"></span>
-              <div>
-                <div class="tree-name-main" style="font-size:10px;color:var(--text3)">Other (no spend data)</div>
-                <div class="tree-name-sub" style="color:var(--text3);font-size:9px">Leads from inactive/paused campaigns</div>
-              </div>
-            </div></td>`;
-          COLS.forEach((col,ci)=>{ oc+=`<td class="${ci===0?'col-sep':''}" style="background:var(--bg3)">${cellVal(od,col,true)}</td>`; });
-          rows.push(`<tr class="row-week">${oc}</tr>`);
-        }
 
-        // "Organic" row — leads with no utm_campaign
+        // Sort all campaign rows by spend desc, then by leads desc
+        campRows.sort((a,b)=>b.spend!==a.spend?b.spend-a.spend:b.leads-a.leads);
+        campRows.forEach(r=>rows.push(r.html()));
+
+        // "Organic" row — leads with no utm_campaign (always last)
         const organicBd=b.data['__organic__'];
         if(organicBd&&organicBd.leads>0){
-          const orgd=batchMetrics(organicBd,null);
+          const orgRd=(b.revData&&b.revData['__organic__'])||{rev:0,subs:0};
+          const orgd=batchMetrics(organicBd,null,orgRd);
           let ogc=`<td style="position:sticky;left:0;background:var(--bg);z-index:1">
             <div class="tree-name tree-indent-2">
               <span style="width:14px;display:inline-block;flex-shrink:0"></span>
@@ -3359,19 +3370,20 @@ function parseXlsx(wb){
     const cid=cleanId(r.utm_campaign);
     const aid=cleanId(r.utm_adgroup_id);
     const crid=cleanId(r.utm_creative_id);
-    if(!cid||!validCamps.has(cid)) return;
     const dt=toDate(r.date_ist); if(!dt) return;
     const wk=weekKey(dt);
     const rev=toNum(r.net_revenue);
     const subs=toNum(r.paid_students);
-    // Batch-level revenue tracking
+    // Batch-level revenue tracking (including organic = no campaign)
     const payBid=String(r.free_batch_id||'').trim();
+    const payKey=cid&&validCamps.has(cid)?cid:'__organic__';
     if(payBid){
       if(!revByBatch[payBid]) revByBatch[payBid]={};
-      if(!revByBatch[payBid][cid]) revByBatch[payBid][cid]={rev:0,subs:0};
-      revByBatch[payBid][cid].rev+=rev;
-      revByBatch[payBid][cid].subs+=subs;
+      if(!revByBatch[payBid][payKey]) revByBatch[payBid][payKey]={rev:0,subs:0};
+      revByBatch[payBid][payKey].rev+=rev;
+      revByBatch[payBid][payKey].subs+=subs;
     }
+    if(!cid||!validCamps.has(cid)) return; // skip non-campaign attribution below
     if(!revByCamp[cid]) revByCamp[cid]={daily:{}};
     if(!revByCamp[cid].daily) revByCamp[cid].daily={};
     if(!revByCamp[cid][wk]) revByCamp[cid][wk]=0;
@@ -3905,7 +3917,7 @@ function parseXlsx(wb){
   // update isMature to use real approxAgeMap
   window._approxAgeMap=approxAgeMap;
 
-  return {camps, creatives, weeks:recentWeeks, batches, mt, gt, months, weeklyOv};
+  return {camps, creatives, weeks:recentWeeks, batches, mt, gt, months, weeklyOv, campNames};
 }
 
 // ═══════════════════════════════════════
