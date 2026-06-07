@@ -3720,12 +3720,14 @@ function parseXlsx(wb){
     Object.entries(spDaily).forEach(([dateStr,sp])=>{
       const mk=dateStr.slice(0,7);
       ['all',p].forEach(bucket=>{
-        if(!monthMap[bucket][mk]) monthMap[bucket][mk]={spend:0,leads:0,rev:0,subs:0,clicks:0,impr:0};
+        if(!monthMap[bucket][mk]) monthMap[bucket][mk]={spend:0,leads:0,rev:0,subs:0,clicks:0,impr:0,d1:0,d3:0,d7:0,d10:0};
         monthMap[bucket][mk].spend+=sp.spend||0;
         monthMap[bucket][mk].clicks+=sp.clicks||0;
         monthMap[bucket][mk].impr+=sp.impr||0;
-        const att=attByDate[c.id]?.[dateStr]||{leads:0};
+        const att=attByDate[c.id]?.[dateStr]||{leads:0,d1:0,d3:0,d7:0,d10:0};
         monthMap[bucket][mk].leads+=att.leads||0;
+        monthMap[bucket][mk].d1+=att.d1||0; monthMap[bucket][mk].d3+=att.d3||0;
+        monthMap[bucket][mk].d7+=att.d7||0; monthMap[bucket][mk].d10+=att.d10||0;
         monthMap[bucket][mk].rev+=(revByCamp[c.id]?.daily||{})[dateStr]||0;
         monthMap[bucket][mk].subs+=(subsByCamp[c.id]?.daily||{})[dateStr]||0;
       });
@@ -3739,10 +3741,17 @@ function parseXlsx(wb){
     const [yr,mo]=mk.split('-');
     const label=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][parseInt(mo)-1]+'-'+yr.slice(2);
     const current=mk===monthKey(today2);
-    function mkMo(d){ return {...d, cpm:d.impr>0?d.spend/d.impr*1000:null, cpc:d.clicks>0?d.spend/d.clicks:null, ctr:d.impr>0?d.clicks/d.impr*100:null, c2db:null}; }
+    function mkMo(d){ return {spend:d.spend||null,leads:d.leads||null,rev:d.rev||null,subs:d.subs||null,clicks:d.clicks,impr:d.impr,
+      cpm:d.impr>0?d.spend/d.impr*1000:null, cpc:d.clicks>0?d.spend/d.clicks:null,
+      ctr:d.impr>0?d.clicks/d.impr*100:null, c2db:null,
+      d1pct:d.leads>0?Math.round(d.d1/d.leads*100)||null:null,
+      d3pct:d.leads>0?Math.round(d.d3/d.leads*100)||null:null,
+      d3cost:d.d3>0&&d.spend>0?d.spend/d.d3:null,
+      d7pct:d.leads>0?Math.round(d.d7/d.leads*100)||null:null,
+      d7cost:d.d7>0&&d.spend>0?d.spend/d.d7:null,
+      d10pct:d.leads>0?Math.round(d.d10/d.leads*100)||null:null}; }
     return {...mkMo(m), key:mk.replace('-',''), label, sub:current?'Current month':'', current,
       days:[], meta:mkMo(mm), google:mkMo(mg),
-      d1pct:0, d3pct:0, d7pct:0, d10pct:0,
     };
   });
   // Add real daily rows to each month from spend data with real platform splits
@@ -3755,12 +3764,14 @@ function parseXlsx(wb){
       Object.entries(spDaily).forEach(([dateStr,sp])=>{
         if(!dateStr.startsWith(`${myr}-${mmo}`)) return;
         ['all',p].forEach(bucket=>{
-          if(!dailyMap[bucket][dateStr]) dailyMap[bucket][dateStr]={spend:0,leads:0,rev:0,subs:0,clicks:0,impr:0};
+          if(!dailyMap[bucket][dateStr]) dailyMap[bucket][dateStr]={spend:0,leads:0,rev:0,subs:0,clicks:0,impr:0,d1:0,d3:0,d7:0,d10:0};
           dailyMap[bucket][dateStr].spend+=sp.spend||0;
           dailyMap[bucket][dateStr].clicks+=sp.clicks||0;
           dailyMap[bucket][dateStr].impr+=sp.impr||0;
-          const att=attByDate[c.id]?.[dateStr]||{leads:0};
+          const att=attByDate[c.id]?.[dateStr]||{leads:0,d1:0,d3:0,d7:0,d10:0};
           dailyMap[bucket][dateStr].leads+=att.leads||0;
+          dailyMap[bucket][dateStr].d1+=att.d1||0; dailyMap[bucket][dateStr].d3+=att.d3||0;
+          dailyMap[bucket][dateStr].d7+=att.d7||0; dailyMap[bucket][dateStr].d10+=att.d10||0;
           dailyMap[bucket][dateStr].rev+=(revByCamp[c.id]?.daily||{})[dateStr]||0;
           dailyMap[bucket][dateStr].subs+=(subsByCamp[c.id]?.daily||{})[dateStr]||0;
         });
@@ -3769,17 +3780,23 @@ function parseXlsx(wb){
     const allDates=[...new Set([...Object.keys(dailyMap.all),...Object.keys(dailyMap.meta),...Object.keys(dailyMap.google)])].sort();
     const today2Str=localDateStr(new Date());
     const dayNames=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-    function mkDay(dateStr,d){ return {spend:d.spend,leads:d.leads,rev:d.rev,subs:d.subs,
+    function mkDay(dateStr,d){ return {spend:d.spend||null,leads:d.leads||null,rev:d.rev||null,subs:d.subs||null,
       clicks:d.clicks,impr:d.impr,
       cpm:d.impr>0?d.spend/d.impr*1000:null,cpc:d.clicks>0?d.spend/d.clicks:null,
-      ctr:d.impr>0?d.clicks/d.impr*100:null}; }
+      ctr:d.impr>0?d.clicks/d.impr*100:null,c2db:null,
+      d1pct:d.leads>0?Math.round(d.d1/d.leads*100)||null:null,
+      d3pct:d.leads>0?Math.round(d.d3/d.leads*100)||null:null,
+      d3cost:d.d3>0&&d.spend>0?d.spend/d.d3:null,
+      d7pct:d.leads>0?Math.round(d.d7/d.leads*100)||null:null,
+      d7cost:d.d7>0&&d.spend>0?d.spend/d.d7:null,
+      d10pct:d.leads>0?Math.round(d.d10/d.leads*100)||null:null}; }
     m.days=allDates.map(dateStr=>{
       const dt=new Date(dateStr+'T00:00:00Z');
-      const d=dailyMap.all[dateStr]||{spend:0,leads:0,rev:0,subs:0,clicks:0,impr:0};
+      const d=dailyMap.all[dateStr]||{spend:0,leads:0,rev:0,subs:0,clicks:0,impr:0,d1:0,d3:0,d7:0,d10:0};
       return {label:`${dateStr} ${dayNames[dt.getUTCDay()]}`, today:dateStr===today2Str,
         ...mkDay(dateStr,d),
-        meta:mkDay(dateStr,dailyMap.meta[dateStr]||{spend:0,leads:0,rev:0,subs:0,clicks:0,impr:0}),
-        google:mkDay(dateStr,dailyMap.google[dateStr]||{spend:0,leads:0,rev:0,subs:0,clicks:0,impr:0}),
+        meta:mkDay(dateStr,dailyMap.meta[dateStr]||{spend:0,leads:0,rev:0,subs:0,clicks:0,impr:0,d1:0,d3:0,d7:0,d10:0}),
+        google:mkDay(dateStr,dailyMap.google[dateStr]||{spend:0,leads:0,rev:0,subs:0,clicks:0,impr:0,d1:0,d3:0,d7:0,d10:0}),
       };
     });
     m.sub=`${m.days.length} days`;
