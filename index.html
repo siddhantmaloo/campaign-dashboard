@@ -328,6 +328,28 @@ td:first-child{text-align:left;}
 
 @media(max-width:1100px){.ov-split,.ov-compare{grid-template-columns:1fr;}.ov-totals{grid-template-columns:repeat(3,1fr);}}
 
+/* ── SETTINGS MODAL REDESIGN ── */
+.s-tab{padding:9px 16px;font-family:var(--font-mono);font-size:10px;letter-spacing:.06em;color:var(--text3);cursor:pointer;border:none;background:none;border-bottom:2px solid transparent;transition:all .15s;text-transform:uppercase;}
+.s-tab:hover{color:var(--text2);}
+.s-tab.active{color:var(--text);border-bottom-color:var(--accent);}
+.s-card{background:var(--bg);border:1px solid var(--border);border-radius:5px;padding:12px 14px;}
+.s-card-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;}
+.s-card-title{font-family:var(--font-mono);font-size:11px;font-weight:600;color:var(--text);}
+.s-card-dir{font-family:var(--font-mono);font-size:9px;color:var(--text3);}
+.s-card-hint{font-family:var(--font-mono);font-size:9px;color:var(--text3);margin-bottom:10px;}
+.s-threshold-row{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
+.s-param-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+.s-param-label{font-family:var(--font-mono);font-size:10px;color:var(--text2);}
+.s-op{font-family:var(--font-mono);font-size:9px;color:var(--text3);width:36px;}
+.s-input-wrap{display:flex;align-items:center;gap:4px;margin-left:auto;}
+.s-input-wrap input{width:72px;padding:5px 8px;background:var(--bg2);border:1px solid var(--border2);border-radius:3px;color:var(--text);font-family:var(--font-mono);font-size:12px;font-weight:500;outline:none;text-align:right;transition:border-color .12s;}
+.s-input-wrap input:focus{border-color:var(--accent);}
+.s-unit{font-family:var(--font-mono);font-size:10px;color:var(--text3);}
+.s-chip{display:inline-flex;padding:2px 8px;border-radius:3px;font-family:var(--font-mono);font-size:9px;font-weight:600;width:50px;justify-content:center;}
+.green-chip{background:var(--green-bg);color:var(--green);border:1px solid rgba(34,197,94,.2);}
+.yellow-chip{background:var(--yellow-bg);color:var(--yellow);border:1px solid rgba(234,179,8,.2);}
+.red-chip{background:var(--red-bg);color:var(--red);border:1px solid rgba(239,68,68,.2);}
+.s-section-label{font-family:var(--font-mono);font-size:9px;letter-spacing:.12em;color:var(--text3);text-transform:uppercase;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border);}
 /* ── WEEK / BATCH DROPDOWN ── */
 .wk-dd-wrap{position:relative;}
 .wk-dd-btn{display:flex;align-items:center;gap:8px;padding:4px 12px;border-radius:3px;border:1px solid var(--border2);background:var(--bg3);color:var(--text);font-family:var(--font-mono);font-size:10px;cursor:pointer;transition:all .12s;white-space:nowrap;min-width:160px;justify-content:space-between;}
@@ -464,195 +486,206 @@ td:first-child{text-align:left;}
 
 <!-- SETTINGS MODAL -->
 <div class="modal-overlay" id="settingsModal" onclick="closeSettingsOutside(event)">
-  <div class="modal" id="settingsBox" style="width:560px">
-    <div class="modal-header">
+  <div class="modal" id="settingsBox" style="width:680px;max-height:88vh;overflow-y:auto">
+    <div class="modal-hdr" style="padding:14px 20px">
       <div>
-        <div class="modal-title">⚙ Threshold Settings</div>
-        <div class="modal-sub">Changes apply instantly to all tables</div>
+        <div class="modal-title" style="font-size:13px">⚙ Settings</div>
+        <div class="modal-sub">Changes apply instantly · saved across sessions</div>
       </div>
-      <button class="modal-close" onclick="closeSettings()">✕</button>
+      <div style="display:flex;align-items:center;gap:8px">
+        <button onclick="resetThresholds()" style="padding:4px 12px;border-radius:3px;border:1px solid var(--border2);background:transparent;color:var(--text3);font-family:var(--font-mono);font-size:10px;cursor:pointer;transition:all .12s" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--text3)'">Reset defaults</button>
+        <button class="modal-close" onclick="closeSettings()">✕</button>
+      </div>
     </div>
-    <div class="modal-body" style="padding:24px">
 
-      <div class="ts-metric">
-        <div class="ts-metric-label">CPL — COST PER LEAD (₹) · LOWER IS BETTER</div>
-        <div class="ts-row">
-          <div class="ts-dot green"></div>
-          <div class="ts-fields">
-            <div class="ts-field">
-              <label>Max ₹ for Green</label>
-              <input type="number" id="t_cpl_green" value="10" onchange="updateThreshold('cpl','green',this.value)">
+    <!-- Tabs -->
+    <div style="display:flex;border-bottom:1px solid var(--border);background:var(--bg3);padding:0 20px">
+      <button class="s-tab active" id="stab-thresholds" onclick="switchSTab('thresholds')">Colour Thresholds</button>
+      <button class="s-tab" id="stab-ltv" onclick="switchSTab('ltv')">LTV Model</button>
+      <button class="s-tab" id="stab-proj" onclick="switchSTab('proj')">Projection Model</button>
+    </div>
+
+    <div class="modal-body" style="padding:20px">
+
+      <!-- TAB: Colour Thresholds -->
+      <div id="stab-thresholds-body">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+
+          <!-- CPL -->
+          <div class="s-card">
+            <div class="s-card-hdr">
+              <span class="s-card-title">CPL (DB)</span>
+              <span class="s-card-dir">↓ lower better</span>
             </div>
-            <div class="ts-field">
-              <label>Max ₹ for Yellow</label>
-              <input type="number" id="t_cpl_yellow" value="15" onchange="updateThreshold('cpl','yellow',this.value)">
+            <div class="s-card-hint">Cost per lead · colour gates on maturity</div>
+            <div class="s-threshold-row">
+              <span class="s-chip green-chip">Green</span>
+              <span class="s-op">below</span>
+              <div class="s-input-wrap"><span class="s-unit">₹</span><input type="number" id="t_cpl_green" onchange="updateThreshold('cpl','green',this.value)" oninput="previewThreshold(this,'cpl','green')"></div>
             </div>
+            <div class="s-threshold-row">
+              <span class="s-chip yellow-chip">Yellow</span>
+              <span class="s-op">below</span>
+              <div class="s-input-wrap"><span class="s-unit">₹</span><input type="number" id="t_cpl_yellow" onchange="updateThreshold('cpl','yellow',this.value)" oninput="previewThreshold(this,'cpl','yellow')"></div>
+            </div>
+            <div class="s-threshold-row"><span class="s-chip red-chip">Red</span><span class="s-op">above yellow</span></div>
           </div>
+
+          <!-- D3 Cost -->
+          <div class="s-card">
+            <div class="s-card-hdr">
+              <span class="s-card-title">D3 Cost</span>
+              <span class="s-card-dir">↓ lower better</span>
+            </div>
+            <div class="s-card-hint">Cost per 3-day attendee · needs 14+ days</div>
+            <div class="s-threshold-row">
+              <span class="s-chip green-chip">Green</span>
+              <span class="s-op">below</span>
+              <div class="s-input-wrap"><span class="s-unit">₹</span><input type="number" id="t_d3_green" onchange="updateThreshold('d3','green',this.value)" oninput="previewThreshold(this,'d3','green')"></div>
+            </div>
+            <div class="s-threshold-row">
+              <span class="s-chip yellow-chip">Yellow</span>
+              <span class="s-op">below</span>
+              <div class="s-input-wrap"><span class="s-unit">₹</span><input type="number" id="t_d3_yellow" onchange="updateThreshold('d3','yellow',this.value)" oninput="previewThreshold(this,'d3','yellow')"></div>
+            </div>
+            <div class="s-threshold-row"><span class="s-chip red-chip">Red</span><span class="s-op">above yellow</span></div>
+          </div>
+
+          <!-- D7 Cost -->
+          <div class="s-card">
+            <div class="s-card-hdr">
+              <span class="s-card-title">D7 Cost</span>
+              <span class="s-card-dir">↓ lower better</span>
+            </div>
+            <div class="s-card-hint">Cost per 7-day attendee · needs 21+ days</div>
+            <div class="s-threshold-row">
+              <span class="s-chip green-chip">Green</span>
+              <span class="s-op">below</span>
+              <div class="s-input-wrap"><span class="s-unit">₹</span><input type="number" id="t_d7_green" onchange="updateThreshold('d7','green',this.value)" oninput="previewThreshold(this,'d7','green')"></div>
+            </div>
+            <div class="s-threshold-row">
+              <span class="s-chip yellow-chip">Yellow</span>
+              <span class="s-op">below</span>
+              <div class="s-input-wrap"><span class="s-unit">₹</span><input type="number" id="t_d7_yellow" onchange="updateThreshold('d7','yellow',this.value)" oninput="previewThreshold(this,'d7','yellow')"></div>
+            </div>
+            <div class="s-threshold-row"><span class="s-chip red-chip">Red</span><span class="s-op">above yellow</span></div>
+          </div>
+
+          <!-- Paid ROAS -->
+          <div class="s-card">
+            <div class="s-card-hdr">
+              <span class="s-card-title">Paid ROAS</span>
+              <span class="s-card-dir">↑ higher better</span>
+            </div>
+            <div class="s-card-hint">Revenue ÷ Spend · needs 28+ days</div>
+            <div class="s-threshold-row">
+              <span class="s-chip green-chip">Green</span>
+              <span class="s-op">above</span>
+              <div class="s-input-wrap"><input type="number" id="t_roas_green" step="0.1" onchange="updateThreshold('roas','green',this.value)" oninput="previewThreshold(this,'roas','green')"><span class="s-unit">×</span></div>
+            </div>
+            <div class="s-threshold-row">
+              <span class="s-chip yellow-chip">Yellow</span>
+              <span class="s-op">above</span>
+              <div class="s-input-wrap"><input type="number" id="t_roas_yellow" step="0.1" onchange="updateThreshold('roas','yellow',this.value)" oninput="previewThreshold(this,'roas','yellow')"><span class="s-unit">×</span></div>
+            </div>
+            <div class="s-threshold-row"><span class="s-chip red-chip">Red</span><span class="s-op">below yellow</span></div>
+          </div>
+
+          <!-- ADJ ROAS -->
+          <div class="s-card">
+            <div class="s-card-hdr">
+              <span class="s-card-title">ADJ ROAS</span>
+              <span class="s-card-dir">↑ higher better</span>
+            </div>
+            <div class="s-card-hint">Includes WA cost per lead · needs 28+ days</div>
+            <div class="s-threshold-row">
+              <span class="s-chip green-chip">Green</span>
+              <span class="s-op">above</span>
+              <div class="s-input-wrap"><input type="number" id="t_adjroas_green" step="0.1" onchange="updateThreshold('adjroas','green',this.value)" oninput="previewThreshold(this,'adjroas','green')"><span class="s-unit">×</span></div>
+            </div>
+            <div class="s-threshold-row">
+              <span class="s-chip yellow-chip">Yellow</span>
+              <span class="s-op">above</span>
+              <div class="s-input-wrap"><input type="number" id="t_adjroas_yellow" step="0.1" onchange="updateThreshold('adjroas','yellow',this.value)" oninput="previewThreshold(this,'adjroas','yellow')"><span class="s-unit">×</span></div>
+            </div>
+            <div class="s-threshold-row"><span class="s-chip red-chip">Red</span><span class="s-op">below yellow</span></div>
+          </div>
+
+          <!-- Proj ROAS -->
+          <div class="s-card">
+            <div class="s-card-hdr">
+              <span class="s-card-title">Proj ROAS</span>
+              <span class="s-card-dir">↑ higher better</span>
+            </div>
+            <div class="s-card-hint">LTV-adjusted ROAS · needs 28+ days</div>
+            <div class="s-threshold-row">
+              <span class="s-chip green-chip">Green</span>
+              <span class="s-op">above</span>
+              <div class="s-input-wrap"><input type="number" id="t_ltvRoas_green" step="0.1" onchange="updateThreshold('ltvRoas','green',this.value)" oninput="previewThreshold(this,'ltvRoas','green')"><span class="s-unit">×</span></div>
+            </div>
+            <div class="s-threshold-row">
+              <span class="s-chip yellow-chip">Yellow</span>
+              <span class="s-op">above</span>
+              <div class="s-input-wrap"><input type="number" id="t_ltvRoas_yellow" step="0.1" onchange="updateThreshold('ltvRoas','yellow',this.value)" oninput="previewThreshold(this,'ltvRoas','yellow')"><span class="s-unit">×</span></div>
+            </div>
+            <div class="s-threshold-row"><span class="s-chip red-chip">Red</span><span class="s-op">below yellow</span></div>
+          </div>
+
         </div>
-        <div class="ts-hint">Green: CPL &lt; value · Yellow: CPL ≤ value · Red: above Yellow</div>
       </div>
 
-      <div class="ts-metric">
-        <div class="ts-metric-label">D3 COST — COST PER 3-DAY ATTENDEE (₹) · LOWER IS BETTER</div>
-        <div class="ts-row">
-          <div class="ts-dot green"></div>
-          <div class="ts-fields">
-            <div class="ts-field">
-              <label>Max ₹ for Green</label>
-              <input type="number" id="t_d3_green" value="33" onchange="updateThreshold('d3','green',this.value)">
-            </div>
-            <div class="ts-field">
-              <label>Max ₹ for Yellow</label>
-              <input type="number" id="t_d3_yellow" value="38" onchange="updateThreshold('d3','yellow',this.value)">
-            </div>
+      <!-- TAB: LTV Model -->
+      <div id="stab-ltv-body" style="display:none">
+        <div class="s-section-label">WhatsApp Cost</div>
+        <div class="s-card" style="margin-bottom:16px">
+          <div class="s-card-hdr"><span class="s-card-title">WA Cost per Lead</span></div>
+          <div class="s-card-hint">ADJ ROAS = Revenue ÷ (Spend + Leads × this value)</div>
+          <div class="s-param-row">
+            <span class="s-param-label">₹ per lead</span>
+            <div class="s-input-wrap"><span class="s-unit">₹</span><input type="number" id="t_wacost" step="0.5" min="0" onchange="updateThreshold('waCost','val',this.value)"></div>
           </div>
         </div>
-        <div class="ts-hint">Green: D3 &lt; value · Yellow: D3 ≤ value · Red: above Yellow</div>
-      </div>
 
-      <div class="ts-metric">
-        <div class="ts-metric-label">D7 COST — COST PER 7-DAY ATTENDEE (₹) · LOWER IS BETTER</div>
-        <div class="ts-row">
-          <div class="ts-dot green"></div>
-          <div class="ts-fields">
-            <div class="ts-field">
-              <label>Max ₹ for Green</label>
-              <input type="number" id="t_d7_green" value="66" onchange="updateThreshold('d7','green',this.value)">
-            </div>
-            <div class="ts-field">
-              <label>Max ₹ for Yellow</label>
-              <input type="number" id="t_d7_yellow" value="95" onchange="updateThreshold('d7','yellow',this.value)">
-            </div>
+        <div class="s-section-label">Projected ROAS — LTV Parameters</div>
+        <div style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:10px 14px;margin-bottom:14px;font-family:var(--font-mono);font-size:10px;color:var(--text2);line-height:1.8">
+          Proj ROAS = <span style="color:var(--text)">[Revenue + (Mult31 × Ord31 × AOV31) + (OrdOther × RateLT × AOVLT)]</span> ÷ Spend
+        </div>
+        <div class="s-card">
+          <div class="s-card-hdr"><span class="s-card-title">31-Day Plan (Subscription)</span><span style="font-family:var(--font-mono);font-size:9px;color:#60a5fa">monthly</span></div>
+          <div class="s-param-row">
+            <span class="s-param-label">Renewal multiplier</span>
+            <div class="s-input-wrap"><input type="number" id="t_ltv_mult31" step="0.1" min="0" onchange="updateThreshold('ltvMult31','val',this.value)"><span class="s-unit">×</span></div>
+          </div>
+          <div class="s-param-row">
+            <span class="s-param-label">AOV per renewal</span>
+            <div class="s-input-wrap"><span class="s-unit">₹</span><input type="number" id="t_ltv_aov31" step="10" min="0" onchange="updateThreshold('ltvAov31','val',this.value)"></div>
           </div>
         </div>
-        <div class="ts-hint">Green: D7 &lt; value · Yellow: D7 ≤ value · Red: above Yellow</div>
-      </div>
-
-      <div class="ts-metric">
-        <div class="ts-metric-label">ROAS — RETURN ON AD SPEND (×) · HIGHER IS BETTER</div>
-        <div class="ts-row">
-          <div class="ts-dot green"></div>
-          <div class="ts-fields">
-            <div class="ts-field">
-              <label>Min × for Green</label>
-              <input type="number" id="t_roas_green" value="1.8" step="0.1" onchange="updateThreshold('roas','green',this.value)">
-            </div>
-            <div class="ts-field">
-              <label>Min × for Yellow</label>
-              <input type="number" id="t_roas_yellow" value="1.2" step="0.1" onchange="updateThreshold('roas','yellow',this.value)">
-            </div>
+        <div class="s-card" style="margin-top:12px">
+          <div class="s-card-hdr"><span class="s-card-title">Long-Term Plans (Pre-paid)</span><span style="font-family:var(--font-mono);font-size:9px;color:#f97316">93/186/372 days</span></div>
+          <div class="s-param-row">
+            <span class="s-param-label">Renewal rate</span>
+            <div class="s-input-wrap"><input type="number" id="t_ltv_ratelt" step="5" min="0" max="100" onchange="updateThreshold('ltvRateLt','pct',this.value)"><span class="s-unit">%</span></div>
           </div>
-        </div>
-        <div class="ts-hint">Green: ROAS ≥ value · Yellow: ROAS &gt; value · Red: below Yellow</div>
-      </div>
-
-      <div class="ts-metric" style="border-bottom:none;margin-bottom:0;padding-bottom:0">
-        <div class="ts-metric-label">ROAS (WA ADJ) — INCL. ₹3 WHATSAPP COST PER LEAD · HIGHER IS BETTER</div>
-        <div class="ts-row">
-          <div class="ts-dot green"></div>
-          <div class="ts-fields">
-            <div class="ts-field">
-              <label>Min × for Green</label>
-              <input type="number" id="t_adjroas_green" value="1.8" step="0.1" onchange="updateThreshold('adjroas','green',this.value)">
-            </div>
-            <div class="ts-field">
-              <label>Min × for Yellow</label>
-              <input type="number" id="t_adjroas_yellow" value="1.2" step="0.1" onchange="updateThreshold('adjroas','yellow',this.value)">
-            </div>
-          </div>
-        </div>
-        <div class="ts-hint">Green: Adj ROAS ≥ value · Yellow: Adj ROAS &gt; value · Red: below Yellow</div>
-      </div>
-
-      <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
-        <div class="ts-metric-label" style="margin-bottom:12px">WHATSAPP COST PER LEAD (₹) · USED IN ADJ ROAS</div>
-        <div class="ts-row">
-          <div class="ts-dot" style="background:var(--accent)"></div>
-          <div class="ts-fields">
-            <div class="ts-field">
-              <label>₹ per lead</label>
-              <input type="number" id="t_wacost" value="3" step="0.5" min="0"
-                onchange="updateThreshold('waCost','val',this.value)">
-            </div>
-            <div class="ts-field" style="display:flex;align-items:flex-end;padding-bottom:8px">
-              <div class="ts-hint">ADJ ROAS = Revenue ÷ (Spend + Leads × ₹ this value)</div>
-            </div>
+          <div class="s-param-row">
+            <span class="s-param-label">AOV per renewal</span>
+            <div class="s-input-wrap"><span class="s-unit">₹</span><input type="number" id="t_ltv_aovlt" step="100" min="0" onchange="updateThreshold('ltvAovLt','val',this.value)"></div>
           </div>
         </div>
       </div>
 
-      <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
-        <div class="ts-metric-label" style="margin-bottom:12px">PROJ ROAS — LIFETIME VALUE PARAMETERS</div>
-        <div class="ts-hint" style="margin-bottom:14px;color:var(--text2);line-height:1.7">
-          Proj ROAS = [Revenue + (Mult31 × Orders31d × AOV31) + (OrdersOther × RateLT × AOVLT)] ÷ Spend
-        </div>
-        <div class="ts-row">
-          <div class="ts-dot" style="background:#60a5fa"></div>
-          <div class="ts-fields">
-            <div class="ts-field">
-              <label>31-day renewal multiplier</label>
-              <input type="number" id="t_ltv_mult31" value="1.5" step="0.1" min="0"
-                onchange="updateThreshold('ltvMult31','val',this.value)">
-            </div>
-            <div class="ts-field">
-              <label>31-day renewal AOV (₹)</label>
-              <input type="number" id="t_ltv_aov31" value="423" step="10" min="0"
-                onchange="updateThreshold('ltvAov31','val',this.value)">
-            </div>
+      <!-- TAB: Projection Model -->
+      <div id="stab-proj-body" style="display:none">
+        <div class="s-section-label">D1 Attendance Assumption</div>
+        <div class="s-card" style="margin-bottom:16px">
+          <div class="s-card-hint">Used to project D3/D7 cost from current CPL for immature campaigns</div>
+          <div class="s-param-row">
+            <span class="s-param-label">D1 attendance rate</span>
+            <div class="s-input-wrap"><input type="number" id="t_d1pct" step="1" min="1" max="100" onchange="updateD1Pct(this.value/100)"><span class="s-unit">%</span></div>
           </div>
         </div>
-        <div class="ts-row" style="margin-top:8px">
-          <div class="ts-dot" style="background:#f97316"></div>
-          <div class="ts-fields">
-            <div class="ts-field">
-              <label>Long-term renewal rate (%)</label>
-              <input type="number" id="t_ltv_ratelt" value="30" step="5" min="0" max="100"
-                onchange="updateThreshold('ltvRateLt','pct',this.value)">
-            </div>
-            <div class="ts-field">
-              <label>Long-term AOV (₹)</label>
-              <input type="number" id="t_ltv_aovlt" value="2000" step="100" min="0"
-                onchange="updateThreshold('ltvAovLt','val',this.value)">
-            </div>
-          </div>
-        </div>
-        <div class="ts-hint" style="margin-top:6px">Long-term = 93/186/372-day plans · renewal rate stored as decimal internally</div>
-      </div>
-
-      <!-- Projection Logic -->
-      <div style="margin-top:24px;padding-top:20px;border-top:1px solid var(--border)">
-        <div class="ts-metric-label" style="margin-bottom:14px">PROJECTION MODEL · SCALING SIGNALS</div>
-        <div class="ts-hint" style="margin-bottom:14px;line-height:1.7;color:var(--text2)">
-          The Scaling Signals use a forward-looking model to project D3/D7/ROAS from current CPL + D1% attendance.<br>
-          Ratios are auto-calculated from the last 4 mature weeks of actual data per campaign.
-        </div>
-
-        <div class="ts-proj-grid" id="projRatiosDisplay">
-          <!-- populated by JS -->
-        </div>
-
-        <div style="margin-top:16px">
-          <div class="ts-metric-label" style="margin-bottom:8px">D1% ASSUMPTION</div>
-          <div class="ts-row">
-            <div class="ts-dot" style="background:var(--accent)"></div>
-            <div class="ts-fields">
-              <div class="ts-field">
-                <label>D1 Attendance Rate (%)</label>
-                <input type="number" id="t_d1pct" value="64" step="1" min="1" max="100"
-                  onchange="updateD1Pct(this.value)">
-              </div>
-              <div class="ts-field" style="display:flex;align-items:flex-end;padding-bottom:8px">
-                <div class="ts-hint">% of leads who attend Day 1.<br>Used as base for D3/D7 projection.</div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="ts-hint" style="margin-top:12px">
-          <span style="color:var(--accent)">Proj D3 Cost</span> = CPL ÷ (D1% × D3/D1 ratio) &nbsp;·&nbsp;
-          <span style="color:var(--accent)">Proj D7 Cost</span> = CPL ÷ (D1% × D7/D1 ratio) &nbsp;·&nbsp;
-          <span style="color:var(--accent)">Proj ROAS</span> = k ÷ Proj D7 Cost
-        </div>
+        <div class="s-section-label">Auto-calculated Ratios</div>
+        <div id="projRatiosDisplay" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:4px"></div>
       </div>
 
     </div>
@@ -1054,24 +1087,43 @@ const actionLabel = a=>({'scale-relaunch':'⬆ Scale + Relaunch','scale':'⬆ Sc
 // ═══════════════════════════════════════
 // SETTINGS MODAL
 // ═══════════════════════════════════════
+
+function switchSTab(tab){
+  ['thresholds','ltv','proj'].forEach(t=>{
+    document.getElementById('stab-'+t+'-body').style.display=t===tab?'':'none';
+    document.getElementById('stab-'+t).classList.toggle('active',t===tab);
+  });
+}
+
+function resetThresholds(){
+  T.cpl={green:10,yellow:15}; T.d3={green:33,yellow:38}; T.d7={green:66,yellow:95};
+  T.roas={green:1.8,yellow:1.2}; T.adjroas={green:1.8,yellow:1.2}; T.ltvRoas={green:2.0,yellow:1.5};
+  T.waCost=3; T.ltvMult31=1.5; T.ltvAov31=423; T.ltvRateLt=0.3; T.ltvAovLt=2000;
+  localStorage.removeItem('kw_T');
+  openSettings();
+  if(S.data){reEnrichData(S.data);renderAll(S.data);}
+  showToast('Thresholds reset','All values restored to defaults');
+}
+
+function previewThreshold(input,metric,tier){
+  // Visual feedback — input border flashes accent
+  input.style.borderColor='var(--accent)';
+  setTimeout(()=>input.style.borderColor='',800);
+}
+
 function openSettings(){
-  document.getElementById('t_wacost').value = T.waCost||3;
-  document.getElementById('t_ltv_mult31').value = T.ltvMult31||1.5;
-  document.getElementById('t_ltv_aov31').value = T.ltvAov31||423;
-  document.getElementById('t_ltv_ratelt').value = Math.round((T.ltvRateLt||0.3)*100);
-  document.getElementById('t_ltv_aovlt').value = T.ltvAovLt||2000;
-  document.getElementById('t_adjroas_green').value = T.adjroas.green;
-  document.getElementById('t_adjroas_yellow').value = T.adjroas.yellow;
-  document.getElementById('t_cpl_green').value  = T.cpl.green;
-  document.getElementById('t_cpl_yellow').value = T.cpl.yellow;
-  document.getElementById('t_d3_green').value   = T.d3.green;
-  document.getElementById('t_d3_yellow').value  = T.d3.yellow;
-  document.getElementById('t_d7_green').value   = T.d7.green;
-  document.getElementById('t_d7_yellow').value  = T.d7.yellow;
-  document.getElementById('t_roas_green').value  = T.roas.green;
-  document.getElementById('t_roas_yellow').value = T.roas.yellow;
-  document.getElementById('t_d1pct').value = Math.round((S.d1pct||0.64)*100);
-  // Populate projection ratios from live data
+  // Colour thresholds
+  ['cpl','d3','d7','roas','adjroas'].forEach(m=>{
+    const eg=document.getElementById('t_'+m+'_green'), ey=document.getElementById('t_'+m+'_yellow');
+    if(eg) eg.value=T[m].green; if(ey) ey.value=T[m].yellow;
+  });
+  const lr=document.getElementById('t_ltvRoas_green'), ly=document.getElementById('t_ltvRoas_yellow');
+  if(lr) lr.value=T.ltvRoas.green; if(ly) ly.value=T.ltvRoas.yellow;
+  // LTV params
+  const fields={t_wacost:T.waCost||3,t_ltv_mult31:T.ltvMult31||1.5,t_ltv_aov31:T.ltvAov31||423,
+    t_ltv_aovlt:T.ltvAovLt||2000,t_d1pct:Math.round((S.d1pct||0.64)*100)};
+  Object.entries(fields).forEach(([id,v])=>{ const el=document.getElementById(id); if(el) el.value=v; });
+  const rlt=document.getElementById('t_ltv_ratelt'); if(rlt) rlt.value=Math.round((T.ltvRateLt||0.3)*100);
   refreshProjRatios();
   document.getElementById('settingsModal').classList.add('open');
 }
