@@ -564,6 +564,23 @@ td:first-child{text-align:left;}
         <div class="ts-hint">Green: Adj ROAS ≥ value · Yellow: Adj ROAS &gt; value · Red: below Yellow</div>
       </div>
 
+      <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
+        <div class="ts-metric-label" style="margin-bottom:12px">WHATSAPP COST PER LEAD (₹) · USED IN ADJ ROAS</div>
+        <div class="ts-row">
+          <div class="ts-dot" style="background:var(--accent)"></div>
+          <div class="ts-fields">
+            <div class="ts-field">
+              <label>₹ per lead</label>
+              <input type="number" id="t_wacost" value="3" step="0.5" min="0"
+                onchange="updateThreshold('waCost','val',this.value)">
+            </div>
+            <div class="ts-field" style="display:flex;align-items:flex-end;padding-bottom:8px">
+              <div class="ts-hint">ADJ ROAS = Revenue ÷ (Spend + Leads × ₹ this value)</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Projection Logic -->
       <div style="margin-top:24px;padding-top:20px;border-top:1px solid var(--border)">
         <div class="ts-metric-label" style="margin-bottom:14px">PROJECTION MODEL · SCALING SIGNALS</div>
@@ -897,6 +914,7 @@ const T = {
   d7:   { green:66,   yellow:95  },
   roas: { green:1.8,  yellow:1.2 },
   adjroas: { green:1.8,  yellow:1.2 },  // WA-adjusted ROAS thresholds
+  waCost: 3,  // WhatsApp cost per lead in ₹ (configurable)
   conf: { high:20000, medium:5000 },
   d3pct: { green:32, yellow:24 },
   d7pct: { green:14, yellow:10 },
@@ -1735,7 +1753,7 @@ function makeOvMetricRow(obj){
     d1pct:obj.d1pct||null,d3pct:obj.d3pct||null,d3cost,
     d7pct:obj.d7pct||null,d7cost,
     d10pct:obj.d10pct||null, paidroas:roas||null,
-    adjroas:obj.rev>0&&((obj.spend||0)+(obj.leads||0)*3)>0?obj.rev/((obj.spend||0)+(obj.leads||0)*3):null
+    adjroas:obj.rev>0&&((obj.spend||0)+(obj.leads||0)*T.waCost)>0?obj.rev/((obj.spend||0)+(obj.leads||0)*T.waCost):null
   };
 }
 
@@ -1763,7 +1781,7 @@ const COLS=[
   {k:'d3cost',   label:'D3 Cost'},
   {k:'d7cost',   label:'D7 Cost'},
   {k:'paidroas', label:'Paid ROAS'},
-  {k:'adjroas',  label:'ROAS (WA adj)'},
+  {k:'adjroas',  label:'ADJ ROAS'},
 ];
 
 function cellVal(row, col, mature){
@@ -1843,7 +1861,7 @@ function campWeekData(c, w){
     d7pct:wd.d7pct||0, d7cost:wd.d7cost||null,
     d10pct:wd.d10pct||0,
     paidroas:wd.rev>0&&wd.spend>0?wd.rev/wd.spend:null,
-    adjroas:wd.rev>0&&(wd.spend+((wd.leads||0)*3))>0?wd.rev/(wd.spend+((wd.leads||0)*3)):null
+    adjroas:wd.rev>0&&(wd.spend+((wd.leads||0)*T.waCost))>0?wd.rev/(wd.spend+((wd.leads||0)*T.waCost)):null
   };
 }
 
@@ -2103,7 +2121,7 @@ function renderTree(d){
       subs,cps:subs>0?totSpend/subs:null,
       rev:totRev,projroas:roas?roas*1.1:null,l2s:totLeads>0?subs/totLeads*100:0,
       d1pct,d3pct,d3cost,d7pct,d7cost,d10pct,
-      paidroas:roas||null, adjroas:totRev>0&&(totSpend+totLeads*3)>0?totRev/(totSpend+totLeads*3):null};
+      paidroas:roas||null, adjroas:totRev>0&&(totSpend+totLeads*T.waCost)>0?totRev/(totSpend+totLeads*T.waCost):null};
   }
 
   function grandAgg(){
@@ -2134,7 +2152,7 @@ function renderTree(d){
       d3pct:totLeads>0?Math.round(totD3att/totLeads*100):0, d3cost,
       d7pct:totLeads>0?Math.round(totD7att/totLeads*100):0, d7cost,
       d10pct:totLeads>0?Math.round(totD10att/totLeads*100):0,
-      paidroas:roas||null, adjroas:totRev>0&&(totSpend+totLeads*3)>0?totRev/(totSpend+totLeads*3):null};
+      paidroas:roas||null, adjroas:totRev>0&&(totSpend+totLeads*T.waCost)>0?totRev/(totSpend+totLeads*T.waCost):null};
   }
 
   let thCells=`<th style="min-width:240px;text-align:left;padding:7px 10px;background:var(--bg3);border-bottom:1px solid var(--border);position:sticky;left:0;z-index:3;font-family:var(--font-mono);font-size:9px;letter-spacing:.08em;color:var(--text3);text-transform:uppercase">Campaign</th>`;
@@ -2235,7 +2253,7 @@ function renderTree(d){
                 d1pct,d3pct,d3cost:dl>0&&d3pct>0?ds/Math.round(dl*(d3pct/100)):null,
                 d7pct,d7cost:dl>0&&d7pct>0?ds/Math.round(dl*(d7pct/100)):null,
                 d10pct,paidroas:droas||null,
-                adjroas:(dailyRev[dateStr]||0)>0&&(ds+dl*3)>0?(dailyRev[dateStr]||0)/(ds+dl*3):null};
+                adjroas:(dailyRev[dateStr]||0)>0&&(ds+dl*T.waCost)>0?(dailyRev[dateStr]||0)/(ds+dl*T.waCost):null};
               let dc=`<td style="position:sticky;left:0;background:var(--bg);z-index:1">
                 <div class="tree-name tree-indent-3">
                   <span style="width:14px;display:inline-block;flex-shrink:0;color:var(--text3);font-size:9px">•</span>
@@ -2368,7 +2386,7 @@ function renderBatch(d){
       subs:subs||null,cps:subs>0&&spend>0?spend/subs:null,
       rev:rev||null,roas,l2s:bLeads>0&&subs>0?subs/bLeads*100:null,
       d1pct:d1pct||null,d3pct:d3pct||null,d3cost,
-      d7pct:d7pct||null,d7cost,d10pct:d10pct||null,paidroas:roas||null, adjroas:rev>0&&(spend+bLeads*3)>0?rev/(spend+bLeads*3):null};
+      d7pct:d7pct||null,d7cost,d10pct:d10pct||null,paidroas:roas||null, adjroas:rev>0&&(spend+bLeads*T.waCost)>0?rev/(spend+bLeads*T.waCost):null};
   }
   function batchCampData(b,c){
     const bd=b.data[c.id]||{leads:0,d1:0,d3:0,d7:0,d10:0,wkLeads:{}};
@@ -2410,7 +2428,7 @@ function renderBatch(d){
       rev:totRev||null,roas,l2s:totLeads>0&&totSubs>0?totSubs/totLeads*100:null,
       d1pct:totLeads>0?Math.round(totD1/totLeads*100)||null:null,
       d3pct:d3pct||null,d3cost,d7pct:d7pct||null,d7cost,
-      d10pct:totLeads>0?Math.round(totD10/totLeads*100)||null:null,paidroas:roas||null, adjroas:totRev>0&&(totSpend+totLeads*3)>0?totRev/(totSpend+totLeads*3):null};
+      d10pct:totLeads>0?Math.round(totD10/totLeads*100)||null:null,paidroas:roas||null, adjroas:totRev>0&&(totSpend+totLeads*T.waCost)>0?totRev/(totSpend+totLeads*T.waCost):null};
   }
   function bMature(bid,col){
     const late=['roas','paidroas','d10pct'], mid=['d7pct'];
@@ -2673,7 +2691,7 @@ function renderAdsets(d){
       d3pct:totLeads>0?Math.round(totD3att/totLeads*100):0, d3cost,
       d7pct:totLeads>0?Math.round(totD7att/totLeads*100):0, d7cost,
       d10pct:totLeads>0?Math.round(totD10att/totLeads*100):0,
-      paidroas:roas||null, adjroas:totRev>0&&(totSpend+totLeads*3)>0?totRev/(totSpend+totLeads*3):null};
+      paidroas:roas||null, adjroas:totRev>0&&(totSpend+totLeads*T.waCost)>0?totRev/(totSpend+totLeads*T.waCost):null};
   }
   function asWeekData(a,w){
     const wd=a.weekly?.[w.key]||{spend:0,leads:0};
@@ -2688,7 +2706,7 @@ function renderAdsets(d){
       d1pct:wd.d1pct||0, d3pct:wd.d3pct||0, d3cost:wd.d3cost||null,
       d7pct:wd.d7pct||0, d7cost:wd.d7cost||null,
       d10pct:wd.d10pct||0, paidroas:roas||null,
-      adjroas:(wd.rev||0)>0&&((wd.spend||0)+((wd.leads||0)*3))>0?(wd.rev||0)/((wd.spend||0)+((wd.leads||0)*3)):null};
+      adjroas:(wd.rev||0)>0&&((wd.spend||0)+((wd.leads||0)*T.waCost))>0?(wd.rev||0)/((wd.spend||0)+((wd.leads||0)*T.waCost)):null};
   }
 
   let thCells=`<th style="min-width:240px;text-align:left;padding:7px 10px;background:var(--bg3);border-bottom:1px solid var(--border);position:sticky;left:0;z-index:3;font-family:var(--font-mono);font-size:9px;letter-spacing:.08em;color:var(--text3);text-transform:uppercase">
@@ -2759,7 +2777,7 @@ function renderAdsets(d){
               d1pct:dl>0?Math.round(dat.d1/dl*100):0,d3pct:dl>0?Math.round(dat.d3/dl*100):0,
               d3cost:dl>0&&dat.d3>0?ds/dat.d3:null,d7pct:dl>0?Math.round(dat.d7/dl*100):0,
               d7cost:dl>0&&dat.d7>0?ds/dat.d7:null,d10pct:dl>0?Math.round(dat.d10/dl*100):0,paidroas:droas||null,
-              adjroas:(dailyRev[dateStr]||0)>0&&(ds+dl*3)>0?(dailyRev[dateStr]||0)/(ds+dl*3):null};
+              adjroas:(dailyRev[dateStr]||0)>0&&(ds+dl*T.waCost)>0?(dailyRev[dateStr]||0)/(ds+dl*T.waCost):null};
             let dc=`<td style="position:sticky;left:0;background:var(--bg);z-index:1"><div class="tree-name tree-indent-3"><span style="width:14px;display:inline-block;flex-shrink:0;color:var(--text3);font-size:9px">•</span><div class="tree-name-main" style="font-size:10px;color:var(--text3)">${dateStr}</div></div></td>`;
             COLS.forEach((col,ci)=>{ dc+=`<td class="${ci===0?'col-sep':''}" style="background:var(--bg)">${cellVal(dd,col,isMature(w.key,col.k))}</td>`; });
             rows.push(`<tr class="row-date">${dc}</tr>`);
@@ -2886,7 +2904,7 @@ function renderCreatives(d){
       d3pct:totLeads>0?Math.round(totD3att/totLeads*100):0, d3cost,
       d7pct:totLeads>0?Math.round(totD7att/totLeads*100):0, d7cost,
       d10pct:totLeads>0?Math.round(totD10att/totLeads*100):0,
-      paidroas:roas||null, adjroas:totRev>0&&(totSpend+totLeads*3)>0?totRev/(totSpend+totLeads*3):null};
+      paidroas:roas||null, adjroas:totRev>0&&(totSpend+totLeads*T.waCost)>0?totRev/(totSpend+totLeads*T.waCost):null};
   }
   function crWeekData(cr,w){
     const wd=cr.weekly?.[w.key]||{spend:0,leads:0};
@@ -2903,7 +2921,7 @@ function renderCreatives(d){
       d1pct:wd.d1pct||0, d3pct:wd.d3pct||0, d3cost:wd.d3cost||null,
       d7pct:wd.d7pct||0, d7cost:wd.d7cost||null,
       d10pct:wd.d10pct||0, paidroas:roas||null,
-      adjroas:wd.rev>0&&((wd.spend||0)+((wd.leads||0)*3))>0?wd.rev/((wd.spend||0)+((wd.leads||0)*3)):null,
+      adjroas:wd.rev>0&&((wd.spend||0)+((wd.leads||0)*T.waCost))>0?wd.rev/((wd.spend||0)+((wd.leads||0)*T.waCost)):null,
       _approxAge:approxAgeAtWeek};
   }
 
@@ -2980,7 +2998,7 @@ function renderCreatives(d){
               d1pct:dl>0?Math.round(dat.d1/dl*100):0,d3pct:dl>0?Math.round(dat.d3/dl*100):0,
               d3cost:dl>0&&dat.d3>0?ds/dat.d3:null,d7pct:dl>0?Math.round(dat.d7/dl*100):0,
               d7cost:dl>0&&dat.d7>0?ds/dat.d7:null,d10pct:dl>0?Math.round(dat.d10/dl*100):0,paidroas:droas||null,
-              adjroas:(dailyRev[dateStr]||0)>0&&(ds+dl*3)>0?(dailyRev[dateStr]||0)/(ds+dl*3):null};
+              adjroas:(dailyRev[dateStr]||0)>0&&(ds+dl*T.waCost)>0?(dailyRev[dateStr]||0)/(ds+dl*T.waCost):null};
             let dc=`<td style="position:sticky;left:0;background:var(--bg);z-index:1"><div class="tree-name tree-indent-3"><span style="width:14px;display:inline-block;flex-shrink:0;color:var(--text3);font-size:9px">•</span><div class="tree-name-main" style="font-size:10px;color:var(--text3)">${dateStr}</div></div></td>`;
             COLS.forEach((col,ci)=>{ dc+=`<td class="${ci===0?'col-sep':''}" style="background:var(--bg)">${cellVal(dd,col,isMatureByAge(approxAgeAtWeek,col.k))}</td>`; });
             rows.push(`<tr class="row-date">${dc}</tr>`);
