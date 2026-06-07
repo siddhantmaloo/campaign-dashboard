@@ -2461,11 +2461,7 @@ function renderBatch(d){
           }});
         });
 
-        // Sort all campaign rows by spend desc, then by leads desc
-        campRows.sort((a,b)=>b.spend!==a.spend?b.spend-a.spend:b.leads-a.leads);
-        campRows.forEach(r=>rows.push(r.html()));
-
-        // "Organic" row — leads with no utm_campaign (always last)
+        // "Organic" row — leads with no utm_campaign (always first)
         const organicBd=b.data['__organic__'];
         if(organicBd&&organicBd.leads>0){
           const orgRd=(b.revData&&b.revData['__organic__'])||{rev:0,subs:0};
@@ -2481,6 +2477,10 @@ function renderBatch(d){
           COLS.forEach((col,ci)=>{ ogc+=`<td class="${ci===0?'col-sep':''}" style="background:var(--bg3)">${cellVal(orgd,col,true)}</td>`; });
           rows.push(`<tr class="row-week">${ogc}</tr>`);
         }
+
+        // Sort all campaign rows by spend desc, then by leads desc, render after organic
+        campRows.sort((a,b)=>b.spend!==a.spend?b.spend-a.spend:b.leads-a.leads);
+        campRows.forEach(r=>rows.push(r.html()));
       }
     });
   }
