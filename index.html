@@ -2292,7 +2292,7 @@ function renderBatch(d){
   const batches=d.batches.filter(b=>BS.selected[b.id]!==false);
 
   // Build metrics from batch attendance object + actual spend from registration weeks
-  function batchMetrics(bd, weeklyData){
+  function batchMetrics(bd, weeklyData, rd){
     const bLeads=bd.leads||0, d1=bd.d1||0, d3=bd.d3||0, d7=bd.d7||0, d10=bd.d10||0;
     // Sum spend/impr/clicks from weeks when these leads registered
     let spend=0, impr=0, clicks=0;
@@ -2310,28 +2310,36 @@ function renderBatch(d){
     const cpc=clicks>0?spend/clicks:null;
     const ctr=impr>0?clicks/impr*100:null;
     const c2db=clicks>0&&bLeads>0?bLeads/clicks*100:null;
-    const health=healthScore(tagCPL(cpl),d3cost?tagD3(d3cost):'na',d7cost?tagD7(d7cost):'na','na');
+    const rev=(rd&&rd.rev)||0;
+    const subs=(rd&&rd.subs)||0;
+    const roas=spend>0&&rev>0?rev/spend:null;
+    const health=healthScore(tagCPL(cpl),d3cost?tagD3(d3cost):'na',d7cost?tagD7(d7cost):'na',roas?tagROAS(roas):'na');
     const conf=tagConf(spend);
     return {health,conf,spend:spend||null,cpm,cpc,ctr,c2db,leads:bLeads||null,cpl,
-      subs:null,cps:null,rev:null,roas:null,l2s:null,
+      subs:subs||null,cps:subs>0&&spend>0?spend/subs:null,
+      rev:rev||null,roas,l2s:bLeads>0&&subs>0?subs/bLeads*100:null,
       d1pct:d1pct||null,d3pct:d3pct||null,d3cost,
-      d7pct:d7pct||null,d7cost,d10pct:d10pct||null,paidroas:null};
+      d7pct:d7pct||null,d7cost,d10pct:d10pct||null,paidroas:roas||null};
   }
   function batchCampData(b,c){
     const bd=b.data[c.id]||{leads:0,d1:0,d3:0,d7:0,d10:0,wks:new Set()};
-    return batchMetrics(bd, c.weekly);
+    const rd=b.revData&&b.revData[c.id]||{rev:0,subs:0};
+    return batchMetrics(bd, c.weekly, rd);
   }
   function batchAgg(b){
     // Aggregate over all campaigns (active) + other + organic
-    let totSpend=0,totLeads=0,totImpr=0,totClicks=0,totD1=0,totD3=0,totD7=0,totD10=0;
+    let totSpend=0,totLeads=0,totImpr=0,totClicks=0,totD1=0,totD3=0,totD7=0,totD10=0,totRev=0,totSubs=0;
     Object.entries(b.data).forEach(([key,bd])=>{
+      const rd=(b.revData&&b.revData[key])||{rev:0,subs:0};
       const weeklyData = key==='__organic__'||!d.camps.find(c=>c.id===key) ? null : d.camps.find(c=>c.id===key)?.weekly;
       let sp=0,im=0,cl=0;
       if(weeklyData&&bd.wks) bd.wks.forEach(wk=>{const wd=weeklyData[wk];if(wd){sp+=wd.spend||0;im+=wd.impr||0;cl+=wd.clicks||0;}});
       totSpend+=sp; totImpr+=im; totClicks+=cl;
       totLeads+=bd.leads||0; totD1+=bd.d1||0; totD3+=bd.d3||0; totD7+=bd.d7||0; totD10+=bd.d10||0;
+      totRev+=rd.rev||0; totSubs+=rd.subs||0;
     });
     const cpl=totLeads>0&&totSpend>0?totSpend/totLeads:null;
+    const roas=totSpend>0&&totRev>0?totRev/totSpend:null;
     const d3pct=totLeads>0?Math.round(totD3/totLeads*100):0;
     const d7pct=totLeads>0?Math.round(totD7/totLeads*100):0;
     const d3cost=totD3>0&&totSpend>0?totSpend/totD3:null;
@@ -2340,13 +2348,14 @@ function renderBatch(d){
     const cpc=totClicks>0?totSpend/totClicks:null;
     const ctr=totImpr>0?totClicks/totImpr*100:null;
     const c2db=totClicks>0&&totLeads>0?totLeads/totClicks*100:null;
-    const health=healthScore(tagCPL(cpl),d3cost?tagD3(d3cost):'na',d7cost?tagD7(d7cost):'na','na');
+    const health=healthScore(tagCPL(cpl),d3cost?tagD3(d3cost):'na',d7cost?tagD7(d7cost):'na',roas?tagROAS(roas):'na');
     const conf=tagConf(totSpend);
     return {health,conf,spend:totSpend||null,cpm,cpc,ctr,c2db,leads:totLeads||null,cpl,
-      subs:null,cps:null,rev:null,roas:null,l2s:null,
+      subs:totSubs||null,cps:totSubs>0&&totSpend>0?totSpend/totSubs:null,
+      rev:totRev||null,roas,l2s:totLeads>0&&totSubs>0?totSubs/totLeads*100:null,
       d1pct:totLeads>0?Math.round(totD1/totLeads*100)||null:null,
       d3pct:d3pct||null,d3cost,d7pct:d7pct||null,d7cost,
-      d10pct:totLeads>0?Math.round(totD10/totLeads*100)||null:null,paidroas:null};
+      d10pct:totLeads>0?Math.round(totD10/totLeads*100)||null:null,paidroas:roas||null};
   }
   function bMature(bid,col){
     const late=['roas','paidroas','d10pct'], mid=['d7pct'];
@@ -3317,6 +3326,7 @@ function parseXlsx(wb){
   });
   const revByCamp={}, revByAdset={}, revByCr={};
   const subsByCamp={}, subsByAdset={}, subsByCr={};
+  const revByBatch={}, subsByBatch={};  // batch→camp→{rev,subs}
   payment.forEach(r=>{
     const cid=cleanId(r.utm_campaign);
     const aid=cleanId(r.utm_adgroup_id);
@@ -3326,6 +3336,14 @@ function parseXlsx(wb){
     const wk=weekKey(dt);
     const rev=toNum(r.net_revenue);
     const subs=toNum(r.paid_students);
+    // Batch-level revenue tracking
+    const payBid=String(r.free_batch_id||'').trim();
+    if(payBid){
+      if(!revByBatch[payBid]) revByBatch[payBid]={};
+      if(!revByBatch[payBid][cid]) revByBatch[payBid][cid]={rev:0,subs:0};
+      revByBatch[payBid][cid].rev+=rev;
+      revByBatch[payBid][cid].subs+=subs;
+    }
     if(!revByCamp[cid]) revByCamp[cid]={daily:{}};
     if(!revByCamp[cid].daily) revByCamp[cid].daily={};
     if(!revByCamp[cid][wk]) revByCamp[cid][wk]=0;
@@ -3674,7 +3692,8 @@ function parseXlsx(wb){
   const batchIds=[...new Set(Object.keys(attByBatch))].sort((a,b)=>parseInt(b)-parseInt(a));
   const batches=batchIds.slice(0,10).map(bid=>({
     id:bid, label:`Batch ${bid}`, sub:'',
-    data:attByBatch[bid]||{}
+    data:attByBatch[bid]||{},
+    revData:revByBatch[bid]||{}
   }));
 
   // ── 9. Totals ──
