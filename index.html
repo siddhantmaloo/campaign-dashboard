@@ -1417,10 +1417,18 @@ function filteredOvData(d){
   // Rebuild months array reusing existing structure but replacing totals
   const months=d.months.map(m=>{
     const mk=m.key.length===6?m.key.slice(0,4)+'-'+m.key.slice(4):m.key;
-    const base=monthMap.all[mk]||{spend:0,leads:0,rev:0,subs:0,clicks:0,impr:0};
-    const meta=monthMap.meta[mk]||{spend:0,leads:0,rev:0,subs:0,clicks:0,impr:0};
-    const goog=monthMap.google[mk]||{spend:0,leads:0,rev:0,subs:0,clicks:0,impr:0};
-    function mk2(d){ return {spend:d.spend||null,leads:d.leads||null,rev:d.rev||null,subs:d.subs||null,clicks:d.clicks,impr:d.impr,cpm:d.impr>0?d.spend/d.impr*1000:null,cpc:d.clicks>0?d.spend/d.clicks:null,ctr:d.impr>0?d.clicks/d.impr*100:null,c2db:null}; }
+    const base=monthMap.all[mk]||{spend:0,leads:0,rev:0,subs:0,clicks:0,impr:0,d1:0,d3:0,d7:0,d10:0};
+    const meta=monthMap.meta[mk]||{spend:0,leads:0,rev:0,subs:0,clicks:0,impr:0,d1:0,d3:0,d7:0,d10:0};
+    const goog=monthMap.google[mk]||{spend:0,leads:0,rev:0,subs:0,clicks:0,impr:0,d1:0,d3:0,d7:0,d10:0};
+    function mk2(d){ return {spend:d.spend||null,leads:d.leads||null,rev:d.rev||null,subs:d.subs||null,clicks:d.clicks,impr:d.impr,
+      cpm:d.impr>0?d.spend/d.impr*1000:null,cpc:d.clicks>0?d.spend/d.clicks:null,
+      ctr:d.impr>0?d.clicks/d.impr*100:null,c2db:null,
+      d1pct:d.leads>0?Math.round(d.d1/d.leads*100)||null:null,
+      d3pct:d.leads>0?Math.round(d.d3/d.leads*100)||null:null,
+      d3cost:d.d3>0&&d.spend>0?d.spend/d.d3:null,
+      d7pct:d.leads>0?Math.round(d.d7/d.leads*100)||null:null,
+      d7cost:d.d7>0&&d.spend>0?d.spend/d.d7:null,
+      d10pct:d.leads>0?Math.round(d.d10/d.leads*100)||null:null}; }
     // Rebuild daily rows for this month
     const dailyMap={all:{},meta:{},google:{}};
     camps.forEach(c=>{
@@ -1429,9 +1437,14 @@ function filteredOvData(d){
       Object.entries(spDaily).forEach(([ds,sp])=>{
         if(!ds.startsWith(mk)) return;
         ['all',p].forEach(b=>{
-          if(!dailyMap[b][ds]) dailyMap[b][ds]={spend:0,leads:0,rev:0,subs:0,clicks:0,impr:0};
+          if(!dailyMap[b][ds]) dailyMap[b][ds]={spend:0,leads:0,rev:0,subs:0,clicks:0,impr:0,d1:0,d3:0,d7:0,d10:0};
           dailyMap[b][ds].spend+=sp.spend||0; dailyMap[b][ds].clicks+=sp.clicks||0; dailyMap[b][ds].impr+=sp.impr||0;
-          dailyMap[b][ds].leads+=(attDaily[ds]?.leads)||0; dailyMap[b][ds].rev+=revDaily[ds]||0;
+          const _att=attDaily[ds]||{leads:0,d1:0,d3:0,d7:0,d10:0};
+          dailyMap[b][ds].leads+=_att.leads||0;
+          dailyMap[b][ds].d1+=_att.d1||0; dailyMap[b][ds].d3+=_att.d3||0;
+          dailyMap[b][ds].d7+=_att.d7||0; dailyMap[b][ds].d10+=_att.d10||0;
+          dailyMap[b][ds].rev+=revDaily[ds]||0;
+          dailyMap[b][ds].subs+=(c._dailySubs&&c._dailySubs[ds])||0;
         });
       });
     });
