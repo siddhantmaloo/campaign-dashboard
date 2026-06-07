@@ -2312,8 +2312,14 @@ function renderBatch(d){
     const bLeads=bd.leads||0, d1=bd.d1||0, d3=bd.d3||0, d7=bd.d7||0, d10=bd.d10||0;
     // Sum spend/impr/clicks from weeks when these leads registered
     let spend=0, impr=0, clicks=0;
-    if(weeklyData && bd.wks){
-      bd.wks.forEach(wk=>{ const wd=weeklyData[wk]; if(wd){spend+=wd.spend||0;impr+=wd.impr||0;clicks+=wd.clicks||0;} });
+    if(weeklyData && bd.wkLeads){
+      Object.entries(bd.wkLeads).forEach(([wk,batchWkLeads])=>{
+        const wd=weeklyData[wk]; if(!wd||!wd.spend) return;
+        // Proportional allocation: batch's share = batch_leads_this_week / total_campaign_leads_this_week
+        const totalWkLeads=wd.leads||1;
+        const share=Math.min(1, batchWkLeads/totalWkLeads);
+        spend+=wd.spend*share; impr+=(wd.impr||0)*share; clicks+=(wd.clicks||0)*share;
+      });
     }
     const cpl=bLeads>0&&spend>0?spend/bLeads:null;
     const d1pct=bLeads>0?Math.round(d1/bLeads*100):0;
@@ -2338,7 +2344,7 @@ function renderBatch(d){
       d7pct:d7pct||null,d7cost,d10pct:d10pct||null,paidroas:roas||null};
   }
   function batchCampData(b,c){
-    const bd=b.data[c.id]||{leads:0,d1:0,d3:0,d7:0,d10:0,wks:new Set()};
+    const bd=b.data[c.id]||{leads:0,d1:0,d3:0,d7:0,d10:0,wkLeads:{}};
     const rd=b.revData&&b.revData[c.id]||{rev:0,subs:0};
     return batchMetrics(bd, c.weekly, rd);
   }
@@ -2349,7 +2355,13 @@ function renderBatch(d){
       const rd=(b.revData&&b.revData[key])||{rev:0,subs:0};
       const weeklyData = key==='__organic__'||!d.camps.find(c=>c.id===key) ? null : d.camps.find(c=>c.id===key)?.weekly;
       let sp=0,im=0,cl=0;
-      if(weeklyData&&bd.wks) bd.wks.forEach(wk=>{const wd=weeklyData[wk];if(wd){sp+=wd.spend||0;im+=wd.impr||0;cl+=wd.clicks||0;}});
+      if(weeklyData&&bd.wkLeads){
+        Object.entries(bd.wkLeads).forEach(([wk,batchWkLeads])=>{
+          const wd=weeklyData[wk]; if(!wd||!wd.spend) return;
+          const share=Math.min(1,batchWkLeads/(wd.leads||1));
+          sp+=wd.spend*share; im+=(wd.impr||0)*share; cl+=(wd.clicks||0)*share;
+        });
+      }
       totSpend+=sp; totImpr+=im; totClicks+=cl;
       totLeads+=bd.leads||0; totD1+=bd.d1||0; totD3+=bd.d3||0; totD7+=bd.d7||0; totD10+=bd.d10||0;
       totRev+=rd.rev||0; totSubs+=rd.subs||0;
@@ -2423,7 +2435,7 @@ function renderBatch(d){
         });
 
         // "Other" row — leads from campaigns with no spend data (old/paused campaigns)
-        const otherBd={leads:0,d1:0,d3:0,d7:0,d10:0,wks:new Set()};
+        const otherBd={leads:0,d1:0,d3:0,d7:0,d10:0,wkLeads:{}};
         Object.entries(b.data).forEach(([key,bd])=>{
           if(key==='__organic__'||activeCampIds.has(key)) return;
           otherBd.leads+=bd.leads||0; otherBd.d1+=bd.d1||0; otherBd.d3+=bd.d3||0;
@@ -3270,10 +3282,10 @@ function parseXlsx(wb){
     if(bid){
       const bk=cid||'__organic__';
       if(!attByBatch[bid]) attByBatch[bid]={};
-      if(!attByBatch[bid][bk]) attByBatch[bid][bk]={leads:0,d1:0,d3:0,d7:0,d10:0,wks:new Set()};
+      if(!attByBatch[bid][bk]) attByBatch[bid][bk]={leads:0,d1:0,d3:0,d7:0,d10:0,wkLeads:{}};
       attByBatch[bid][bk].leads+=leads; attByBatch[bid][bk].d1+=d1;
       attByBatch[bid][bk].d3+=d3; attByBatch[bid][bk].d7+=d7; attByBatch[bid][bk].d10+=d10;
-      attByBatch[bid][bk].wks.add(wk); // track registration weeks for spend lookup
+      attByBatch[bid][bk].wkLeads[wk]=(attByBatch[bid][bk].wkLeads[wk]||0)+leads; // leads per week for proportional spend
     }
 
     // Campaign/adset/creative — only if spend exists
