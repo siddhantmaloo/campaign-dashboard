@@ -1822,7 +1822,8 @@ function campWeekData(c, w){
     d3pct:wd.d3pct||0, d3cost:wd.d3cost||null,
     d7pct:wd.d7pct||0, d7cost:wd.d7cost||null,
     d10pct:wd.d10pct||0,
-    paidroas:wd.rev>0&&wd.spend>0?wd.rev/wd.spend:null
+    paidroas:wd.rev>0&&wd.spend>0?wd.rev/wd.spend:null,
+    adjroas:wd.rev>0&&(wd.spend+((wd.leads||0)*3))>0?wd.rev/(wd.spend+((wd.leads||0)*3)):null
   };
 }
 
@@ -2241,7 +2242,7 @@ function renderTree(d){
                 rev:Math.round(ds*(wd.roas||1)),roas:wd.roas,
                 l2s:dl>0?dSubs/dl*100:null,
                 d1pct:wd.d1pct,d3pct:wd.d3pct,d3cost:wd.d3cost,
-                d7pct:wd.d7pct,d7cost:wd.d7cost,d10pct:wd.d10pct,paidroas:wd.roas||null};
+                d7pct:wd.d7pct,d7cost:wd.d7cost,d10pct:wd.d10pct,paidroas:wd.roas||null,adjroas:wd.rev>0&&((wd.spend||0)+(dl*3))>0?wd.rev/((wd.spend||0)+(dl*3)):null};
               let dc=`<td style="position:sticky;left:0;background:var(--bg);z-index:1">
                 <div class="tree-name tree-indent-3">
                   <span style="width:14px;display:inline-block;flex-shrink:0;color:var(--text3);font-size:9px">•</span>
@@ -2877,6 +2878,7 @@ function renderCreatives(d){
       d1pct:wd.d1pct||0, d3pct:wd.d3pct||0, d3cost:wd.d3cost||null,
       d7pct:wd.d7pct||0, d7cost:wd.d7cost||null,
       d10pct:wd.d10pct||0, paidroas:roas||null,
+      adjroas:wd.rev>0&&((wd.spend||0)+((wd.leads||0)*3))>0?wd.rev/((wd.spend||0)+((wd.leads||0)*3)):null,
       _approxAge:approxAgeAtWeek};
   }
 
