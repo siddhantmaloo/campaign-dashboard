@@ -1578,15 +1578,20 @@ function filteredOvData(d){
 
   // Rebuild weeklyOv from matching camps
   const weeklyOv=d.weeklyOv.map(w=>{
-    const platAgg={all:{spend:0,leads:0,rev:0,subs:0,clicks:0,impr:0,d1:0,d3:0,d7:0,d10:0},
-                   meta:{spend:0,leads:0,rev:0,subs:0,clicks:0,impr:0,d1:0,d3:0,d7:0,d10:0},
-                   google:{spend:0,leads:0,rev:0,subs:0,clicks:0,impr:0,d1:0,d3:0,d7:0,d10:0}};
+    const platAgg={all:{spend:0,leads:0,rev:0,subs:0,clicks:0,impr:0,d1:0,d3:0,d7:0,d10:0,ord31:0,ordOt:0},
+                   meta:{spend:0,leads:0,rev:0,subs:0,clicks:0,impr:0,d1:0,d3:0,d7:0,d10:0,ord31:0,ordOt:0},
+                   google:{spend:0,leads:0,rev:0,subs:0,clicks:0,impr:0,d1:0,d3:0,d7:0,d10:0,ord31:0,ordOt:0}};
     camps.forEach(c=>{
       const wk=c.weekly[w.key]; if(!wk||!wk.spend) return;
       const p=c.platform==='meta'?'meta':'google';
       ['spend','leads','rev','subs','clicks'].forEach(k=>{platAgg.all[k]+=(wk[k]||0);platAgg[p][k]+=(wk[k]||0);});
       platAgg.all.impr+=(wk.impr||0); platAgg[p].impr+=(wk.impr||0);
       ['d1','d3','d7','d10'].forEach(k=>{platAgg.all[k]+=(wk[k]||0);platAgg[p][k]+=(wk[k]||0);});
+      // Sum daily order dicts for this week's dates
+      const _fOrd31=Object.keys(c._dailyOrd31||{}).filter(ds=>weekKey(new Date(ds+'T00:00:00Z'))===w.key).reduce((s,ds)=>s+(c._dailyOrd31[ds]||0),0);
+      const _fOrdOt=Object.keys(c._dailyOrdOt||{}).filter(ds=>weekKey(new Date(ds+'T00:00:00Z'))===w.key).reduce((s,ds)=>s+(c._dailyOrdOt[ds]||0),0);
+      platAgg.all.ord31+=_fOrd31; platAgg.all.ordOt+=_fOrdOt;
+      platAgg[p].ord31+=_fOrd31; platAgg[p].ordOt+=_fOrdOt;
     });
     function mkWk(pa){ return {spend:pa.spend||null,leads:pa.leads||null,rev:pa.rev||null,subs:pa.subs||null,clicks:pa.clicks,impr:pa.impr,ord31:pa.ord31||0,ordOt:pa.ordOt||0,cpm:pa.impr>0?pa.spend/pa.impr*1000:null,cpc:pa.clicks>0?pa.spend/pa.clicks:null,ctr:pa.impr>0?pa.clicks/pa.impr*100:null,c2db:null,d1pct:pa.leads>0?Math.round(pa.d1/pa.leads*100)||null:null,d3pct:pa.leads>0?Math.round(pa.d3/pa.leads*100)||null:null,d3cost:pa.d3>0&&pa.spend>0?pa.spend/pa.d3:null,d7pct:pa.leads>0?Math.round(pa.d7/pa.leads*100)||null:null,d7cost:pa.d7>0&&pa.spend>0?pa.spend/pa.d7:null,d10pct:pa.leads>0?Math.round(pa.d10/pa.leads*100)||null:null,ltvRoas:computeLtvROAS(pa.rev||0,pa.ord31||0,pa.ordOt||0,pa.spend||0)}; }
     return {...w, ...mkWk(platAgg.all), meta:mkWk(platAgg.meta), google:mkWk(platAgg.google), metaDays:w.metaDays, googleDays:w.googleDays, days:w.days};
