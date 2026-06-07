@@ -1940,7 +1940,13 @@ function campWeekData(c, w){
     d7pct:wd.d7pct||0, d7cost:wd.d7cost||null,
     d10pct:wd.d10pct||0,
     paidroas:wd.rev>0&&wd.spend>0?wd.rev/wd.spend:null,
-    adjroas:wd.rev>0&&(wd.spend+((wd.leads||0)*T.waCost))>0?wd.rev/(wd.spend+((wd.leads||0)*T.waCost)):null
+    adjroas:wd.rev>0&&(wd.spend+((wd.leads||0)*T.waCost))>0?wd.rev/(wd.spend+((wd.leads||0)*T.waCost)):null,
+    ltvRoas:(()=>{
+      // Sum daily order dicts for this week's dates (same source as date-level rows)
+      const wkOrd31=Object.keys(c._dailyOrd31||{}).filter(ds=>weekKey(new Date(ds+'T00:00:00Z'))===w.isoWk).reduce((s,ds)=>s+(c._dailyOrd31[ds]||0),0);
+      const wkOrdOt=Object.keys(c._dailyOrdOt||{}).filter(ds=>weekKey(new Date(ds+'T00:00:00Z'))===w.isoWk).reduce((s,ds)=>s+(c._dailyOrdOt[ds]||0),0);
+      return computeLtvROAS(wd.rev,wkOrd31,wkOrdOt,wd.spend);
+    })()
   };
 }
 
@@ -2171,8 +2177,8 @@ function renderTree(d){
     const totImpr   = weeks.reduce((s,w)=>s+(c.weekly[w.key]?.impr||0),0);
     const totRev    = weeks.reduce((s,w)=>{const wd=c.weekly[w.key];return s+(wd?.spend>0?wd.rev||0:0);},0);
     const totD3att  = weeks.reduce((s,w)=>s+(c.weekly[w.key]?.d3||0),0);
-    const totOrd31  = weeks.reduce((s,w)=>s+(c.weekly[w.key]?.ord31||0),0);
-    const totOrdOt  = weeks.reduce((s,w)=>s+(c.weekly[w.key]?.ordOt||0),0);
+    const totOrd31  = c.spend>0?((c.totOrd31||0)*totSpend/c.spend):0;
+    const totOrdOt  = c.spend>0?((c.totOrdOt||0)*totSpend/c.spend):0;
     const totD7att  = weeks.reduce((s,w)=>s+(c.weekly[w.key]?.d7||0),0);
     const totD1att  = weeks.reduce((s,w)=>s+(c.weekly[w.key]?.d1||0),0);
     const totD10att = weeks.reduce((s,w)=>s+(c.weekly[w.key]?.d10||0),0);
@@ -2219,8 +2225,8 @@ function renderTree(d){
     const totD7att  = camps.reduce((s,c)=>s+weeks.reduce((ss,w)=>ss+(c.weekly[w.key]?.d7||0),0),0);
     const totD1att  = camps.reduce((s,c)=>s+weeks.reduce((ss,w)=>ss+(c.weekly[w.key]?.d1||0),0),0);
     const totD10att = camps.reduce((s,c)=>s+weeks.reduce((ss,w)=>ss+(c.weekly[w.key]?.d10||0),0),0);
-    const totOrd31  = camps.reduce((s,c)=>s+weeks.reduce((ss,w)=>ss+(c.weekly[w.key]?.ord31||0),0),0);
-    const totOrdOt  = camps.reduce((s,c)=>s+weeks.reduce((ss,w)=>ss+(c.weekly[w.key]?.ordOt||0),0),0);
+    const totOrd31  = camps.reduce((s,c)=>s+(c.spend>0?(c.totOrd31||0)*weeks.reduce((ss,w)=>ss+(c.weekly[w.key]?.spend||0),0)/c.spend:0),0);
+    const totOrdOt  = camps.reduce((s,c)=>s+(c.spend>0?(c.totOrdOt||0)*weeks.reduce((ss,w)=>ss+(c.weekly[w.key]?.spend||0),0)/c.spend:0),0);
     const cpl=totLeads>0?totSpend/totLeads:null;
     const roas=totSpend>0&&totRev>0?totRev/totSpend:null;
     const cpm=totImpr>0?totSpend/totImpr*1000:null;
@@ -2761,8 +2767,8 @@ function renderAdsets(d){
     const totRev    = weeks.reduce((s,w)=>{const wd=a.weekly?.[w.key];return s+(wd?.spend>0?wd.rev||0:0);},0);
     const totSubs   = weeks.reduce((s,w)=>{const wd=a.weekly?.[w.key];return s+(wd?.spend>0?wd.subs||0:0);},0);
     const totD3att  = weeks.reduce((s,w)=>s+(a.weekly?.[w.key]?.d3||0),0);
-    const totOrd31  = weeks.reduce((s,w)=>s+(a.weekly?.[w.key]?.ord31||0),0);
-    const totOrdOt  = weeks.reduce((s,w)=>s+(a.weekly?.[w.key]?.ordOt||0),0);
+    const totOrd31  = a.spend>0?((a.totOrd31||0)*totSpend/a.spend):0;
+    const totOrdOt  = a.spend>0?((a.totOrdOt||0)*totSpend/a.spend):0;
     const totD7att  = weeks.reduce((s,w)=>s+(a.weekly?.[w.key]?.d7||0),0);
     const totD1att  = weeks.reduce((s,w)=>s+(a.weekly?.[w.key]?.d1||0),0);
     const totD10att = weeks.reduce((s,w)=>s+(a.weekly?.[w.key]?.d10||0),0);
@@ -2802,7 +2808,11 @@ function renderAdsets(d){
       d7pct:wd.d7pct||0, d7cost:wd.d7cost||null,
       d10pct:wd.d10pct||0, paidroas:roas||null,
       adjroas:(wd.rev||0)>0&&((wd.spend||0)+((wd.leads||0)*T.waCost))>0?(wd.rev||0)/((wd.spend||0)+((wd.leads||0)*T.waCost)):null,
-      ltvRoas:computeLtvROAS(wd.rev,wd.ord31,wd.ordOt,wd.spend)};
+      ltvRoas:(()=>{
+        const wkOrd31=Object.keys(a._dailyOrd31||{}).filter(ds=>weekKey(new Date(ds+'T00:00:00Z'))===w.isoWk).reduce((s,ds)=>s+(a._dailyOrd31[ds]||0),0);
+        const wkOrdOt=Object.keys(a._dailyOrdOt||{}).filter(ds=>weekKey(new Date(ds+'T00:00:00Z'))===w.isoWk).reduce((s,ds)=>s+(a._dailyOrdOt[ds]||0),0);
+        return computeLtvROAS(wd.rev,wkOrd31,wkOrdOt,wd.spend);
+      })()};
   }
 
   let thCells=`<th style="min-width:240px;text-align:left;padding:7px 10px;background:var(--bg3);border-bottom:1px solid var(--border);position:sticky;left:0;z-index:3;font-family:var(--font-mono);font-size:9px;letter-spacing:.08em;color:var(--text3);text-transform:uppercase">
@@ -2980,8 +2990,8 @@ function renderCreatives(d){
     const totRev    = weeks.reduce((s,w)=>{const wd=cr.weekly?.[w.key];return s+(wd?.spend>0?wd.rev||0:0);},0);
     const totSubs   = weeks.reduce((s,w)=>{const wd=cr.weekly?.[w.key];return s+(wd?.spend>0?wd.subs||0:0);},0);
     const totD3att  = weeks.reduce((s,w)=>s+(cr.weekly?.[w.key]?.d3||0),0);
-    const totOrd31  = weeks.reduce((s,w)=>s+(cr.weekly?.[w.key]?.ord31||0),0);
-    const totOrdOt  = weeks.reduce((s,w)=>s+(cr.weekly?.[w.key]?.ordOt||0),0);
+    const totOrd31  = cr.spend>0?((cr.totOrd31||0)*totSpend/cr.spend):0;
+    const totOrdOt  = cr.spend>0?((cr.totOrdOt||0)*totSpend/cr.spend):0;
     const totD7att  = weeks.reduce((s,w)=>s+(cr.weekly?.[w.key]?.d7||0),0);
     const totD1att  = weeks.reduce((s,w)=>s+(cr.weekly?.[w.key]?.d1||0),0);
     const totD10att = weeks.reduce((s,w)=>s+(cr.weekly?.[w.key]?.d10||0),0);
@@ -3022,7 +3032,11 @@ function renderCreatives(d){
       d7pct:wd.d7pct||0, d7cost:wd.d7cost||null,
       d10pct:wd.d10pct||0, paidroas:roas||null,
       adjroas:wd.rev>0&&((wd.spend||0)+((wd.leads||0)*T.waCost))>0?wd.rev/((wd.spend||0)+((wd.leads||0)*T.waCost)):null,
-      ltvRoas:computeLtvROAS(wd.rev,wd.ord31,wd.ordOt,wd.spend),
+      ltvRoas:(()=>{
+        const wkOrd31=Object.keys(cr._dailyOrd31||{}).filter(ds=>weekKey(new Date(ds+'T00:00:00Z'))===w.isoWk).reduce((s,ds)=>s+(cr._dailyOrd31[ds]||0),0);
+        const wkOrdOt=Object.keys(cr._dailyOrdOt||{}).filter(ds=>weekKey(new Date(ds+'T00:00:00Z'))===w.isoWk).reduce((s,ds)=>s+(cr._dailyOrdOt[ds]||0),0);
+        return computeLtvROAS(wd.rev,wkOrd31,wkOrdOt,wd.spend);
+      })(),
       _approxAge:approxAgeAtWeek};
   }
 
@@ -3794,6 +3808,8 @@ function parseXlsx(wb){
         _dailyRev: (revByAdset[ak]?.daily)||{},
         _dailyOrd31: ord31ByAdset[ak]?.daily||{},
         _dailyOrdOt: ordOtByAdset[ak]?.daily||{},
+        totOrd31: Object.values(ord31ByAdset[ak]?.daily||{}).reduce((s,v)=>s+(v||0),0),
+        totOrdOt: Object.values(ordOtByAdset[ak]?.daily||{}).reduce((s,v)=>s+(v||0),0),
         _dailySubs: (subsByAdset[ak]?.daily)||{},
       };
     });
@@ -3807,6 +3823,8 @@ function parseXlsx(wb){
       _dailyRev: (revByCamp[cid]&&revByCamp[cid].daily)||{},
       _dailyOrd31: ord31ByCamp[cid]?.daily||{},
       _dailyOrdOt: ordOtByCamp[cid]?.daily||{},
+      totOrd31: Object.values(ord31ByCamp[cid]?.daily||{}).reduce((s,v)=>s+(v||0),0),
+      totOrdOt: Object.values(ordOtByCamp[cid]?.daily||{}).reduce((s,v)=>s+(v||0),0),
       _dailySubs: (subsByCamp[cid]&&subsByCamp[cid].daily)||{},
     };
   }).filter(c=>c.spend>0);
@@ -3913,6 +3931,8 @@ function parseXlsx(wb){
       _dailyRev: (revByCr[crid]?.daily)||{},
       _dailyOrd31: ord31ByCr[crid]?.daily||{},
       _dailyOrdOt: ordOtByCr[crid]?.daily||{},
+      totOrd31: Object.values(ord31ByCr[crid]?.daily||{}).reduce((s,v)=>s+(v||0),0),
+      totOrdOt: Object.values(ordOtByCr[crid]?.daily||{}).reduce((s,v)=>s+(v||0),0),
       _dailySubs: (subsByCr[crid]?.daily)||{},
     };
   }).filter(cr=>cr.spend>0);
