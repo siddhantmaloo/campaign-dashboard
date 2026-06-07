@@ -3930,7 +3930,7 @@ function loadSample(){
   TS.weeks={}; S.data.weeks.forEach(w=>{ TS.weeks[w.key]=_last6s.has(w.key); });
   AS.weeks={}; S.data.weeks.forEach(w=>{ AS.weeks[w.key]=_last6s.has(w.key); });
   CR.weeks={}; S.data.weeks.forEach(w=>{ CR.weeks[w.key]=_last6s.has(w.key); });
-  S.data.batches.forEach(b=>{ BS.selected[b.id]=true; });
+  S.data.batches.forEach((b,i)=>{ BS.selected[b.id]=(i<6); }); // default: last 6 batches
   document.getElementById('xlsxDot')?.classList.add('active');
   document.getElementById('cohortBadge').textContent='Sample Data';
   OVW.weeks={}; S.data.weeklyOv.forEach(w=>{ OVW.weeks[w.key]=true; });
@@ -3978,7 +3978,7 @@ document.addEventListener('DOMContentLoaded', async ()=>{
       TS.weeks={}; S.data.weeks.forEach(w=>{ TS.weeks[w.key]=_last6b.has(w.key); });
       AS.weeks={}; S.data.weeks.forEach(w=>{ AS.weeks[w.key]=_last6b.has(w.key); });
       CR.weeks={}; S.data.weeks.forEach(w=>{ CR.weeks[w.key]=_last6b.has(w.key); });
-      S.data.batches.forEach(b=>{ BS.selected[b.id]=true; });
+      S.data.batches.forEach((b,i)=>{ BS.selected[b.id]=(i<6); }); // default: last 6 batches
       document.getElementById('xlsxDot')?.classList.add('active');
       document.getElementById('cohortBadge').textContent='Live Data';
       const _last5wk=new Set(S.data.weeklyOv.slice(-6).map(w=>w.key));
