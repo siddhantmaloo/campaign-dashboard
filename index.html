@@ -581,6 +581,44 @@ td:first-child{text-align:left;}
         </div>
       </div>
 
+      <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
+        <div class="ts-metric-label" style="margin-bottom:12px">PROJ ROAS — LIFETIME VALUE PARAMETERS</div>
+        <div class="ts-hint" style="margin-bottom:14px;color:var(--text2);line-height:1.7">
+          Proj ROAS = [Revenue + (Mult31 × Orders31d × AOV31) + (OrdersOther × RateLT × AOVLT)] ÷ Spend
+        </div>
+        <div class="ts-row">
+          <div class="ts-dot" style="background:#60a5fa"></div>
+          <div class="ts-fields">
+            <div class="ts-field">
+              <label>31-day renewal multiplier</label>
+              <input type="number" id="t_ltv_mult31" value="1.5" step="0.1" min="0"
+                onchange="updateThreshold('ltvMult31','val',this.value)">
+            </div>
+            <div class="ts-field">
+              <label>31-day renewal AOV (₹)</label>
+              <input type="number" id="t_ltv_aov31" value="423" step="10" min="0"
+                onchange="updateThreshold('ltvAov31','val',this.value)">
+            </div>
+          </div>
+        </div>
+        <div class="ts-row" style="margin-top:8px">
+          <div class="ts-dot" style="background:#f97316"></div>
+          <div class="ts-fields">
+            <div class="ts-field">
+              <label>Long-term renewal rate (%)</label>
+              <input type="number" id="t_ltv_ratelt" value="30" step="5" min="0" max="100"
+                onchange="updateThreshold('ltvRateLt','pct',this.value)">
+            </div>
+            <div class="ts-field">
+              <label>Long-term AOV (₹)</label>
+              <input type="number" id="t_ltv_aovlt" value="2000" step="100" min="0"
+                onchange="updateThreshold('ltvAovLt','val',this.value)">
+            </div>
+          </div>
+        </div>
+        <div class="ts-hint" style="margin-top:6px">Long-term = 93/186/372-day plans · renewal rate stored as decimal internally</div>
+      </div>
+
       <!-- Projection Logic -->
       <div style="margin-top:24px;padding-top:20px;border-top:1px solid var(--border)">
         <div class="ts-metric-label" style="margin-bottom:14px">PROJECTION MODEL · SCALING SIGNALS</div>
@@ -914,6 +952,8 @@ const T = {
   d7:   { green:66,   yellow:95  },
   roas: { green:1.8,  yellow:1.2 },
   adjroas: { green:1.8,  yellow:1.2 },  // WA-adjusted ROAS thresholds
+  ltvRoas:{ green:2.0,  yellow:1.5 },  // Proj ROAS thresholds
+  ltvMult31:1.5, ltvAov31:423, ltvRateLt:0.3, ltvAovLt:2000,
   waCost: 3,  // WhatsApp cost per lead in ₹ (configurable)
   conf: { high:20000, medium:5000 },
   d3pct: { green:32, yellow:24 },
@@ -929,6 +969,8 @@ const T = {
     if(saved){ const s=JSON.parse(saved);
       ['cpl','d3','d7','roas','adjroas'].forEach(k=>{ if(s[k]&&T[k]){ Object.assign(T[k],s[k]); }});
       if(s.waCost) T.waCost=s.waCost;
+    ['ltvMult31','ltvAov31','ltvRateLt','ltvAovLt'].forEach(k=>{ if(s[k]!==undefined) T[k]=s[k]; });
+    ['ltvRoas'].forEach(k=>{ if(s[k]&&T[k]) Object.assign(T[k],s[k]); });
     }
   }catch(e){}
 })();
@@ -1013,6 +1055,13 @@ const actionLabel = a=>({'scale-relaunch':'⬆ Scale + Relaunch','scale':'⬆ Sc
 // SETTINGS MODAL
 // ═══════════════════════════════════════
 function openSettings(){
+  document.getElementById('t_wacost').value = T.waCost||3;
+  document.getElementById('t_ltv_mult31').value = T.ltvMult31||1.5;
+  document.getElementById('t_ltv_aov31').value = T.ltvAov31||423;
+  document.getElementById('t_ltv_ratelt').value = Math.round((T.ltvRateLt||0.3)*100);
+  document.getElementById('t_ltv_aovlt').value = T.ltvAovLt||2000;
+  document.getElementById('t_adjroas_green').value = T.adjroas.green;
+  document.getElementById('t_adjroas_yellow').value = T.adjroas.yellow;
   document.getElementById('t_cpl_green').value  = T.cpl.green;
   document.getElementById('t_cpl_yellow').value = T.cpl.yellow;
   document.getElementById('t_d3_green').value   = T.d3.green;
@@ -1074,7 +1123,8 @@ function closeSettings(){ document.getElementById('settingsModal').classList.rem
 function closeSettingsOutside(e){ if(e.target===document.getElementById('settingsModal')) closeSettings(); }
 
 function updateThreshold(metric, level, val){
-  if(metric==='waCost'){ T.waCost=parseFloat(val)||3; localStorage.setItem('kw_T',JSON.stringify(T)); if(S.data) renderAll(S.data); return; }
+  if(['waCost','ltvMult31','ltvAov31','ltvAovLt'].includes(metric)){ T[metric]=parseFloat(val)||0; localStorage.setItem('kw_T',JSON.stringify(T)); if(S.data) renderAll(S.data); return; }
+  if(metric==='ltvRateLt'){ T.ltvRateLt=(parseFloat(val)||0)/100; localStorage.setItem('kw_T',JSON.stringify(T)); if(S.data) renderAll(S.data); return; }
   const v = parseFloat(val);
   if(isNaN(v)||v<=0) return;
   T[metric][level] = v;
@@ -1168,6 +1218,13 @@ function setCat(cat,btn){
   if(S.data) renderAll(S.data);
 }
 function catMatch(name){ return CAT.active==='all'||detectCat(name)===CAT.active; }
+
+const tagLtvROAS=v=>v==null||isNaN(v)?'na':v>=T.ltvRoas.green?'green':v>=T.ltvRoas.yellow?'yellow':'red';
+function computeLtvROAS(rev,ord31,ordOt,spend){
+  if(!spend||spend<=0) return null;
+  const ltv=(rev||0)+T.ltvMult31*(ord31||0)*T.ltvAov31+(ordOt||0)*T.ltvRateLt*T.ltvAovLt;
+  return ltv>0?ltv/spend:null;
+}
 
 // ═══════════════════════════════════════
 // SAMPLE DATA
@@ -1459,23 +1516,25 @@ function filteredOvData(d){
     Object.entries(spDaily).forEach(([ds,sp])=>{
       const mk=ds.slice(0,7);
       ['all',p].forEach(b=>{
-        if(!monthMap[b][mk]) monthMap[b][mk]={spend:0,leads:0,rev:0,subs:0,clicks:0,impr:0,d1:0,d3:0,d7:0,d10:0};
+        if(!monthMap[b][mk]) monthMap[b][mk]={spend:0,leads:0,rev:0,subs:0,clicks:0,impr:0,d1:0,d3:0,d7:0,d10:0,ord31:0,ordOt:0};
         monthMap[b][mk].spend+=sp.spend||0; monthMap[b][mk].clicks+=sp.clicks||0; monthMap[b][mk].impr+=sp.impr||0;
         const _matt=attDaily[ds]||{leads:0,d1:0,d3:0,d7:0,d10:0};
         monthMap[b][mk].leads+=_matt.leads||0;
         monthMap[b][mk].d1+=_matt.d1||0; monthMap[b][mk].d3+=_matt.d3||0;
         monthMap[b][mk].d7+=_matt.d7||0; monthMap[b][mk].d10+=_matt.d10||0;
         monthMap[b][mk].rev+=revDaily[ds]||0; monthMap[b][mk].subs+=subsDaily[ds]||0;
+        monthMap[b][mk].ord31+=(c._dailyOrd31&&c._dailyOrd31[ds])||0;
+        monthMap[b][mk].ordOt+=(c._dailyOrdOt&&c._dailyOrdOt[ds])||0;
       });
     });
   });
   // Rebuild months array reusing existing structure but replacing totals
   const months=d.months.map(m=>{
     const mk=m.key.length===6?m.key.slice(0,4)+'-'+m.key.slice(4):m.key;
-    const base=monthMap.all[mk]||{spend:0,leads:0,rev:0,subs:0,clicks:0,impr:0,d1:0,d3:0,d7:0,d10:0};
-    const meta=monthMap.meta[mk]||{spend:0,leads:0,rev:0,subs:0,clicks:0,impr:0,d1:0,d3:0,d7:0,d10:0};
-    const goog=monthMap.google[mk]||{spend:0,leads:0,rev:0,subs:0,clicks:0,impr:0,d1:0,d3:0,d7:0,d10:0};
-    function mk2(d){ return {spend:d.spend||null,leads:d.leads||null,rev:d.rev||null,subs:d.subs||null,clicks:d.clicks,impr:d.impr,
+    const base=monthMap.all[mk]||{spend:0,leads:0,rev:0,subs:0,clicks:0,impr:0,d1:0,d3:0,d7:0,d10:0,ord31:0,ordOt:0};
+    const meta=monthMap.meta[mk]||{spend:0,leads:0,rev:0,subs:0,clicks:0,impr:0,d1:0,d3:0,d7:0,d10:0,ord31:0,ordOt:0};
+    const goog=monthMap.google[mk]||{spend:0,leads:0,rev:0,subs:0,clicks:0,impr:0,d1:0,d3:0,d7:0,d10:0,ord31:0,ordOt:0};
+    function mk2(d){ return {spend:d.spend||null,leads:d.leads||null,rev:d.rev||null,subs:d.subs||null,clicks:d.clicks,impr:d.impr,ord31:d.ord31||0,ordOt:d.ordOt||0,
       cpm:d.impr>0?d.spend/d.impr*1000:null,cpc:d.clicks>0?d.spend/d.clicks:null,
       ctr:d.impr>0?d.clicks/d.impr*100:null,c2db:null,
       d1pct:d.leads>0?Math.round(d.d1/d.leads*100)||null:null,
@@ -1483,7 +1542,8 @@ function filteredOvData(d){
       d3cost:d.d3>0&&d.spend>0?d.spend/d.d3:null,
       d7pct:d.leads>0?Math.round(d.d7/d.leads*100)||null:null,
       d7cost:d.d7>0&&d.spend>0?d.spend/d.d7:null,
-      d10pct:d.leads>0?Math.round(d.d10/d.leads*100)||null:null}; }
+      d10pct:d.leads>0?Math.round(d.d10/d.leads*100)||null:null,
+      ltvRoas:computeLtvROAS(d.rev||0,d.ord31||0,d.ordOt||0,d.spend||0)}; }
     // Rebuild daily rows for this month
     const dailyMap={all:{},meta:{},google:{}};
     camps.forEach(c=>{
@@ -1492,7 +1552,7 @@ function filteredOvData(d){
       Object.entries(spDaily).forEach(([ds,sp])=>{
         if(!ds.startsWith(mk)) return;
         ['all',p].forEach(b=>{
-          if(!dailyMap[b][ds]) dailyMap[b][ds]={spend:0,leads:0,rev:0,subs:0,clicks:0,impr:0,d1:0,d3:0,d7:0,d10:0};
+          if(!dailyMap[b][ds]) dailyMap[b][ds]={spend:0,leads:0,rev:0,subs:0,clicks:0,impr:0,d1:0,d3:0,d7:0,d10:0,ord31:0,ordOt:0};
           dailyMap[b][ds].spend+=sp.spend||0; dailyMap[b][ds].clicks+=sp.clicks||0; dailyMap[b][ds].impr+=sp.impr||0;
           const _att=attDaily[ds]||{leads:0,d1:0,d3:0,d7:0,d10:0};
           dailyMap[b][ds].leads+=_att.leads||0;
@@ -1500,6 +1560,8 @@ function filteredOvData(d){
           dailyMap[b][ds].d7+=_att.d7||0; dailyMap[b][ds].d10+=_att.d10||0;
           dailyMap[b][ds].rev+=revDaily[ds]||0;
           dailyMap[b][ds].subs+=(c._dailySubs&&c._dailySubs[ds])||0;
+          dailyMap[b][ds].ord31+=(c._dailyOrd31&&c._dailyOrd31[ds])||0;
+          dailyMap[b][ds].ordOt+=(c._dailyOrdOt&&c._dailyOrdOt[ds])||0;
         });
       });
     });
@@ -1526,7 +1588,7 @@ function filteredOvData(d){
       platAgg.all.impr+=(wk.impr||0); platAgg[p].impr+=(wk.impr||0);
       ['d1','d3','d7','d10'].forEach(k=>{platAgg.all[k]+=(wk[k]||0);platAgg[p][k]+=(wk[k]||0);});
     });
-    function mkWk(pa){ return {spend:pa.spend||null,leads:pa.leads||null,rev:pa.rev||null,subs:pa.subs||null,clicks:pa.clicks,impr:pa.impr,cpm:pa.impr>0?pa.spend/pa.impr*1000:null,cpc:pa.clicks>0?pa.spend/pa.clicks:null,ctr:pa.impr>0?pa.clicks/pa.impr*100:null,c2db:null,d1pct:pa.leads>0?Math.round(pa.d1/pa.leads*100)||null:null,d3pct:pa.leads>0?Math.round(pa.d3/pa.leads*100)||null:null,d3cost:pa.d3>0&&pa.spend>0?pa.spend/pa.d3:null,d7pct:pa.leads>0?Math.round(pa.d7/pa.leads*100)||null:null,d7cost:pa.d7>0&&pa.spend>0?pa.spend/pa.d7:null,d10pct:pa.leads>0?Math.round(pa.d10/pa.leads*100)||null:null}; }
+    function mkWk(pa){ return {spend:pa.spend||null,leads:pa.leads||null,rev:pa.rev||null,subs:pa.subs||null,clicks:pa.clicks,impr:pa.impr,ord31:pa.ord31||0,ordOt:pa.ordOt||0,cpm:pa.impr>0?pa.spend/pa.impr*1000:null,cpc:pa.clicks>0?pa.spend/pa.clicks:null,ctr:pa.impr>0?pa.clicks/pa.impr*100:null,c2db:null,d1pct:pa.leads>0?Math.round(pa.d1/pa.leads*100)||null:null,d3pct:pa.leads>0?Math.round(pa.d3/pa.leads*100)||null:null,d3cost:pa.d3>0&&pa.spend>0?pa.spend/pa.d3:null,d7pct:pa.leads>0?Math.round(pa.d7/pa.leads*100)||null:null,d7cost:pa.d7>0&&pa.spend>0?pa.spend/pa.d7:null,d10pct:pa.leads>0?Math.round(pa.d10/pa.leads*100)||null:null,ltvRoas:computeLtvROAS(pa.rev||0,pa.ord31||0,pa.ordOt||0,pa.spend||0)}; }
     return {...w, ...mkWk(platAgg.all), meta:mkWk(platAgg.meta), google:mkWk(platAgg.google), metaDays:w.metaDays, googleDays:w.googleDays, days:w.days};
   }).filter(w=>w.spend);
 
@@ -1767,7 +1829,8 @@ function makeOvMetricRow(obj){
     d1pct:obj.d1pct||null,d3pct:obj.d3pct||null,d3cost,
     d7pct:obj.d7pct||null,d7cost,
     d10pct:obj.d10pct||null, paidroas:roas||null,
-    adjroas:obj.rev>0&&((obj.spend||0)+(obj.leads||0)*T.waCost)>0?obj.rev/((obj.spend||0)+(obj.leads||0)*T.waCost):null
+    adjroas:obj.rev>0&&((obj.spend||0)+(obj.leads||0)*T.waCost)>0?obj.rev/((obj.spend||0)+(obj.leads||0)*T.waCost):null,
+    ltvRoas:computeLtvROAS(obj.rev||0,obj.ord31||0,obj.ordOt||0,obj.spend||0)
   };
 }
 
@@ -1796,6 +1859,7 @@ const COLS=[
   {k:'d7cost',   label:'D7 Cost'},
   {k:'paidroas', label:'Paid ROAS'},
   {k:'adjroas',  label:'ADJ ROAS'},
+  {k:'ltvRoas',  label:'Proj ROAS'},
 ];
 
 function cellVal(row, col, mature){
@@ -1842,6 +1906,7 @@ function cellVal(row, col, mature){
     case 'd10pct':   return (v && mature) ? `<span style="color:var(--text2)">${v}%</span>` : na;
     case 'paidroas': return v ? (mature ? mTag(tagROAS(v),v,fmt.roas) : `<span style="color:var(--text3)">${fmt.roas(v)}</span>`) : na;
     case 'adjroas':  return v ? (mature ? mTag(tagAdjROAS(v),v,fmt.roas) : `<span style="color:var(--text3)">${fmt.roas(v)}</span>`) : na;
+    case 'ltvRoas':  return v ? (mature ? mTag(tagLtvROAS(v),v,fmt.roas) : `<span style="color:var(--text3)">${fmt.roas(v)}</span>`) : na;
     default: return na;
   }
 }
@@ -1899,6 +1964,7 @@ function isMatureByAge(age, col){
   if(col==='roas')     return age >= 28;
   if(col==='paidroas') return age >= 28;
   if(col==='adjroas')  return age >= 28;
+  if(col==='ltvRoas')  return age >= 28;
   if(col==='d7pct')    return age >= 21;
   if(col==='d10pct')   return age >= 28;
   if(col==='projroas') return age >= 28;
@@ -1917,6 +1983,7 @@ function isMature(wk, col){
   if(col==='roas')     return age>=28;
   if(col==='paidroas') return age>=28;
   if(col==='adjroas')  return age>=28;
+  if(col==='ltvRoas')  return age>=28;
   if(col==='d7pct')    return age>=21;
   if(col==='d10pct')   return age>=28;
   if(col==='projroas') return age>=28;
@@ -2104,6 +2171,8 @@ function renderTree(d){
     const totImpr   = weeks.reduce((s,w)=>s+(c.weekly[w.key]?.impr||0),0);
     const totRev    = weeks.reduce((s,w)=>{const wd=c.weekly[w.key];return s+(wd?.spend>0?wd.rev||0:0);},0);
     const totD3att  = weeks.reduce((s,w)=>s+(c.weekly[w.key]?.d3||0),0);
+    const totOrd31  = weeks.reduce((s,w)=>s+(c.weekly[w.key]?.ord31||0),0);
+    const totOrdOt  = weeks.reduce((s,w)=>s+(c.weekly[w.key]?.ordOt||0),0);
     const totD7att  = weeks.reduce((s,w)=>s+(c.weekly[w.key]?.d7||0),0);
     const totD1att  = weeks.reduce((s,w)=>s+(c.weekly[w.key]?.d1||0),0);
     const totD10att = weeks.reduce((s,w)=>s+(c.weekly[w.key]?.d10||0),0);
@@ -2135,7 +2204,8 @@ function renderTree(d){
       subs,cps:subs>0?totSpend/subs:null,
       rev:totRev,projroas:roas?roas*1.1:null,l2s:totLeads>0?subs/totLeads*100:0,
       d1pct,d3pct,d3cost,d7pct,d7cost,d10pct,
-      paidroas:roas||null, adjroas:totRev>0&&(totSpend+totLeads*T.waCost)>0?totRev/(totSpend+totLeads*T.waCost):null};
+      paidroas:roas||null, adjroas:totRev>0&&(totSpend+totLeads*T.waCost)>0?totRev/(totSpend+totLeads*T.waCost):null,
+      ltvRoas:computeLtvROAS(totRev,totOrd31,totOrdOt,totSpend)};
   }
 
   function grandAgg(){
@@ -2149,6 +2219,8 @@ function renderTree(d){
     const totD7att  = camps.reduce((s,c)=>s+weeks.reduce((ss,w)=>ss+(c.weekly[w.key]?.d7||0),0),0);
     const totD1att  = camps.reduce((s,c)=>s+weeks.reduce((ss,w)=>ss+(c.weekly[w.key]?.d1||0),0),0);
     const totD10att = camps.reduce((s,c)=>s+weeks.reduce((ss,w)=>ss+(c.weekly[w.key]?.d10||0),0),0);
+    const totOrd31  = camps.reduce((s,c)=>s+weeks.reduce((ss,w)=>ss+(c.weekly[w.key]?.ord31||0),0),0);
+    const totOrdOt  = camps.reduce((s,c)=>s+weeks.reduce((ss,w)=>ss+(c.weekly[w.key]?.ordOt||0),0),0);
     const cpl=totLeads>0?totSpend/totLeads:null;
     const roas=totSpend>0&&totRev>0?totRev/totSpend:null;
     const cpm=totImpr>0?totSpend/totImpr*1000:null;
@@ -2166,7 +2238,8 @@ function renderTree(d){
       d3pct:totLeads>0?Math.round(totD3att/totLeads*100):0, d3cost,
       d7pct:totLeads>0?Math.round(totD7att/totLeads*100):0, d7cost,
       d10pct:totLeads>0?Math.round(totD10att/totLeads*100):0,
-      paidroas:roas||null, adjroas:totRev>0&&(totSpend+totLeads*T.waCost)>0?totRev/(totSpend+totLeads*T.waCost):null};
+      paidroas:roas||null, adjroas:totRev>0&&(totSpend+totLeads*T.waCost)>0?totRev/(totSpend+totLeads*T.waCost):null,
+      ltvRoas:computeLtvROAS(totRev,totOrd31,totOrdOt,totSpend)};
   }
 
   let thCells=`<th style="min-width:240px;text-align:left;padding:7px 10px;background:var(--bg3);border-bottom:1px solid var(--border);position:sticky;left:0;z-index:3;font-family:var(--font-mono);font-size:9px;letter-spacing:.08em;color:var(--text3);text-transform:uppercase">Campaign</th>`;
@@ -2267,7 +2340,8 @@ function renderTree(d){
                 d1pct,d3pct,d3cost:dl>0&&d3pct>0?ds/Math.round(dl*(d3pct/100)):null,
                 d7pct,d7cost:dl>0&&d7pct>0?ds/Math.round(dl*(d7pct/100)):null,
                 d10pct,paidroas:droas||null,
-                adjroas:(dailyRev[dateStr]||0)>0&&(ds+dl*T.waCost)>0?(dailyRev[dateStr]||0)/(ds+dl*T.waCost):null};
+                adjroas:(dailyRev[dateStr]||0)>0&&(ds+dl*T.waCost)>0?(dailyRev[dateStr]||0)/(ds+dl*T.waCost):null,
+                ltvRoas:computeLtvROAS(dailyRev[dateStr]||0,c._dailyOrd31[dateStr]||0,c._dailyOrdOt[dateStr]||0,ds)};
               let dc=`<td style="position:sticky;left:0;background:var(--bg);z-index:1">
                 <div class="tree-name tree-indent-3">
                   <span style="width:14px;display:inline-block;flex-shrink:0;color:var(--text3);font-size:9px">•</span>
@@ -2297,7 +2371,7 @@ function renderTree(d){
                 rev:Math.round(ds*(wd.roas||1)),roas:wd.roas,
                 l2s:dl>0?dSubs/dl*100:null,
                 d1pct:wd.d1pct,d3pct:wd.d3pct,d3cost:wd.d3cost,
-                d7pct:wd.d7pct,d7cost:wd.d7cost,d10pct:wd.d10pct,paidroas:wd.roas||null,adjroas:wd.rev>0&&((wd.spend||0)+(dl*3))>0?wd.rev/((wd.spend||0)+(dl*3)):null};
+                d7pct:wd.d7pct,d7cost:wd.d7cost,d10pct:wd.d10pct,paidroas:wd.roas||null,adjroas:wd.rev>0&&((wd.spend||0)+(dl*T.waCost))>0?wd.rev/((wd.spend||0)+(dl*T.waCost)):null,ltvRoas:computeLtvROAS(wd.rev,(wd.ord31||0)/7,(wd.ordOt||0)/7,ds)};
               let dc=`<td style="position:sticky;left:0;background:var(--bg);z-index:1">
                 <div class="tree-name tree-indent-3">
                   <span style="width:14px;display:inline-block;flex-shrink:0;color:var(--text3);font-size:9px">•</span>
@@ -2400,7 +2474,9 @@ function renderBatch(d){
       subs:subs||null,cps:subs>0&&spend>0?spend/subs:null,
       rev:rev||null,roas,l2s:bLeads>0&&subs>0?subs/bLeads*100:null,
       d1pct:d1pct||null,d3pct:d3pct||null,d3cost,
-      d7pct:d7pct||null,d7cost,d10pct:d10pct||null,paidroas:roas||null, adjroas:rev>0&&(spend+bLeads*T.waCost)>0?rev/(spend+bLeads*T.waCost):null};
+      d7pct:d7pct||null,d7cost,d10pct:d10pct||null,paidroas:roas||null,
+      adjroas:rev>0&&(spend+bLeads*T.waCost)>0?rev/(spend+bLeads*T.waCost):null,
+      ltvRoas:computeLtvROAS(rev,bd?bd.ord31:0,bd?bd.ordOt:0,spend)};
   }
   function batchCampData(b,c){
     const bd=b.data[c.id]||{leads:0,d1:0,d3:0,d7:0,d10:0,wkLeads:{}};
@@ -2409,7 +2485,7 @@ function renderBatch(d){
   }
   function batchAgg(b){
     // Aggregate over all campaigns (active) + other + organic
-    let totSpend=0,totLeads=0,totImpr=0,totClicks=0,totD1=0,totD3=0,totD7=0,totD10=0,totRev=0,totSubs=0;
+    let totSpend=0,totLeads=0,totImpr=0,totClicks=0,totD1=0,totD3=0,totD7=0,totD10=0,totRev=0,totSubs=0,totOrd31=0,totOrdOt=0;
     Object.entries(b.data).forEach(([key,bd])=>{
       const rd=(b.revData&&b.revData[key])||{rev:0,subs:0};
       const weeklyData = key==='__organic__'||!d.camps.find(c=>c.id===key) ? null : d.camps.find(c=>c.id===key)?.weekly;
@@ -2424,6 +2500,7 @@ function renderBatch(d){
       totSpend+=sp; totImpr+=im; totClicks+=cl;
       totLeads+=bd.leads||0; totD1+=bd.d1||0; totD3+=bd.d3||0; totD7+=bd.d7||0; totD10+=bd.d10||0;
       totRev+=rd.rev||0; totSubs+=rd.subs||0;
+      totOrd31+=rd.ord31||0; totOrdOt+=rd.ordOt||0;
     });
     const cpl=totLeads>0&&totSpend>0?totSpend/totLeads:null;
     const roas=totSpend>0&&totRev>0?totRev/totSpend:null;
@@ -2442,7 +2519,8 @@ function renderBatch(d){
       rev:totRev||null,roas,l2s:totLeads>0&&totSubs>0?totSubs/totLeads*100:null,
       d1pct:totLeads>0?Math.round(totD1/totLeads*100)||null:null,
       d3pct:d3pct||null,d3cost,d7pct:d7pct||null,d7cost,
-      d10pct:totLeads>0?Math.round(totD10/totLeads*100)||null:null,paidroas:roas||null, adjroas:totRev>0&&(totSpend+totLeads*T.waCost)>0?totRev/(totSpend+totLeads*T.waCost):null};
+      d10pct:totLeads>0?Math.round(totD10/totLeads*100)||null:null,paidroas:roas||null, adjroas:totRev>0&&(totSpend+totLeads*T.waCost)>0?totRev/(totSpend+totLeads*T.waCost):null,
+      ltvRoas:computeLtvROAS(totRev,totOrd31,totOrdOt,totSpend)};
   }
   function bMature(bid,col){
     const late=['roas','paidroas','d10pct'], mid=['d7pct'];
@@ -2683,6 +2761,8 @@ function renderAdsets(d){
     const totRev    = weeks.reduce((s,w)=>{const wd=a.weekly?.[w.key];return s+(wd?.spend>0?wd.rev||0:0);},0);
     const totSubs   = weeks.reduce((s,w)=>{const wd=a.weekly?.[w.key];return s+(wd?.spend>0?wd.subs||0:0);},0);
     const totD3att  = weeks.reduce((s,w)=>s+(a.weekly?.[w.key]?.d3||0),0);
+    const totOrd31  = weeks.reduce((s,w)=>s+(a.weekly?.[w.key]?.ord31||0),0);
+    const totOrdOt  = weeks.reduce((s,w)=>s+(a.weekly?.[w.key]?.ordOt||0),0);
     const totD7att  = weeks.reduce((s,w)=>s+(a.weekly?.[w.key]?.d7||0),0);
     const totD1att  = weeks.reduce((s,w)=>s+(a.weekly?.[w.key]?.d1||0),0);
     const totD10att = weeks.reduce((s,w)=>s+(a.weekly?.[w.key]?.d10||0),0);
@@ -2705,7 +2785,8 @@ function renderAdsets(d){
       d3pct:totLeads>0?Math.round(totD3att/totLeads*100):0, d3cost,
       d7pct:totLeads>0?Math.round(totD7att/totLeads*100):0, d7cost,
       d10pct:totLeads>0?Math.round(totD10att/totLeads*100):0,
-      paidroas:roas||null, adjroas:totRev>0&&(totSpend+totLeads*T.waCost)>0?totRev/(totSpend+totLeads*T.waCost):null};
+      paidroas:roas||null, adjroas:totRev>0&&(totSpend+totLeads*T.waCost)>0?totRev/(totSpend+totLeads*T.waCost):null,
+      ltvRoas:computeLtvROAS(totRev,totOrd31,totOrdOt,totSpend)};
   }
   function asWeekData(a,w){
     const wd=a.weekly?.[w.key]||{spend:0,leads:0};
@@ -2720,7 +2801,8 @@ function renderAdsets(d){
       d1pct:wd.d1pct||0, d3pct:wd.d3pct||0, d3cost:wd.d3cost||null,
       d7pct:wd.d7pct||0, d7cost:wd.d7cost||null,
       d10pct:wd.d10pct||0, paidroas:roas||null,
-      adjroas:(wd.rev||0)>0&&((wd.spend||0)+((wd.leads||0)*T.waCost))>0?(wd.rev||0)/((wd.spend||0)+((wd.leads||0)*T.waCost)):null};
+      adjroas:(wd.rev||0)>0&&((wd.spend||0)+((wd.leads||0)*T.waCost))>0?(wd.rev||0)/((wd.spend||0)+((wd.leads||0)*T.waCost)):null,
+      ltvRoas:computeLtvROAS(wd.rev,wd.ord31,wd.ordOt,wd.spend)};
   }
 
   let thCells=`<th style="min-width:240px;text-align:left;padding:7px 10px;background:var(--bg3);border-bottom:1px solid var(--border);position:sticky;left:0;z-index:3;font-family:var(--font-mono);font-size:9px;letter-spacing:.08em;color:var(--text3);text-transform:uppercase">
@@ -2791,7 +2873,8 @@ function renderAdsets(d){
               d1pct:dl>0?Math.round(dat.d1/dl*100):0,d3pct:dl>0?Math.round(dat.d3/dl*100):0,
               d3cost:dl>0&&dat.d3>0?ds/dat.d3:null,d7pct:dl>0?Math.round(dat.d7/dl*100):0,
               d7cost:dl>0&&dat.d7>0?ds/dat.d7:null,d10pct:dl>0?Math.round(dat.d10/dl*100):0,paidroas:droas||null,
-              adjroas:(dailyRev[dateStr]||0)>0&&(ds+dl*T.waCost)>0?(dailyRev[dateStr]||0)/(ds+dl*T.waCost):null};
+              adjroas:(dailyRev[dateStr]||0)>0&&(ds+dl*T.waCost)>0?(dailyRev[dateStr]||0)/(ds+dl*T.waCost):null,
+              ltvRoas:computeLtvROAS(dailyRev[dateStr]||0,a._dailyOrd31[dateStr]||0,a._dailyOrdOt[dateStr]||0,ds)};
             let dc=`<td style="position:sticky;left:0;background:var(--bg);z-index:1"><div class="tree-name tree-indent-3"><span style="width:14px;display:inline-block;flex-shrink:0;color:var(--text3);font-size:9px">•</span><div class="tree-name-main" style="font-size:10px;color:var(--text3)">${dateStr}</div></div></td>`;
             COLS.forEach((col,ci)=>{ dc+=`<td class="${ci===0?'col-sep':''}" style="background:var(--bg)">${cellVal(dd,col,isMature(w.key,col.k))}</td>`; });
             rows.push(`<tr class="row-date">${dc}</tr>`);
@@ -2897,6 +2980,8 @@ function renderCreatives(d){
     const totRev    = weeks.reduce((s,w)=>{const wd=cr.weekly?.[w.key];return s+(wd?.spend>0?wd.rev||0:0);},0);
     const totSubs   = weeks.reduce((s,w)=>{const wd=cr.weekly?.[w.key];return s+(wd?.spend>0?wd.subs||0:0);},0);
     const totD3att  = weeks.reduce((s,w)=>s+(cr.weekly?.[w.key]?.d3||0),0);
+    const totOrd31  = weeks.reduce((s,w)=>s+(cr.weekly?.[w.key]?.ord31||0),0);
+    const totOrdOt  = weeks.reduce((s,w)=>s+(cr.weekly?.[w.key]?.ordOt||0),0);
     const totD7att  = weeks.reduce((s,w)=>s+(cr.weekly?.[w.key]?.d7||0),0);
     const totD1att  = weeks.reduce((s,w)=>s+(cr.weekly?.[w.key]?.d1||0),0);
     const totD10att = weeks.reduce((s,w)=>s+(cr.weekly?.[w.key]?.d10||0),0);
@@ -2918,7 +3003,8 @@ function renderCreatives(d){
       d3pct:totLeads>0?Math.round(totD3att/totLeads*100):0, d3cost,
       d7pct:totLeads>0?Math.round(totD7att/totLeads*100):0, d7cost,
       d10pct:totLeads>0?Math.round(totD10att/totLeads*100):0,
-      paidroas:roas||null, adjroas:totRev>0&&(totSpend+totLeads*T.waCost)>0?totRev/(totSpend+totLeads*T.waCost):null};
+      paidroas:roas||null, adjroas:totRev>0&&(totSpend+totLeads*T.waCost)>0?totRev/(totSpend+totLeads*T.waCost):null,
+      ltvRoas:computeLtvROAS(totRev,totOrd31,totOrdOt,totSpend)};
   }
   function crWeekData(cr,w){
     const wd=cr.weekly?.[w.key]||{spend:0,leads:0};
@@ -2936,6 +3022,7 @@ function renderCreatives(d){
       d7pct:wd.d7pct||0, d7cost:wd.d7cost||null,
       d10pct:wd.d10pct||0, paidroas:roas||null,
       adjroas:wd.rev>0&&((wd.spend||0)+((wd.leads||0)*T.waCost))>0?wd.rev/((wd.spend||0)+((wd.leads||0)*T.waCost)):null,
+      ltvRoas:computeLtvROAS(wd.rev,wd.ord31,wd.ordOt,wd.spend),
       _approxAge:approxAgeAtWeek};
   }
 
@@ -3012,7 +3099,8 @@ function renderCreatives(d){
               d1pct:dl>0?Math.round(dat.d1/dl*100):0,d3pct:dl>0?Math.round(dat.d3/dl*100):0,
               d3cost:dl>0&&dat.d3>0?ds/dat.d3:null,d7pct:dl>0?Math.round(dat.d7/dl*100):0,
               d7cost:dl>0&&dat.d7>0?ds/dat.d7:null,d10pct:dl>0?Math.round(dat.d10/dl*100):0,paidroas:droas||null,
-              adjroas:(dailyRev[dateStr]||0)>0&&(ds+dl*T.waCost)>0?(dailyRev[dateStr]||0)/(ds+dl*T.waCost):null};
+              adjroas:(dailyRev[dateStr]||0)>0&&(ds+dl*T.waCost)>0?(dailyRev[dateStr]||0)/(ds+dl*T.waCost):null,
+              ltvRoas:computeLtvROAS(dailyRev[dateStr]||0,cr._dailyOrd31[dateStr]||0,cr._dailyOrdOt[dateStr]||0,ds)};
             let dc=`<td style="position:sticky;left:0;background:var(--bg);z-index:1"><div class="tree-name tree-indent-3"><span style="width:14px;display:inline-block;flex-shrink:0;color:var(--text3);font-size:9px">•</span><div class="tree-name-main" style="font-size:10px;color:var(--text3)">${dateStr}</div></div></td>`;
             COLS.forEach((col,ci)=>{ dc+=`<td class="${ci===0?'col-sep':''}" style="background:var(--bg)">${cellVal(dd,col,isMatureByAge(approxAgeAtWeek,col.k))}</td>`; });
             rows.push(`<tr class="row-date">${dc}</tr>`);
@@ -3428,6 +3516,7 @@ function parseXlsx(wb){
   });
   const revByCamp={}, revByAdset={}, revByCr={};
   const subsByCamp={}, subsByAdset={}, subsByCr={};
+  const ord31ByCamp={}, ordOtByCamp={}, ord31ByAdset={}, ordOtByAdset={}, ord31ByCr={}, ordOtByCr={};
   const revByBatch={}, subsByBatch={};  // batch→camp→{rev,subs}
   payment.forEach(r=>{
     const cid=cleanId(r.utm_campaign);
@@ -3437,20 +3526,26 @@ function parseXlsx(wb){
     const wk=weekKey(dt);
     const rev=toNum(r.net_revenue);
     const subs=toNum(r.paid_students);
+    const ord31=toNum(r.orders_31_days);
+    const ordOt=toNum(r.orders_93_days)+toNum(r.orders_186_days)+toNum(r.orders_372_days);
     // Batch-level revenue tracking (including organic = no campaign)
     const payBid=String(r.free_batch_id||'').trim();
     const payKey=cid&&validCamps.has(cid)?cid:'__organic__';
     if(payBid){
       if(!revByBatch[payBid]) revByBatch[payBid]={};
-      if(!revByBatch[payBid][payKey]) revByBatch[payBid][payKey]={rev:0,subs:0};
+      if(!revByBatch[payBid][payKey]) revByBatch[payBid][payKey]={rev:0,subs:0,ord31:0,ordOt:0};
       revByBatch[payBid][payKey].rev+=rev;
       revByBatch[payBid][payKey].subs+=subs;
+      revByBatch[payBid][payKey].ord31+=ord31;
+      revByBatch[payBid][payKey].ordOt+=ordOt;
     }
     if(!cid||!validCamps.has(cid)) return; // skip non-campaign attribution below
     if(!revByCamp[cid]) revByCamp[cid]={daily:{}};
     if(!revByCamp[cid].daily) revByCamp[cid].daily={};
     if(!revByCamp[cid][wk]) revByCamp[cid][wk]=0;
     revByCamp[cid][wk]+=rev;
+    if(!ord31ByCamp[cid]) ord31ByCamp[cid]={daily:{}};
+    if(!ordOtByCamp[cid]) ordOtByCamp[cid]={daily:{}};
     if(!subsByCamp[cid]) subsByCamp[cid]={daily:{}};
     if(!subsByCamp[cid].daily) subsByCamp[cid].daily={};
     if(!subsByCamp[cid][wk]) subsByCamp[cid][wk]=0;
@@ -3459,6 +3554,8 @@ function parseXlsx(wb){
     const payDateStr=localDateStr(dt);
     if(!revByCamp[cid].daily[payDateStr]) revByCamp[cid].daily[payDateStr]=0;
     revByCamp[cid].daily[payDateStr]+=rev;
+    ord31ByCamp[cid].daily[payDateStr]=(ord31ByCamp[cid].daily[payDateStr]||0)+ord31;
+    ordOtByCamp[cid].daily[payDateStr]=(ordOtByCamp[cid].daily[payDateStr]||0)+ordOt;
     if(!subsByCamp[cid].daily[payDateStr]) subsByCamp[cid].daily[payDateStr]=0;
     subsByCamp[cid].daily[payDateStr]+=subs;
     if(aid){
@@ -3469,6 +3566,10 @@ function parseXlsx(wb){
       revByAdset[ak][wk]+=rev;
       if(!revByAdset[ak].daily[payDateStr]) revByAdset[ak].daily[payDateStr]=0;
       revByAdset[ak].daily[payDateStr]+=rev;
+      if(!ord31ByAdset[ak]) ord31ByAdset[ak]={daily:{}};
+      if(!ordOtByAdset[ak]) ordOtByAdset[ak]={daily:{}};
+      ord31ByAdset[ak].daily[payDateStr]=(ord31ByAdset[ak].daily[payDateStr]||0)+ord31;
+      ordOtByAdset[ak].daily[payDateStr]=(ordOtByAdset[ak].daily[payDateStr]||0)+ordOt;
       if(!subsByAdset[ak]) subsByAdset[ak]={daily:{}};
       if(!subsByAdset[ak].daily) subsByAdset[ak].daily={};
       if(!subsByAdset[ak][wk]) subsByAdset[ak][wk]=0;
@@ -3483,6 +3584,10 @@ function parseXlsx(wb){
       revByCr[crid][wk]+=rev;
       if(!revByCr[crid].daily[payDateStr]) revByCr[crid].daily[payDateStr]=0;
       revByCr[crid].daily[payDateStr]+=rev;
+      if(!ord31ByCr[crid]) ord31ByCr[crid]={daily:{}};
+      if(!ordOtByCr[crid]) ordOtByCr[crid]={daily:{}};
+      ord31ByCr[crid].daily[payDateStr]=(ord31ByCr[crid].daily[payDateStr]||0)+ord31;
+      ordOtByCr[crid].daily[payDateStr]=(ordOtByCr[crid].daily[payDateStr]||0)+ordOt;
       if(!subsByCr[crid]) subsByCr[crid]={daily:{}};
       if(!subsByCr[crid].daily) subsByCr[crid].daily={};
       if(!subsByCr[crid][wk]) subsByCr[crid][wk]=0;
@@ -3549,6 +3654,7 @@ function parseXlsx(wb){
       // This ensures week total = sum of visible daily rows
       let spend=0,clicks=0,impr=0,rev=0,wkSubs=0;
       let leads=0,d1=0,d3=0,d7=0,d10=0;
+      let ord31=0,ordOt=0;
       const spDaily=spendIndex[cid]?.daily||{};
       const revDaily=(revByCamp[cid]?.daily)||{};
       const subsDaily=(subsByCamp[cid]?.daily)||{};
@@ -3559,6 +3665,8 @@ function parseXlsx(wb){
         spend+=sd.spend||0; clicks+=sd.clicks||0; impr+=sd.impr||0;
         rev+=revDaily[dateStr]||0;
         wkSubs+=subsDaily[dateStr]||0;
+        ord31+=(ord31ByCamp[cid]?.daily?.[dateStr])||0;
+        ordOt+=(ordOtByCamp[cid]?.daily?.[dateStr])||0;
         const dat=(attByDate[cid]&&attByDate[cid][dateStr])||{leads:0,d1:0,d3:0,d7:0,d10:0};
         leads+=dat.leads||0; d1+=dat.d1||0; d3+=dat.d3||0; d7+=dat.d7||0; d10+=dat.d10||0;
       });
@@ -3576,7 +3684,7 @@ function parseXlsx(wb){
 
       weekly[wkey]={spend,leads,cpl,roas,rev,subs:wkSubs,
         clicks,impr,
-        d1,d3,d7,d10,
+        d1,d3,d7,d10,ord31,ordOt,
         daily:wkDaily,
         dailySpend:spDaily,
         dailyRev:revDaily,
@@ -3630,7 +3738,7 @@ function parseXlsx(wb){
       const asWeekly={};
       sortedWks.forEach((isoWk,wi)=>{
         const wkey=isoWk;
-        let asSpend=0,asClicks=0,asImpr=0,asLeads=0,asD1=0,asD3=0,asD7=0,asD10=0,asRev=0,asSubs=0;
+        let asSpend=0,asClicks=0,asImpr=0,asLeads=0,asD1=0,asD3=0,asD7=0,asD10=0,asRev=0,asSubs=0,asOrd31=0,asOrdOt=0;
         const spDailyAs=spendByAdset[ak]?.daily||{};
         const revDailyAs=revByAdset[ak]?.daily||{};
         const subsDailyAs=subsByAdset[ak]?.daily||{};
@@ -3640,12 +3748,14 @@ function parseXlsx(wb){
           if(weekKey(new Date(dateStr+'T00:00:00Z'))!==isoWk) return;
           asSpend+=sd.spend||0; asClicks+=sd.clicks||0; asImpr+=sd.impr||0;
           asRev+=revDailyAs[dateStr]||0; asSubs+=subsDailyAs[dateStr]||0;
+          asOrd31+=(ord31ByAdset[ak]?.daily?.[dateStr])||0;
+          asOrdOt+=(ordOtByAdset[ak]?.daily?.[dateStr])||0;
           const dat=attDailyAs[dateStr]||{leads:0,d1:0,d3:0,d7:0,d10:0};
           asLeads+=dat.leads||0; asD1+=dat.d1||0; asD3+=dat.d3||0; asD7+=dat.d7||0; asD10+=dat.d10||0;
         });
         const asCpl=asLeads>0?asSpend/asLeads:null;
         const asRoas=asSpend>0&&asRev>0?asRev/asSpend:null;
-        asWeekly[wkey]={spend:asSpend,leads:asLeads,rev:asRev,subs:asSubs,clicks:asClicks,impr:asImpr,
+        asWeekly[wkey]={spend:asSpend,leads:asLeads,rev:asRev,subs:asSubs,clicks:asClicks,impr:asImpr,ord31:asOrd31,ordOt:asOrdOt,
           d1:asD1,d3:asD3,d7:asD7,d10:asD10,
           cpl:asCpl,roas:asRoas,
           d3cost:asD3>0?asSpend/asD3:null, d7cost:asD7>0?asSpend/asD7:null,
@@ -3674,6 +3784,8 @@ function parseXlsx(wb){
         _dailyAtt: attByAdset[ak]?.daily||{},
         _dailySpend: spendByAdset[ak]?.daily||{},
         _dailyRev: (revByAdset[ak]?.daily)||{},
+        _dailyOrd31: ord31ByAdset[ak]?.daily||{},
+        _dailyOrdOt: ordOtByAdset[ak]?.daily||{},
         _dailySubs: (subsByAdset[ak]?.daily)||{},
       };
     });
@@ -3685,6 +3797,8 @@ function parseXlsx(wb){
       _dailyAtt: attByDate[cid]||{},   // flat date→attendance lookup
       _dailySpend: spendIndex[cid]?.daily||{},
       _dailyRev: (revByCamp[cid]&&revByCamp[cid].daily)||{},
+      _dailyOrd31: ord31ByCamp[cid]?.daily||{},
+      _dailyOrdOt: ordOtByCamp[cid]?.daily||{},
       _dailySubs: (subsByCamp[cid]&&subsByCamp[cid].daily)||{},
     };
   }).filter(c=>c.spend>0);
@@ -3699,7 +3813,7 @@ function parseXlsx(wb){
     const crWeeklyData={};
     sortedWks.forEach((isoWk,wi)=>{
       const wkey=isoWk;
-      let crSpend=0,crClicks=0,crImpr=0,crLeads=0,crD1=0,crD3=0,crD7=0,crD10=0,crRev=0,crSubs=0;
+      let crSpend=0,crClicks=0,crImpr=0,crLeads=0,crD1=0,crD3=0,crD7=0,crD10=0,crRev=0,crSubs=0,crOrd31=0,crOrdOt=0;
       const spDailyCr=spendByCr[crid]?.daily||{};
       const revDailyCr=revByCr[crid]?.daily||{};
       const subsDailyCr=subsByCr[crid]?.daily||{};
@@ -3713,6 +3827,8 @@ function parseXlsx(wb){
           const sd=spDailyCr[dateStr]||{};
           crSpend+=sd.spend||0; crClicks+=sd.clicks||0; crImpr+=sd.impr||0;
           crRev+=revDailyCr[dateStr]||0; crSubs+=subsDailyCr[dateStr]||0;
+          crOrd31+=(ord31ByCr[crid]?.daily?.[dateStr])||0;
+          crOrdOt+=(ordOtByCr[crid]?.daily?.[dateStr])||0;
           crLeads+=dat.leads||0; crD1+=dat.d1||0; crD3+=dat.d3||0; crD7+=dat.d7||0; crD10+=dat.d10||0;
         });
       } else {
@@ -3725,6 +3841,8 @@ function parseXlsx(wb){
           const sd=spDailyCr[dateStr]||{};
           crSpend+=sd.spend||0; crClicks+=sd.clicks||0; crImpr+=sd.impr||0;
           crRev+=revDailyCr[dateStr]||0; crSubs+=subsDailyCr[dateStr]||0;
+          crOrd31+=(ord31ByCr[crid]?.daily?.[dateStr])||0;
+          crOrdOt+=(ordOtByCr[crid]?.daily?.[dateStr])||0;
           // Proportion attendance by spend share within adset
           const asSpend=(spendByAdset[ak]?.daily?.[dateStr]?.spend)||1;
           const ratio=crSpend/asSpend;
@@ -3736,7 +3854,7 @@ function parseXlsx(wb){
       }
       const crCpl=crLeads>0?crSpend/crLeads:null;
       const crRoas=crSpend>0&&crRev>0?crRev/crSpend:null;
-      crWeeklyData[wkey]={spend:crSpend,leads:crLeads,rev:crRev,subs:crSubs,clicks:crClicks,impr:crImpr,
+      crWeeklyData[wkey]={spend:crSpend,leads:crLeads,rev:crRev,subs:crSubs,clicks:crClicks,impr:crImpr,ord31:crOrd31,ordOt:crOrdOt,
         d1:crD1,d3:crD3,d7:crD7,d10:crD10,
         cpl:crCpl,roas:crRoas,
         d3cost:crD3>0?crSpend/crD3:null, d7cost:crD7>0?crSpend/crD7:null,
@@ -3787,6 +3905,8 @@ function parseXlsx(wb){
       _dailyAtt: attByCr[crid]?.daily||{},
       _dailySpend: spendByCr[crid]?.daily||{},
       _dailyRev: (revByCr[crid]?.daily)||{},
+      _dailyOrd31: ord31ByCr[crid]?.daily||{},
+      _dailyOrdOt: ordOtByCr[crid]?.daily||{},
       _dailySubs: (subsByCr[crid]?.daily)||{},
     };
   }).filter(cr=>cr.spend>0);
@@ -3823,7 +3943,7 @@ function parseXlsx(wb){
     Object.entries(spDaily).forEach(([dateStr,sp])=>{
       const mk=dateStr.slice(0,7);
       ['all',p].forEach(bucket=>{
-        if(!monthMap[bucket][mk]) monthMap[bucket][mk]={spend:0,leads:0,rev:0,subs:0,clicks:0,impr:0,d1:0,d3:0,d7:0,d10:0};
+        if(!monthMap[bucket][mk]) monthMap[bucket][mk]={spend:0,leads:0,rev:0,subs:0,clicks:0,impr:0,d1:0,d3:0,d7:0,d10:0,ord31:0,ordOt:0};
         monthMap[bucket][mk].spend+=sp.spend||0;
         monthMap[bucket][mk].clicks+=sp.clicks||0;
         monthMap[bucket][mk].impr+=sp.impr||0;
@@ -3833,6 +3953,8 @@ function parseXlsx(wb){
         monthMap[bucket][mk].d7+=att.d7||0; monthMap[bucket][mk].d10+=att.d10||0;
         monthMap[bucket][mk].rev+=(revByCamp[c.id]?.daily||{})[dateStr]||0;
         monthMap[bucket][mk].subs+=(subsByCamp[c.id]?.daily||{})[dateStr]||0;
+        monthMap[bucket][mk].ord31+=(ord31ByCamp[c.id]?.daily||{})[dateStr]||0;
+        monthMap[bucket][mk].ordOt+=(ordOtByCamp[c.id]?.daily||{})[dateStr]||0;
       });
     });
   });
@@ -3844,7 +3966,7 @@ function parseXlsx(wb){
     const [yr,mo]=mk.split('-');
     const label=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][parseInt(mo)-1]+'-'+yr.slice(2);
     const current=mk===monthKey(today2);
-    function mkMo(d){ return {spend:d.spend||null,leads:d.leads||null,rev:d.rev||null,subs:d.subs||null,clicks:d.clicks,impr:d.impr,
+    function mkMo(d){ return {spend:d.spend||null,leads:d.leads||null,rev:d.rev||null,subs:d.subs||null,clicks:d.clicks,impr:d.impr,ord31:d.ord31||0,ordOt:d.ordOt||0,
       cpm:d.impr>0?d.spend/d.impr*1000:null, cpc:d.clicks>0?d.spend/d.clicks:null,
       ctr:d.impr>0?d.clicks/d.impr*100:null, c2db:null,
       d1pct:d.leads>0?Math.round(d.d1/d.leads*100)||null:null,
@@ -3852,7 +3974,8 @@ function parseXlsx(wb){
       d3cost:d.d3>0&&d.spend>0?d.spend/d.d3:null,
       d7pct:d.leads>0?Math.round(d.d7/d.leads*100)||null:null,
       d7cost:d.d7>0&&d.spend>0?d.spend/d.d7:null,
-      d10pct:d.leads>0?Math.round(d.d10/d.leads*100)||null:null}; }
+      d10pct:d.leads>0?Math.round(d.d10/d.leads*100)||null:null,
+      ltvRoas:computeLtvROAS(d.rev||0,d.ord31||0,d.ordOt||0,d.spend||0)}; }
     return {...mkMo(m), key:mk.replace('-',''), label, sub:current?'Current month':'', current,
       days:[], meta:mkMo(mm), google:mkMo(mg),
     };
@@ -3867,7 +3990,7 @@ function parseXlsx(wb){
       Object.entries(spDaily).forEach(([dateStr,sp])=>{
         if(!dateStr.startsWith(`${myr}-${mmo}`)) return;
         ['all',p].forEach(bucket=>{
-          if(!dailyMap[bucket][dateStr]) dailyMap[bucket][dateStr]={spend:0,leads:0,rev:0,subs:0,clicks:0,impr:0,d1:0,d3:0,d7:0,d10:0};
+          if(!dailyMap[bucket][dateStr]) dailyMap[bucket][dateStr]={spend:0,leads:0,rev:0,subs:0,clicks:0,impr:0,d1:0,d3:0,d7:0,d10:0,ord31:0,ordOt:0};
           dailyMap[bucket][dateStr].spend+=sp.spend||0;
           dailyMap[bucket][dateStr].clicks+=sp.clicks||0;
           dailyMap[bucket][dateStr].impr+=sp.impr||0;
@@ -3877,6 +4000,8 @@ function parseXlsx(wb){
           dailyMap[bucket][dateStr].d7+=att.d7||0; dailyMap[bucket][dateStr].d10+=att.d10||0;
           dailyMap[bucket][dateStr].rev+=(revByCamp[c.id]?.daily||{})[dateStr]||0;
           dailyMap[bucket][dateStr].subs+=(subsByCamp[c.id]?.daily||{})[dateStr]||0;
+          dailyMap[bucket][dateStr].ord31+=(ord31ByCamp[c.id]?.daily||{})[dateStr]||0;
+          dailyMap[bucket][dateStr].ordOt+=(ordOtByCamp[c.id]?.daily||{})[dateStr]||0;
         });
       });
     });
@@ -3884,7 +4009,7 @@ function parseXlsx(wb){
     const today2Str=localDateStr(new Date());
     const dayNames=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
     function mkDay(dateStr,d){ return {spend:d.spend||null,leads:d.leads||null,rev:d.rev||null,subs:d.subs||null,
-      clicks:d.clicks,impr:d.impr,
+      clicks:d.clicks,impr:d.impr,ord31:d.ord31||0,ordOt:d.ordOt||0,
       cpm:d.impr>0?d.spend/d.impr*1000:null,cpc:d.clicks>0?d.spend/d.clicks:null,
       ctr:d.impr>0?d.clicks/d.impr*100:null,c2db:null,
       d1pct:d.leads>0?Math.round(d.d1/d.leads*100)||null:null,
@@ -3892,7 +4017,8 @@ function parseXlsx(wb){
       d3cost:d.d3>0&&d.spend>0?d.spend/d.d3:null,
       d7pct:d.leads>0?Math.round(d.d7/d.leads*100)||null:null,
       d7cost:d.d7>0&&d.spend>0?d.spend/d.d7:null,
-      d10pct:d.leads>0?Math.round(d.d10/d.leads*100)||null:null}; }
+      d10pct:d.leads>0?Math.round(d.d10/d.leads*100)||null:null,
+      ltvRoas:computeLtvROAS(d.rev||0,d.ord31||0,d.ordOt||0,d.spend||0)}; }
     m.days=allDates.map(dateStr=>{
       const dt=new Date(dateStr+'T00:00:00Z');
       const d=dailyMap.all[dateStr]||{spend:0,leads:0,rev:0,subs:0,clicks:0,impr:0,d1:0,d3:0,d7:0,d10:0};
@@ -3908,9 +4034,9 @@ function parseXlsx(wb){
   // Weekly overview
   const weeklyOv=recentWeeks.map(w=>{
     // Aggregate by platform
-    const platAgg={all:{spend:0,leads:0,rev:0,subs:0,clicks:0,impr:0,d3:0,d7:0,d1:0,d10:0},
-                   meta:{spend:0,leads:0,rev:0,subs:0,clicks:0,impr:0,d3:0,d7:0,d1:0,d10:0},
-                   google:{spend:0,leads:0,rev:0,subs:0,clicks:0,impr:0,d3:0,d7:0,d1:0,d10:0}};
+    const platAgg={all:{spend:0,leads:0,rev:0,subs:0,clicks:0,impr:0,d3:0,d7:0,d1:0,d10:0,ord31:0,ordOt:0},
+                   meta:{spend:0,leads:0,rev:0,subs:0,clicks:0,impr:0,d3:0,d7:0,d1:0,d10:0,ord31:0,ordOt:0},
+                   google:{spend:0,leads:0,rev:0,subs:0,clicks:0,impr:0,d3:0,d7:0,d1:0,d10:0,ord31:0,ordOt:0}};
     camps.forEach(c=>{
       const wk=c.weekly[w.key]; if(!wk||!wk.spend) return;
       const p=c.platform==='meta'?'meta':'google';
@@ -3920,6 +4046,8 @@ function parseXlsx(wb){
       platAgg.all.impr+=(wk.impr||0); platAgg[p].impr+=(wk.impr||0);
       platAgg.all.d1+=(wk.d1||0); platAgg.all.d3+=(wk.d3||0); platAgg.all.d7+=(wk.d7||0); platAgg.all.d10+=(wk.d10||0);
       platAgg[p].d1+=(wk.d1||0); platAgg[p].d3+=(wk.d3||0); platAgg[p].d7+=(wk.d7||0); platAgg[p].d10+=(wk.d10||0);
+      platAgg.all.ord31+=(wk.ord31||0); platAgg.all.ordOt+=(wk.ordOt||0);
+      platAgg[p].ord31+=(wk.ord31||0); platAgg[p].ordOt+=(wk.ordOt||0);
     });
 
     function mkWkObj(pa){
@@ -3930,7 +4058,9 @@ function parseXlsx(wb){
         d3cost:pa.d3>0?pa.spend/pa.d3:null,
         d7pct:pa.leads>0?Math.round(pa.d7/pa.leads*100):0,
         d7cost:pa.d7>0?pa.spend/pa.d7:null,
-        d10pct:pa.leads>0?Math.round(pa.d10/pa.leads*100):0};
+        d10pct:pa.leads>0?Math.round(pa.d10/pa.leads*100):0,
+        ltvRoas:computeLtvROAS(pa.rev||0,pa.ord31||0,pa.ordOt||0,pa.spend||0),
+        ord31:pa.ord31||0,ordOt:pa.ordOt||0};
     }
 
     // Build daily data for this week from flat daily indexes (all platforms)
@@ -3981,6 +4111,13 @@ function parseXlsx(wb){
   window._approxAgeMap=approxAgeMap;
 
   return {camps, creatives, weeks:recentWeeks, batches, mt, gt, months, weeklyOv, campNames};
+}
+
+const tagLtvROAS=v=>v==null||isNaN(v)?'na':v>=T.ltvRoas.green?'green':v>=T.ltvRoas.yellow?'yellow':'red';
+function computeLtvROAS(rev,ord31,ordOt,spend){
+  if(!spend||spend<=0) return null;
+  const ltv=(rev||0)+T.ltvMult31*(ord31||0)*T.ltvAov31+(ordOt||0)*T.ltvRateLt*T.ltvAovLt;
+  return ltv>0?ltv/spend:null;
 }
 
 // ═══════════════════════════════════════
