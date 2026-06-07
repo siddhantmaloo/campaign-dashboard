@@ -2687,7 +2687,8 @@ function renderAdsets(d){
       l2s:wd.leads>0&&wd.subs>0?wd.subs/wd.leads*100:null,
       d1pct:wd.d1pct||0, d3pct:wd.d3pct||0, d3cost:wd.d3cost||null,
       d7pct:wd.d7pct||0, d7cost:wd.d7cost||null,
-      d10pct:wd.d10pct||0, paidroas:roas||null, adjroas:totRev>0&&(totSpend+totLeads*3)>0?totRev/(totSpend+totLeads*3):null};
+      d10pct:wd.d10pct||0, paidroas:roas||null,
+      adjroas:(wd.rev||0)>0&&((wd.spend||0)+((wd.leads||0)*3))>0?(wd.rev||0)/((wd.spend||0)+((wd.leads||0)*3)):null};
   }
 
   let thCells=`<th style="min-width:240px;text-align:left;padding:7px 10px;background:var(--bg3);border-bottom:1px solid var(--border);position:sticky;left:0;z-index:3;font-family:var(--font-mono);font-size:9px;letter-spacing:.08em;color:var(--text3);text-transform:uppercase">
