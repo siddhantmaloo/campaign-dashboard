@@ -3864,6 +3864,7 @@ function loadSample(){
   buildCrWkItems(S.data);
   buildOvWkItems(S.data);
   buildKvMonthItems(S.data);
+  if(S.data.months&&S.data.months.length) setKvMonth(S.data.months[S.data.months.length-1].key);
   renderAll(S.data);
   showToast('Sample data loaded','Week 23 · Meta + Google · 6 campaigns');
 }
@@ -3912,6 +3913,7 @@ document.addEventListener('DOMContentLoaded', async ()=>{
       buildCrWkItems(S.data);
       buildOvWkItems(S.data);
       buildKvMonthItems(S.data);
+      if(S.data.months&&S.data.months.length) setKvMonth(S.data.months[S.data.months.length-1].key);
       renderAll(S.data);
       showToast('Data loaded ✓', `${parsed.camps.length} campaigns · ${parsed.creatives.length} creatives`);
     } else {
