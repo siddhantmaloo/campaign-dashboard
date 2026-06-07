@@ -1407,9 +1407,12 @@ function filteredOvData(d){
     Object.entries(spDaily).forEach(([ds,sp])=>{
       const mk=ds.slice(0,7);
       ['all',p].forEach(b=>{
-        if(!monthMap[b][mk]) monthMap[b][mk]={spend:0,leads:0,rev:0,subs:0,clicks:0,impr:0};
+        if(!monthMap[b][mk]) monthMap[b][mk]={spend:0,leads:0,rev:0,subs:0,clicks:0,impr:0,d1:0,d3:0,d7:0,d10:0};
         monthMap[b][mk].spend+=sp.spend||0; monthMap[b][mk].clicks+=sp.clicks||0; monthMap[b][mk].impr+=sp.impr||0;
-        monthMap[b][mk].leads+=(attDaily[ds]?.leads)||0;
+        const _matt=attDaily[ds]||{leads:0,d1:0,d3:0,d7:0,d10:0};
+        monthMap[b][mk].leads+=_matt.leads||0;
+        monthMap[b][mk].d1+=_matt.d1||0; monthMap[b][mk].d3+=_matt.d3||0;
+        monthMap[b][mk].d7+=_matt.d7||0; monthMap[b][mk].d10+=_matt.d10||0;
         monthMap[b][mk].rev+=revDaily[ds]||0; monthMap[b][mk].subs+=subsDaily[ds]||0;
       });
     });
