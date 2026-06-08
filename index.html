@@ -3924,7 +3924,7 @@ function parseXlsx(wb){
           crRev+=revDailyCr[dateStr]||0; crSubs+=subsDailyCr[dateStr]||0;
           // Proportion attendance by spend share within adset
           const asSpend=(spendByAdset[ak]?.daily?.[dateStr]?.spend)||1;
-          const ratio=crSpend/asSpend;
+          const ratio=(sd.spend||0)/asSpend; // proportion by THIS date's spend share, not cumulative
           const dat=attDailyAs[dateStr]||{};
           crLeads+=Math.round((dat.leads||0)*ratio);
           crD1+=Math.round((dat.d1||0)*ratio); crD3+=Math.round((dat.d3||0)*ratio);
