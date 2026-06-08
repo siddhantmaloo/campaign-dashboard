@@ -1917,6 +1917,7 @@ const COLS=[
   {k:'paidroas', label:'Paid ROAS'},
   {k:'adjroas',  label:'ADJ ROAS'},
   {k:'ltvRoas',  label:'Proj ROAS'},
+  {k:'projroas', label:'Signal ROAS'},
 ];
 
 function cellVal(row, col, mature){
@@ -1953,7 +1954,7 @@ function cellVal(row, col, mature){
     case 'cps':      return v ? fmt.inr(v) : na;
     case 'rev':      return v ? fmt.inrK(v) : na;
     case 'roas':     return v ? (mature ? mTag(tagROAS(v),v,fmt.roas) : `<span style="color:var(--text3)">${fmt.roas(v)}</span>`) : na;
-    case 'projroas': return v ? `<span style="color:var(--text3)">${fmt.roas(v)}</span>` : na;
+    case 'projroas': return v ? (mature ? mTag(tagROAS(v),v,fmt.roas) : `<span style="color:var(--text3)">${fmt.roas(v)}</span>`) : na;
     case 'l2s':      return v ? `${Math.round(v*10)/10}%` : na;
     case 'd1pct':    return v ? `<span style="color:var(--text2)">${v}%</span>` : na;
     case 'd3pct':    return (v && mature) ? `<span style="color:var(--text2)">${v}%</span>` : na;
@@ -2064,11 +2065,16 @@ function renderCampaigns(d){
 
 // ── PROJECTION ENGINE (shared by signals + tree) ──
 function calcRatios(c, d, useCrossAvg){
-  const matureWks=['w19','w18','w17','w16'].filter(wk=>d.weeks.find(w=>w.key===wk));
+  // Use real ISO week keys; only weeks >= 28 days old have mature ROAS
+  const matureWks=(d.weeks||[]).filter(w=>{
+    const age=(window._approxAgeMap&&window._approxAgeMap[w.key]!==undefined)?window._approxAgeMap[w.key]:90;
+    return age>=28;
+  }).map(w=>w.key).slice(-6); // last 6 mature weeks
   let d3d1=[],d7d1=[],roasD7=[];
   matureWks.forEach(wk=>{
     const wd=c.weekly[wk]; if(!wd||!wd.leads||wd.leads===0) return;
-    const d1a=wd.leads*0.64,d3a=wd.leads*0.31,d7a=wd.leads*0.13;
+    // Use actual d1/d3/d7 counts stored on weekly object
+    const d1a=wd.d1||0, d3a=wd.d3||0, d7a=wd.d7||0;
     if(d1a>0){d3d1.push(d3a/d1a);d7d1.push(d7a/d1a);}
     if(d7a>0&&wd.roas){const d7cost=wd.spend/d7a;roasD7.push(wd.roas*d7cost);}
   });
@@ -2100,8 +2106,9 @@ function calcRatios(c, d, useCrossAvg){
 
 function projSignal(c,d){
   const ratios=calcRatios(c,d,false);
-  const wkOrder=['w23','w22','w21','w20','w19'];
-  const cplWk=wkOrder.find(wk=>c.weekly[wk]?.spend>0);
+  // Use real ISO week keys sorted descending — find most recent week with spend
+  const sortedWks=(d.weeks||[]).map(w=>w.key).sort().reverse();
+  const cplWk=sortedWks.find(wk=>c.weekly[wk]?.spend>0);
   const cplWd=cplWk?c.weekly[cplWk]:null;
   const actualCPL=cplWd&&cplWd.leads>0?cplWd.spend/cplWd.leads:null;
   const d1pct=S.d1pct||0.64;
@@ -2110,7 +2117,7 @@ function projSignal(c,d){
   const projD7cost=actualCPL?actualCPL/projD7pct:null;
   const projROAS=projD7cost&&ratios.roasPerD7cost?ratios.roasPerD7cost/projD7cost:null;
   const cplT=tagCPL(actualCPL),d3T=tagD3(projD3cost),d7T=tagD7(projD7cost),roasT=tagROAS(projROAS);
-  const last3Spend=['w23','w22','w21'].reduce((s,wk)=>s+(c.weekly[wk]?.spend||0),0);
+  const last3Spend=sortedWks.slice(0,3).reduce((s,wk)=>s+(c.weekly[wk]?.spend||0),0);
   // Cap confidence at medium if projection uses cross-campaign or default ratios
   let conf=tagConf(last3Spend);
   if(ratios.source!=='own' && conf==='high') conf='medium';
@@ -2265,7 +2272,7 @@ function renderTree(d){
       spend:totSpend,leads:totLeads,cpl,roas,
       cpm,cpc,ctr,c2db,
       subs,cps:subs>0?totSpend/subs:null,
-      rev:totRev,projroas:roas?roas*1.1:null,l2s:totLeads>0?subs/totLeads*100:0,
+      rev:totRev,projroas:ps.projROAS||null,l2s:totLeads>0?subs/totLeads*100:0,
       d1pct,d3pct,d3cost,d7pct,d7cost,d10pct,
       paidroas:roas||null, adjroas:totRev>0&&(totSpend+totLeads*T.waCost)>0?totRev/(totSpend+totLeads*T.waCost):null,
       ltvRoas:computeLtvROAS(totRev,totOrd31,totOrdOt,totSpend)};
