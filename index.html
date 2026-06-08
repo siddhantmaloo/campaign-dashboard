@@ -3921,10 +3921,11 @@ function parseXlsx(wb){
           if(weekKey(new Date(dateStr+'T00:00:00Z'))!==isoWk) return;
           const sd=spDailyCr[dateStr]||{};
           crSpend+=sd.spend||0; crClicks+=sd.clicks||0; crImpr+=sd.impr||0;
-          crRev+=revDailyCr[dateStr]||0; crSubs+=subsDailyCr[dateStr]||0;
-          // Proportion attendance by spend share within adset
+          // No creative-level payment data for Google — attribute proportionally from adset
           const asSpend=(spendByAdset[ak]?.daily?.[dateStr]?.spend)||1;
-          const ratio=(sd.spend||0)/asSpend; // proportion by THIS date's spend share, not cumulative
+          const ratio=(sd.spend||0)/asSpend;
+          crRev+=(revByAdset[ak]?.daily?.[dateStr]||0)*ratio;
+          crSubs+=(subsByAdset[ak]?.daily?.[dateStr]||0)*ratio;
           const dat=attDailyAs[dateStr]||{};
           crLeads+=Math.round((dat.leads||0)*ratio);
           crD1+=Math.round((dat.d1||0)*ratio); crD3+=Math.round((dat.d3||0)*ratio);
