@@ -2856,7 +2856,16 @@ function renderAdsets(d){
       d7pct:totLeads>0?Math.round(totD7att/totLeads*100):0, d7cost,
       d10pct:totLeads>0?Math.round(totD10att/totLeads*100):0,
       paidroas:roas||null, adjroas:totRev>0&&(totSpend+totLeads*T.waCost)>0?totRev/(totSpend+totLeads*T.waCost):null,
-      ltvRoas:computeLtvROAS(totRev,totOrd31,totOrdOt,totSpend)};
+      ltvRoas:computeLtvROAS(totRev,totOrd31,totOrdOt,totSpend),
+      projroas:(()=>{
+        // Use parent campaign's D3/D7 ratios + adset's most recent CPL
+        const parentCamp=d.camps.find(c=>c.id===a.campId);
+        if(!parentCamp||!cpl) return null;
+        const ratios=calcRatios(parentCamp,d,false);
+        const d1p=S.d1pct||0.64;
+        const projD7cost=cpl/(d1p*(ratios.d7d1||0.203));
+        return ratios.roasPerD7cost?ratios.roasPerD7cost/projD7cost:null;
+      })()};
   }
   function asWeekData(a,w){
     const wd=a.weekly?.[w.key]||{spend:0,leads:0};
@@ -2876,6 +2885,13 @@ function renderAdsets(d){
         const wkOrd31=Object.keys(a._dailyOrd31||{}).filter(ds=>weekKey(new Date(ds+'T00:00:00Z'))===w.isoWk).reduce((s,ds)=>s+(a._dailyOrd31[ds]||0),0);
         const wkOrdOt=Object.keys(a._dailyOrdOt||{}).filter(ds=>weekKey(new Date(ds+'T00:00:00Z'))===w.isoWk).reduce((s,ds)=>s+(a._dailyOrdOt[ds]||0),0);
         return computeLtvROAS(wd.rev,wkOrd31,wkOrdOt,wd.spend);
+      })(),
+      projroas:(()=>{
+        const parentCamp=d.camps.find(c=>c.id===a.campId);
+        if(!parentCamp||!cpl) return null;
+        const ratios=calcRatios(parentCamp,d,false);
+        const projD7cost=cpl/((S.d1pct||0.64)*(ratios.d7d1||0.203));
+        return ratios.roasPerD7cost?ratios.roasPerD7cost/projD7cost:null;
       })()};
   }
 
