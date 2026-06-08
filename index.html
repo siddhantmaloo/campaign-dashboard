@@ -732,11 +732,11 @@ td:first-child{text-align:left;}
 
 <!-- NAV -->
 <nav class="nav">
-  <div class="nav-tab"  onclick="switchTab('insights')">✦ Insights</div>
   <div class="nav-tab active"  onclick="switchTab('overview')">Overview</div>
   <div class="nav-tab"         onclick="switchTab('campaigns')">Campaigns</div>
   <div class="nav-tab"         onclick="switchTab('adsets')">Ad Sets</div>
   <div class="nav-tab"         onclick="switchTab('creatives')">Creatives</div>
+  <div class="nav-tab"         onclick="switchTab('insights')">✦ Insights</div>
 </nav>
 
 
@@ -3303,10 +3303,13 @@ function closeModalOutside(e){ if(e.target===document.getElementById('modal')) c
 // UI CONTROLS
 // ═══════════════════════════════════════
 function switchTab(t){
-  if(t==='insights'&&S.data) renderInsights(S.data);
   S.tab=t;
-  document.querySelectorAll('.nav-tab').forEach((el,i)=>el.classList.toggle('active',['overview','campaigns','adsets','creatives'][i]===t));
+  // Update all nav tabs
+  document.querySelectorAll('.nav-tab').forEach((el,i)=>el.classList.toggle('active',['overview','campaigns','adsets','creatives','insights'][i]===t));
+  // Update all tab content panes
   document.querySelectorAll('.tab-content').forEach(el=>el.classList.toggle('active',el.id===`tab-${t}`));
+  // Render insights when switching to that tab
+  if(t==='insights'&&S.data) renderInsights(S.data);
 }
 function setCrSort(s,btn){ /* handled above */ }
 
