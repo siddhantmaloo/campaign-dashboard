@@ -2891,12 +2891,16 @@ function renderAdsets(d){
       paidroas:roas||null, adjroas:totRev>0&&(totSpend+totLeads*T.waCost)>0?totRev/(totSpend+totLeads*T.waCost):null,
       ltvRoas:computeLtvROAS(totRev,totOrd31,totOrdOt,totSpend),
       projroas:(()=>{
-        // Use parent campaign's D3/D7 ratios + adset's most recent CPL
         const parentCamp=d.camps.find(c=>c.id===a.campId);
-        if(!parentCamp||!cpl) return null;
+        if(!parentCamp) return null;
         const ratios=calcRatios(parentCamp,d,false);
         const d1p=getCampaignD1pct(parentCamp,d);
-        const projD7cost=cpl/(d1p*(ratios.d7d1||0.203));
+        // Use most recent week's CPL (not aggregate over selected weeks)
+        const allWks=(d.weeks||[]).map(w=>w.key).sort().reverse();
+        const recentWk=allWks.find(wk=>a.weekly?.[wk]?.spend>0&&a.weekly?.[wk]?.leads>0);
+        const recentCPL=recentWk?a.weekly[recentWk].spend/a.weekly[recentWk].leads:cpl;
+        if(!recentCPL) return null;
+        const projD7cost=recentCPL/(d1p*(ratios.d7d1||0.203));
         return ratios.roasPerD7cost?ratios.roasPerD7cost/projD7cost:null;
       })()};
   }
