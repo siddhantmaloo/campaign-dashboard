@@ -2031,7 +2031,7 @@ function isMatureByAge(age, col){
   if(col==='ltvRoas')  return age >= 28;
   if(col==='d7pct')    return age >= 21;
   if(col==='d10pct')   return age >= 28;
-  if(col==='projroas') return age >= 28;
+  // projroas = forward projection, no maturity gate (show when CPL available)
   return true;
 }
 
@@ -2050,7 +2050,7 @@ function isMature(wk, col){
   if(col==='ltvRoas')  return age>=28;
   if(col==='d7pct')    return age>=21;
   if(col==='d10pct')   return age>=28;
-  if(col==='projroas') return age>=28;
+  // projroas = forward projection, no maturity gate
   return true;
 }
 
@@ -2886,13 +2886,7 @@ function renderAdsets(d){
         const wkOrdOt=Object.keys(a._dailyOrdOt||{}).filter(ds=>weekKey(new Date(ds+'T00:00:00Z'))===w.isoWk).reduce((s,ds)=>s+(a._dailyOrdOt[ds]||0),0);
         return computeLtvROAS(wd.rev,wkOrd31,wkOrdOt,wd.spend);
       })(),
-      projroas:(()=>{
-        const parentCamp=d.camps.find(c=>c.id===a.campId);
-        if(!parentCamp||!cpl) return null;
-        const ratios=calcRatios(parentCamp,d,false);
-        const projD7cost=cpl/((S.d1pct||0.64)*(ratios.d7d1||0.203));
-        return ratios.roasPerD7cost?ratios.roasPerD7cost/projD7cost:null;
-      })()};
+};
   }
 
   let thCells=`<th style="min-width:240px;text-align:left;padding:7px 10px;background:var(--bg3);border-bottom:1px solid var(--border);position:sticky;left:0;z-index:3;font-family:var(--font-mono);font-size:9px;letter-spacing:.08em;color:var(--text3);text-transform:uppercase">
