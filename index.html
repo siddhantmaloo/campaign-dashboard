@@ -2004,7 +2004,8 @@ function campWeekData(c, w){
       const wkOrd31=Object.keys(c._dailyOrd31||{}).filter(ds=>weekKey(new Date(ds+'T00:00:00Z'))===w.isoWk).reduce((s,ds)=>s+(c._dailyOrd31[ds]||0),0);
       const wkOrdOt=Object.keys(c._dailyOrdOt||{}).filter(ds=>weekKey(new Date(ds+'T00:00:00Z'))===w.isoWk).reduce((s,ds)=>s+(c._dailyOrdOt[ds]||0),0);
       return computeLtvROAS(wd.rev,wkOrd31,wkOrdOt,wd.spend);
-    })()
+    })(),
+    projroas:null
   };
 }
 
@@ -2441,7 +2442,7 @@ function renderTree(d){
                 rev:Math.round(ds*(wd.roas||1)),roas:wd.roas,
                 l2s:dl>0?dSubs/dl*100:null,
                 d1pct:wd.d1pct,d3pct:wd.d3pct,d3cost:wd.d3cost,
-                d7pct:wd.d7pct,d7cost:wd.d7cost,d10pct:wd.d10pct,paidroas:wd.roas||null,adjroas:wd.rev>0&&((wd.spend||0)+(dl*T.waCost))>0?wd.rev/((wd.spend||0)+(dl*T.waCost)):null,ltvRoas:computeLtvROAS(wd.rev,(wd.ord31||0)/7,(wd.ordOt||0)/7,ds)};
+                d7pct:wd.d7pct,d7cost:wd.d7cost,d10pct:wd.d10pct,paidroas:wd.roas||null,adjroas:wd.rev>0&&((wd.spend||0)+(dl*T.waCost))>0?wd.rev/((wd.spend||0)+(dl*T.waCost)):null,ltvRoas:computeLtvROAS(wd.rev,(wd.ord31||0)/7,(wd.ordOt||0)/7,ds),projroas:null};
               let dc=`<td style="position:sticky;left:0;background:var(--bg);z-index:1">
                 <div class="tree-name tree-indent-3">
                   <span style="width:14px;display:inline-block;flex-shrink:0;color:var(--text3);font-size:9px">•</span>
@@ -2886,7 +2887,7 @@ function renderAdsets(d){
         const wkOrdOt=Object.keys(a._dailyOrdOt||{}).filter(ds=>weekKey(new Date(ds+'T00:00:00Z'))===w.isoWk).reduce((s,ds)=>s+(a._dailyOrdOt[ds]||0),0);
         return computeLtvROAS(wd.rev,wkOrd31,wkOrdOt,wd.spend);
       })(),
-};
+      projroas:null};  // Signal ROAS is projection-only, not shown at week level
   }
 
   let thCells=`<th style="min-width:240px;text-align:left;padding:7px 10px;background:var(--bg3);border-bottom:1px solid var(--border);position:sticky;left:0;z-index:3;font-family:var(--font-mono);font-size:9px;letter-spacing:.08em;color:var(--text3);text-transform:uppercase">
