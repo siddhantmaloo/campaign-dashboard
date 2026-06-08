@@ -3101,8 +3101,12 @@ function renderCreatives(d){
     const totRev    = weeks.reduce((s,w)=>{const wd=cr.weekly?.[w.key];return s+(wd?.spend>0?wd.rev||0:0);},0);
     const totSubs   = weeks.reduce((s,w)=>{const wd=cr.weekly?.[w.key];return s+(wd?.spend>0?wd.subs||0:0);},0);
     const totD3att  = weeks.reduce((s,w)=>s+(cr.weekly?.[w.key]?.d3||0),0);
-    const totOrd31  = cr.spend>0?((cr.totOrd31||0)*totSpend/cr.spend):0;
-    const totOrdOt  = cr.spend>0?((cr.totOrdOt||0)*totSpend/cr.spend):0;
+    // If creative has no order data (Google), attribute from parent campaign by spend share
+    const _crParent=d.camps.find(c=>c.id===cr.campId);
+    const totOrd31  = cr.totOrd31>0&&cr.spend>0 ? (cr.totOrd31*totSpend/cr.spend) :
+      (_crParent&&_crParent.spend>0 ? (_crParent.totOrd31||0)*totSpend/_crParent.spend : 0);
+    const totOrdOt  = cr.totOrdOt>0&&cr.spend>0 ? (cr.totOrdOt*totSpend/cr.spend) :
+      (_crParent&&_crParent.spend>0 ? (_crParent.totOrdOt||0)*totSpend/_crParent.spend : 0);
     const totD7att  = weeks.reduce((s,w)=>s+(cr.weekly?.[w.key]?.d7||0),0);
     const totD1att  = weeks.reduce((s,w)=>s+(cr.weekly?.[w.key]?.d1||0),0);
     const totD10att = weeks.reduce((s,w)=>s+(cr.weekly?.[w.key]?.d10||0),0);
