@@ -4286,6 +4286,7 @@ function loadSample(){
 // INSIGHTS ENGINE
 // ═══════════════════════════════════════
 function renderInsights(d){
+  try{
   const el=document.getElementById('insightsContent'); if(!el||!d) return;
   const today=new Date(); const dow=today.getUTCDay(); // 0=Sun,1=Mon
   const daysSinceMon=dow===0?6:dow-1;
@@ -4373,8 +4374,9 @@ function renderInsights(d){
 
   // ── WARNINGS ──
   const warnings=[];
-  const sleeping=d.camps.flatMap(c=>c.adsets).filter(a=>catMatch(c_name_for_adset(a,d))&&!a.weekly[CW]?.spend&&!a.weekly[PW]?.spend&&a.weekly[W3]?.spend>0);
-  function c_name_for_adset(a,d){ const c=d.camps.find(c=>c.adsets.some(x=>x.id===a.id)); return c?c.name:''; }
+  // Find adsets with 0 spend 2+ weeks but had spend before (might be forgotten)
+  const campAdsetMap={}; d.camps.forEach(c=>c.adsets.forEach(a=>{campAdsetMap[a.id]=c.name;}));
+  const sleeping=d.camps.flatMap(c=>c.adsets).filter(a=>catMatch(campAdsetMap[a.id]||'')&&!a.weekly[CW]?.spend&&!a.weekly[PW]?.spend&&a.weekly[W3]?.spend>0);
   sleeping.slice(0,3).forEach(a=>{ warnings.push({dot:'red',text:`<span class="alert">0 spend 2+ weeks</span> — ${a.name.length>40?a.name.slice(0,38)+'…':a.name} — paused or forgotten?`}); });
   if(cw.cpl&&cw.cpl>T.cpl.yellow) warnings.push({dot:'red',text:`Blended CPL <span class="alert">₹${Math.round(cw.cpl)}</span> above threshold — review adset mix`});
 
@@ -4506,6 +4508,7 @@ function renderInsights(d){
       Generated from live data · Updates on data reload · DRR forecast uses 1.2% conv rate × ₹1,404 AOV from your last 12 weeks
     </div>
   </div>`;
+  } catch(e){ console.error('Insights error:',e); document.getElementById('insightsContent').innerHTML='<div style="padding:24px;font-family:var(--font-mono);font-size:11px;color:var(--red)">Insights error: '+e.message+'</div>'; }
 }
 
 function renderAll(d){ renderOverview(d); renderCampaigns(d); renderAdsets(d); renderCreatives(d); renderInsights(d); }
