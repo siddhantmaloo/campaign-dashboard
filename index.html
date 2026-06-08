@@ -1917,7 +1917,6 @@ const COLS=[
   {k:'paidroas', label:'Paid ROAS'},
   {k:'adjroas',  label:'ADJ ROAS'},
   {k:'ltvRoas',  label:'Proj ROAS'},
-  {k:'projroas', label:'Signal ROAS'},
 ];
 
 function cellVal(row, col, mature){
@@ -2088,7 +2087,8 @@ function calcRatios(c, d, useCrossAvg){
 
   // No own mature data — fall back to cross-campaign average from campaigns that do have data
   if(!useCrossAvg && d){
-    const others=d.camps.filter(oc=>oc.id!==c.id);
+    const thisCat=detectCat(c.name);
+    const others=d.camps.filter(oc=>oc.id!==c.id&&detectCat(oc.name)===thisCat);
     const crossRatios=others.map(oc=>calcRatios(oc,d,true)).filter(r=>r.source==='own');
     if(crossRatios.length>0){
       const crossAvg=arr=>arr.reduce((s,v)=>s+v,0)/arr.length;
@@ -2347,6 +2347,7 @@ function renderTree(d){
 
   let thCells=`<th style="min-width:240px;text-align:left;padding:7px 10px;background:var(--bg3);border-bottom:1px solid var(--border);position:sticky;left:0;z-index:3;font-family:var(--font-mono);font-size:9px;letter-spacing:.08em;color:var(--text3);text-transform:uppercase">Campaign</th>`;
   COLS.forEach((col,ci)=>{ thCells+=`<th class="${ci===0?'col-sep':''}">${col.label}</th>`; });
+  thCells+=`<th>Signal ROAS</th>`;
 
   // Sort campaigns by spend in selected weeks (descending)
   camps.sort((a,b)=>(weeks.reduce((s,w)=>s+(b.weekly[w.key]?.spend||0),0))-(weeks.reduce((s,w)=>s+(a.weekly[w.key]?.spend||0),0)));
@@ -2931,6 +2932,7 @@ function renderAdsets(d){
     ${filterLabel?`<span class="filter-pill">${filterLabel} <span onclick="clearAsFilter()" style="cursor:pointer;margin-left:4px;opacity:.7">✕</span></span>`:''}
   </th>`;
   COLS.forEach((col,ci)=>{ thCells+=`<th class="${ci===0?'col-sep':''}">${col.label}</th>`; });
+  thCells+=`<th>Signal ROAS</th>`;
 
   const rows=[];
   adsets.forEach(a=>{
@@ -2950,6 +2952,7 @@ function renderAdsets(d){
       const val=(col.k==='health'||col.k==='conf')?'<span style="color:var(--text3)">—</span>':cellVal(agg,col,weeks.length>0?isMature(weeks[weeks.length-1].key,col.k):false);
       ac+=`<td class="${ci===0?'col-sep':''}">${val}</td>`; 
     });
+    ac+=`<td>${cellVal(agg,{k:'projroas'},true)}</td>`;
     rows.push(`<tr class="row-camp${isOpen?' open':''}"
       onclick="toggleAsRow('${a.id}')"
       ondblclick="drillToCreatives('${a.id}','${a.name.replace(/'/g,"\\'")}','${a.campId}');event.stopPropagation()"
