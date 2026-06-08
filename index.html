@@ -461,6 +461,44 @@ td:first-child{text-align:left;}
 .cat-chip{display:inline-flex;align-items:center;padding:4px 12px;border-radius:3px;border:1px solid var(--border2);background:transparent;color:var(--text3);font-family:var(--font-mono);font-size:10px;cursor:pointer;transition:all .12s;letter-spacing:.05em;}
 .cat-chip:hover{color:var(--text2);border-color:var(--accent);}
 .cat-chip.active{background:rgba(124,106,247,.15);color:var(--accent);border-color:var(--accent);}
+
+/* ── INSIGHTS TAB ── */
+.ins-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;}
+.ins-card{background:var(--bg2);border:1px solid var(--border);border-radius:5px;padding:14px 16px;}
+.ins-card-hdr{display:flex;align-items:center;gap:8px;margin-bottom:10px;}
+.ins-card-icon{font-size:14px;}
+.ins-card-title{font-family:var(--font-mono);font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--text2);}
+.ins-card-sub{font-family:var(--font-mono);font-size:9px;color:var(--text3);margin-left:auto;}
+.ins-row{display:flex;align-items:flex-start;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);}
+.ins-row:last-child{border-bottom:none;}
+.ins-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;margin-top:4px;}
+.ins-dot.green{background:var(--green);}
+.ins-dot.yellow{background:var(--yellow);}
+.ins-dot.red{background:var(--red);}
+.ins-dot.blue{background:#60a5fa;}
+.ins-dot.gray{background:var(--text3);}
+.ins-text{font-family:var(--font-mono);font-size:10px;color:var(--text);line-height:1.5;}
+.ins-text .hi{color:var(--green);}
+.ins-text .warn{color:var(--yellow);}
+.ins-text .alert{color:var(--red);}
+.ins-text .dim{color:var(--text3);}
+.ins-badge{display:inline-flex;align-items:center;padding:1px 6px;border-radius:2px;font-family:var(--font-mono);font-size:8px;font-weight:600;margin-left:4px;}
+.ins-badge.green{background:var(--green-bg);color:var(--green);}
+.ins-badge.yellow{background:var(--yellow-bg);color:var(--yellow);}
+.ins-badge.red{background:var(--red-bg);color:var(--red);}
+.ins-badge.blue{background:rgba(96,165,250,.15);color:#60a5fa;}
+.ins-kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px;}
+.ins-kpi{background:var(--bg2);border:1px solid var(--border);border-radius:4px;padding:10px 12px;}
+.ins-kpi-label{font-family:var(--font-mono);font-size:8px;color:var(--text3);letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px;}
+.ins-kpi-val{font-family:var(--font-mono);font-size:18px;font-weight:500;color:var(--text);}
+.ins-kpi-sub{font-family:var(--font-mono);font-size:9px;margin-top:2px;}
+.ins-empty{font-family:var(--font-mono);font-size:10px;color:var(--text3);padding:8px 0;font-style:italic;}
+.ins-batch-bar{display:flex;align-items:center;gap:10px;padding:8px 0;}
+.ins-day-pip{width:28px;height:28px;border-radius:3px;display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-size:9px;font-weight:600;}
+.ins-day-pip.done{background:var(--bg4);color:var(--text3);}
+.ins-day-pip.today{background:var(--accent);color:#fff;}
+.ins-day-pip.future{background:var(--border);color:var(--text3);}
+
 .fade-in{animation:fadeIn .28s ease both;}
 @keyframes fadeIn{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:none}}
 </style>
@@ -694,6 +732,7 @@ td:first-child{text-align:left;}
 
 <!-- NAV -->
 <nav class="nav">
+  <div class="nav-tab"  onclick="switchTab('insights')">✦ Insights</div>
   <div class="nav-tab active"  onclick="switchTab('overview')">Overview</div>
   <div class="nav-tab"         onclick="switchTab('campaigns')">Campaigns</div>
   <div class="nav-tab"         onclick="switchTab('adsets')">Ad Sets</div>
@@ -713,6 +752,16 @@ td:first-child{text-align:left;}
 
 <!-- MAIN -->
 <main class="main">
+
+
+<!-- ══ INSIGHTS ══ -->
+<div class="tab-content" id="tab-insights">
+  <div id="insightsContent" style="padding:0">
+    <div style="padding:60px 24px;text-align:center;font-family:var(--font-mono);font-size:11px;color:var(--text3)">
+      Upload data to see insights
+    </div>
+  </div>
+</div>
 
 <!-- ══ OVERVIEW ══ -->
 <div class="tab-content active" id="tab-overview">
@@ -3254,6 +3303,7 @@ function closeModalOutside(e){ if(e.target===document.getElementById('modal')) c
 // UI CONTROLS
 // ═══════════════════════════════════════
 function switchTab(t){
+  if(t==='insights'&&S.data) renderInsights(S.data);
   S.tab=t;
   document.querySelectorAll('.nav-tab').forEach((el,i)=>el.classList.toggle('active',['overview','campaigns','adsets','creatives'][i]===t));
   document.querySelectorAll('.tab-content').forEach(el=>el.classList.toggle('active',el.id===`tab-${t}`));
@@ -4228,7 +4278,234 @@ function loadSample(){
   renderAll(S.data);
   showToast('Sample data loaded','Week 23 · Meta + Google · 6 campaigns');
 }
-function renderAll(d){ renderOverview(d); renderCampaigns(d); renderAdsets(d); renderCreatives(d); }
+
+// ═══════════════════════════════════════
+// INSIGHTS ENGINE
+// ═══════════════════════════════════════
+function renderInsights(d){
+  const el=document.getElementById('insightsContent'); if(!el||!d) return;
+  const today=new Date(); const dow=today.getUTCDay(); // 0=Sun,1=Mon
+  const daysSinceMon=dow===0?6:dow-1;
+  const lastMon=new Date(today); lastMon.setUTCDate(today.getUTCDate()-daysSinceMon);
+  const nextMon=new Date(lastMon); nextMon.setUTCDate(lastMon.getUTCDate()+7);
+  const fmt=dt=>dt.toLocaleDateString('en-IN',{day:'numeric',month:'short'});
+
+  // Get all weeks sorted
+  const wks=d.weeks.map(w=>w.key).sort();
+  const CW=wks[wks.length-1]; // current week
+  const PW=wks[wks.length-2]; // previous week
+  const W3=wks[wks.length-3];
+
+  // ── KPIs ──
+  const metaCamps=d.camps.filter(c=>c.platform==='meta'&&catMatch(c.name));
+  const googCamps=d.camps.filter(c=>c.platform!=='meta'&&catMatch(c.name));
+
+  function wkAgg(camps,wk){
+    let sp=0,leads=0,d3=0,d7=0,rev=0;
+    camps.forEach(c=>{const w=c.weekly[wk]; if(w){sp+=w.spend||0;leads+=w.leads||0;d3+=w.d3||0;d7+=w.d7||0;rev+=w.rev||0;}});
+    return {sp,leads,d3,d7,rev,cpl:leads>0?sp/leads:null,d3pct:leads>0?Math.round(d3/leads*100):null,d7pct:leads>0?Math.round(d7/leads*100):null};
+  }
+  const allCamps=[...metaCamps,...googCamps];
+  const cw=wkAgg(allCamps,CW), pw=wkAgg(allCamps,PW);
+  const cplChg=cw.cpl&&pw.cpl?Math.round((cw.cpl-pw.cpl)/pw.cpl*100):null;
+  const leadsChg=pw.leads>0?Math.round((cw.leads-pw.leads)/pw.leads*100):null;
+
+  // ── ADSET ANALYSIS (Meta) ──
+  const adsetRows=[];
+  metaCamps.forEach(c=>{
+    c.adsets.forEach(a=>{
+      const cw2=a.weekly[CW]; const pw2=a.weekly[PW];
+      if(!cw2||!cw2.spend) return;
+      const cwLeads=cw2.leads||0; const cwSp=cw2.spend||0;
+      const cpl=cwLeads>0?cwSp/cwLeads:null;
+      const pwSp=pw2?.spend||0; const pwLeads=pw2?.leads||0;
+      const pwCpl=pwLeads>0?pwSp/pwLeads:null;
+      const spTrend=pwSp>0?(cwSp-pwSp)/pwSp*100:null;
+      const cplTrend=cpl&&pwCpl?(cpl-pwCpl)/pwCpl*100:null;
+      const d3pct=cwLeads>0?Math.round((cw2.d3||0)/cwLeads*100):null;
+      const isDate=a.name.toLowerCase().includes('datespecific')||a.name.includes('DateSpecific');
+      adsetRows.push({name:a.name,cpl,pwCpl,d3pct,spTrend,cplTrend,sp:cwSp,leads:cwLeads,isDate});
+    });
+  });
+
+  // ── CAMPAIGN ANALYSIS (Google) ──
+  const campRows=[];
+  googCamps.forEach(c=>{
+    const cw2=c.weekly[CW]; const pw2=c.weekly[PW];
+    if(!cw2||!cw2.spend) return;
+    const cwSp=cw2.spend||0; const cwLeads=cw2.leads||0;
+    const cpl=cwLeads>0?cwSp/cwLeads:null;
+    const pwSp=pw2?.spend||0; const pwLeads=pw2?.leads||0; const pwCpl=pwLeads>0?pwSp/pwLeads:null;
+    const spTrend=pwSp>0?(cwSp-pwSp)/pwSp*100:null;
+    const cplTrend=cpl&&pwCpl?(cpl-pwCpl)/pwCpl*100:null;
+    const d3pct=cwLeads>0?Math.round((cw2.d3||0)/cwLeads*100):null;
+    const roas=cw2.rev>0&&cwSp>0?cw2.rev/cwSp:null;
+    campRows.push({name:campShort(c.name),cpl,pwCpl,d3pct,spTrend,cplTrend,sp:cwSp,leads:cwLeads,roas});
+  });
+
+  // ── FIND POSITIVES ──
+  const wins=[];
+  adsetRows.filter(r=>r.cpl&&r.cpl<T.cpl.yellow&&r.d3pct&&r.d3pct>=T.d3pct.yellow).sort((a,b)=>b.sp-a.sp).slice(0,4).forEach(r=>{
+    const nm=r.name.length>38?r.name.slice(0,36)+'…':r.name;
+    const cplTag=r.cpl<T.cpl.green?'green':'yellow';
+    let txt=`<span class="ins-badge ${cplTag}">CPL ₹${Math.round(r.cpl)}</span> <span class="ins-badge blue">D3 ${r.d3pct}%</span> ${nm}`;
+    if(r.cplTrend&&r.cplTrend<-10) txt+=` <span class="ins-badge green">CPL ↓${Math.abs(Math.round(r.cplTrend))}%</span>`;
+    wins.push({dot:'green',text:txt});
+  });
+  campRows.filter(r=>r.roas&&r.roas>=T.roas.yellow).forEach(r=>{
+    wins.push({dot:'green',text:`<span class="ins-badge green">ROAS ${r.roas.toFixed(2)}×</span> ${r.name}`});
+  });
+
+  // ── FIND WATCH ITEMS ──
+  const watches=[];
+  adsetRows.filter(r=>r.cplTrend&&r.cplTrend>20&&r.sp>5000).sort((a,b)=>b.cplTrend-a.cplTrend).slice(0,3).forEach(r=>{
+    const nm=r.name.length>35?r.name.slice(0,33)+'…':r.name;
+    watches.push({dot:'yellow',text:`CPL up <span class="warn">+${Math.round(r.cplTrend)}%</span> this week — ${nm}`});
+  });
+  adsetRows.filter(r=>r.spTrend&&r.spTrend<-30&&r.sp>0).slice(0,2).forEach(r=>{
+    const nm=r.name.length>35?r.name.slice(0,33)+'…':r.name;
+    watches.push({dot:'yellow',text:`Spend dropped <span class="warn">${Math.round(r.spTrend)}%</span> — ${nm} — intentional?`});
+  });
+  if(cw.d3pct&&pw.d3pct&&cw.d3pct<pw.d3pct-3) watches.push({dot:'yellow',text:`Overall D3% dropped <span class="warn">${pw.d3pct}% → ${cw.d3pct}%</span> — lead quality signal`});
+
+  // ── WARNINGS ──
+  const warnings=[];
+  const sleeping=d.camps.flatMap(c=>c.adsets).filter(a=>catMatch(c_name_for_adset(a,d))&&!a.weekly[CW]?.spend&&!a.weekly[PW]?.spend&&a.weekly[W3]?.spend>0);
+  function c_name_for_adset(a,d){ const c=d.camps.find(c=>c.adsets.some(x=>x.id===a.id)); return c?c.name:''; }
+  sleeping.slice(0,3).forEach(a=>{ warnings.push({dot:'red',text:`<span class="alert">0 spend 2+ weeks</span> — ${a.name.length>40?a.name.slice(0,38)+'…':a.name} — paused or forgotten?`}); });
+  if(cw.cpl&&cw.cpl>T.cpl.yellow) warnings.push({dot:'red',text:`Blended CPL <span class="alert">₹${Math.round(cw.cpl)}</span> above threshold — review adset mix`});
+
+  // ── DRR FORECAST ──
+  const batchLTV=1404; const convRate=0.012;
+  const recentLeads=cw.leads||0;
+  const daysIn=daysSinceMon+1;
+  const projWeeklyLeads=daysIn>0?Math.round(recentLeads/daysIn*7):0;
+  const projRev=projWeeklyLeads*convRate*batchLTV;
+  const projDRR=Math.round(projRev/7);
+  const shortfall=65000-projDRR;
+
+  // ── BATCH STATUS ──
+  const batchDays=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  const batchBar=batchDays.map((d2,i)=>{
+    const cls=i<daysSinceMon?'done':i===daysSinceMon?'today':'future';
+    return `<div class="ins-day-pip ${cls}">${d2}<br><span style="font-size:8px">${i===daysSinceMon?'today':''}</span></div>`;
+  }).join('');
+
+  const dateAdsets=adsetRows.filter(r=>r.isDate&&r.sp>0);
+
+  // ── RENDER ──
+  el.innerHTML=`
+  <div style="padding:18px 24px">
+
+    <!-- KPI Strip -->
+    <div class="ins-kpi-row">
+      <div class="ins-kpi">
+        <div class="ins-kpi-label">Leads This Week</div>
+        <div class="ins-kpi-val" style="color:${leadsChg>=0?'var(--green)':'var(--red)'}">${fmt.numK(cw.leads)}</div>
+        <div class="ins-kpi-sub" style="color:${leadsChg>=0?'var(--green)':'var(--red)'}">${leadsChg!==null?(leadsChg>=0?'↑':'↓')+Math.abs(leadsChg)+'% vs last wk':'—'}</div>
+      </div>
+      <div class="ins-kpi">
+        <div class="ins-kpi-label">Blended CPL</div>
+        <div class="ins-kpi-val" style="color:${cw.cpl<T.cpl.green?'var(--green)':cw.cpl<T.cpl.yellow?'var(--yellow)':'var(--red)'}">${cw.cpl?'₹'+Math.round(cw.cpl):'—'}</div>
+        <div class="ins-kpi-sub" style="color:${cplChg<=0?'var(--green)':'var(--red)'}">${cplChg!==null?(cplChg<=0?'↓ ':'↑ ')+Math.abs(cplChg)+'% vs last wk':'—'}</div>
+      </div>
+      <div class="ins-kpi">
+        <div class="ins-kpi-label">Proj DRR (3 wks)</div>
+        <div class="ins-kpi-val" style="color:${projDRR>=65000?'var(--green)':projDRR>=50000?'var(--yellow)':'var(--red)'}">${fmt.inrK(projDRR)}</div>
+        <div class="ins-kpi-sub" style="color:${projDRR>=65000?'var(--green)':'var(--red)'}">${projDRR>=65000?'On track for ₹65K target':'₹'+(Math.abs(shortfall)/1000).toFixed(0)+'K below target'}</div>
+      </div>
+      <div class="ins-kpi">
+        <div class="ins-kpi-label">Week Spend</div>
+        <div class="ins-kpi-val">${fmt.inrK(cw.sp)}</div>
+        <div class="ins-kpi-sub" style="color:var(--text3)">${fmt.inrK(Math.round(cw.sp/7))}/day avg</div>
+      </div>
+    </div>
+
+    <!-- Batch Status + Grid -->
+    <div class="ins-grid">
+
+      <!-- Batch Week Status -->
+      <div class="ins-card">
+        <div class="ins-card-hdr">
+          <span class="ins-card-icon">📅</span>
+          <span class="ins-card-title">Batch Week Status</span>
+          <span class="ins-card-sub">Batch started ${fmt(lastMon)} · Next ${fmt(nextMon)}</span>
+        </div>
+        <div class="ins-batch-bar">${batchBar}</div>
+        <div style="margin-top:10px">
+          ${daysSinceMon<=2?`<div class="ins-row"><div class="ins-dot green"></div><div class="ins-text"><span class="hi">Peak window</span> — Day ${daysSinceMon+1} of batch. Date creative is maximally relevant today.</div></div>`:''}
+          ${daysSinceMon>=4?`<div class="ins-row"><div class="ins-dot yellow"></div><div class="ins-text"><span class="warn">Window closing</span> — Batch day ${daysSinceMon+1}. Start reducing date-specific budget. Prep next Monday creative.</div></div>`:''}
+          ${daysSinceMon===6?`<div class="ins-row"><div class="ins-dot red"></div><div class="ins-text"><span class="alert">Creative swap tonight</span> — Pause today's date creative. Activate ${fmt(nextMon)} creative before midnight.</div></div>`:''}
+          ${dateAdsets.length>0?dateAdsets.slice(0,2).map(a=>`<div class="ins-row"><div class="ins-dot blue"></div><div class="ins-text"><span class="ins-badge blue">ACTIVE</span> ${a.name.length>40?a.name.slice(0,38)+'…':a.name} — ₹${Math.round(a.sp).toLocaleString('en-IN')} this week</div></div>`).join(''):`<div class="ins-row"><div class="ins-dot gray"></div><div class="ins-text dim">No date-specific adsets detected this week</div></div>`}
+        </div>
+      </div>
+
+      <!-- DRR Forecast -->
+      <div class="ins-card">
+        <div class="ins-card-hdr">
+          <span class="ins-card-icon">📈</span>
+          <span class="ins-card-title">DRR Forecast</span>
+          <span class="ins-card-sub">Target ₹65K/day</span>
+        </div>
+        <div class="ins-row"><div class="ins-dot ${projDRR>=65000?'green':projDRR>=50000?'yellow':'red'}"></div>
+          <div class="ins-text">At current pace (<b>${fmt.numK(recentLeads)}</b> leads in ${daysIn} day${daysIn!==1?'s':''}), projecting <b>${fmt.numK(projWeeklyLeads)}</b> leads this week → <b>${fmt.inrK(projDRR)}/day</b> DRR in ~3 weeks${projDRR<65000?` <span class="warn">(₹${((65000-projDRR)/1000).toFixed(0)}K short)</span>`:` <span class="hi">✓ on track</span>`}</div>
+        </div>
+        <div class="ins-row"><div class="ins-dot blue"></div>
+          <div class="ins-text dim">Assumes <span style="color:var(--text2)">1.2% conversion rate</span> and <span style="color:var(--text2)">₹1,404 AOV</span> based on your last 12 weeks of data</div>
+        </div>
+        <div class="ins-row"><div class="ins-dot ${cw.d3pct>=T.d3pct.green?'green':cw.d3pct>=T.d3pct.yellow?'yellow':'gray'}"></div>
+          <div class="ins-text">Blended D3% this week: <b>${cw.d3pct||'—'}%</b>${cw.d3pct&&pw.d3pct?` <span class="${cw.d3pct>=pw.d3pct?'hi':'warn'}">(${cw.d3pct>=pw.d3pct?'↑':'↓'}${Math.abs(cw.d3pct-pw.d3pct)}pp vs last week)</span>`:''} — leading indicator of conversion quality</div>
+        </div>
+      </div>
+
+      <!-- What's Working -->
+      <div class="ins-card">
+        <div class="ins-card-hdr">
+          <span class="ins-card-icon">✅</span>
+          <span class="ins-card-title">What's Working</span>
+          <span class="ins-card-sub">This week</span>
+        </div>
+        ${wins.length>0?wins.slice(0,5).map(w=>`<div class="ins-row"><div class="ins-dot ${w.dot}"></div><div class="ins-text">${w.text}</div></div>`).join(''):`<div class="ins-empty">Not enough data this week yet</div>`}
+      </div>
+
+      <!-- Watch + Warnings -->
+      <div class="ins-card">
+        <div class="ins-card-hdr">
+          <span class="ins-card-icon">⚠️</span>
+          <span class="ins-card-title">Watch & Warnings</span>
+          <span class="ins-card-sub">Needs attention</span>
+        </div>
+        ${[...warnings,...watches].length>0?[...warnings,...watches].slice(0,5).map(w=>`<div class="ins-row"><div class="ins-dot ${w.dot}"></div><div class="ins-text">${w.text}</div></div>`).join(''):`<div class="ins-empty">No issues detected this week 👍</div>`}
+      </div>
+
+    </div>
+
+    <!-- Top Meta Adsets -->
+    <div class="ins-card" style="margin-bottom:14px">
+      <div class="ins-card-hdr"><span class="ins-card-icon">📊</span><span class="ins-card-title">Meta Adsets — This Week vs Last</span></div>
+      ${adsetRows.sort((a,b)=>b.sp-a.sp).slice(0,8).map(r=>{
+        const cplColor=!r.cpl?'var(--text3)':r.cpl<T.cpl.green?'var(--green)':r.cpl<T.cpl.yellow?'var(--yellow)':'var(--red)';
+        const trend=r.spTrend===null?'—':(r.spTrend>10?`<span style="color:var(--green)">↑${Math.round(r.spTrend)}%</span>`:(r.spTrend<-10?`<span style="color:var(--red)">↓${Math.abs(Math.round(r.spTrend))}%</span>`:'→ stable'));
+        const cplStr=r.cpl?`<span style="color:${cplColor}">₹${Math.round(r.cpl)}</span>`:'—';
+        const d3Str=r.d3pct?`${r.d3pct}%`:'—';
+        const nm=r.isDate?`🔥 ${r.name}`:r.name;
+        return `<div class="ins-row">
+          <div class="ins-dot ${!r.cpl?'gray':r.cpl<T.cpl.yellow?'green':'red'}"></div>
+          <div class="ins-text" style="flex:1">${nm.length>42?nm.slice(0,40)+'…':nm}</div>
+          <div style="font-family:var(--font-mono);font-size:10px;color:var(--text2);margin-left:auto;display:flex;gap:16px;flex-shrink:0">
+            <span>CPL ${cplStr}</span><span>D3 ${d3Str}</span><span>Spend ${trend}</span>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>
+
+    <div style="font-family:var(--font-mono);font-size:9px;color:var(--text3);text-align:right;padding-bottom:4px">
+      Generated from live data · Updates on data reload · DRR forecast uses 1.2% conv rate × ₹1,404 AOV from your last 12 weeks
+    </div>
+  </div>`;
+}
+
+function renderAll(d){ renderOverview(d); renderCampaigns(d); renderAdsets(d); renderCreatives(d); if(document.getElementById('tab-insights')?.classList.contains('active')) renderInsights(d); }
 
 // ═══════════════════════════════════════
 // TOAST
