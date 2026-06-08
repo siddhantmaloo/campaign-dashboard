@@ -1136,7 +1136,7 @@ function refreshProjRatios(){
   const avgD3D1 = allRatios.reduce((s,r)=>s+r.d3d1,0)/allRatios.length;
   const avgD7D1 = allRatios.reduce((s,r)=>s+r.d7d1,0)/allRatios.length;
   const avgK    = allRatios.reduce((s,r)=>s+r.roasPerD7cost,0)/allRatios.length;
-  const d1 = S.d1pct||0.64;
+  const d1 = S.data ? getCampaignD1pct(S.data.camps.find(c=>detectCat(c.name)==='14DayYoga')||S.data.camps[0], S.data) : (S.d1pct||0.58);
   el.innerHTML=`
     <div class="ts-proj-card">
       <div class="ts-proj-card-label">D3 / D1 Ratio</div>
@@ -2105,6 +2105,38 @@ function calcRatios(c, d, useCrossAvg){
   return {d3d1:0.484, d7d1:0.203, roasPerD7cost:154, source:'default'};
 }
 
+
+// ── D1% from per-campaign data (with 14DayYoga portfolio fallback) ──
+function getCampaignD1pct(c, d){
+  // Step 1: use campaign's own recent mature weeks (age >= 14, last 4)
+  const sortedWks=(d.weeks||[]).map(w=>w.key).sort();
+  const matureWks=sortedWks.filter(wk=>{
+    const age=(window._approxAgeMap&&window._approxAgeMap[wk]!==undefined)?window._approxAgeMap[wk]:90;
+    return age>=14;
+  }).slice(-4); // last 4 mature weeks
+
+  let ownLeads=0, ownD1=0;
+  matureWks.forEach(wk=>{
+    const wd=c.weekly[wk]; if(!wd||!wd.spend) return;
+    ownLeads+=(wd.leads||0); ownD1+=(wd.d1||0);
+  });
+
+  // If campaign has enough data (>= 200 leads in mature weeks), use own D1%
+  if(ownLeads>=200) return ownD1/ownLeads;
+
+  // Step 2: portfolio fallback — only 14DayYoga campaigns
+  let portLeads=0, portD1=0;
+  (d.camps||[]).filter(pc=>detectCat(pc.name)==='14DayYoga').forEach(pc=>{
+    matureWks.forEach(wk=>{
+      const wd=pc.weekly[wk]; if(!wd||!wd.spend) return;
+      portLeads+=(wd.leads||0); portD1+=(wd.d1||0);
+    });
+  });
+
+  if(portLeads>0) return portD1/portLeads;
+  return S.d1pct||0.58; // last resort default
+}
+
 function projSignal(c,d){
   const ratios=calcRatios(c,d,false);
   // Use real ISO week keys sorted descending — find most recent week with spend
@@ -2112,7 +2144,7 @@ function projSignal(c,d){
   const cplWk=sortedWks.find(wk=>c.weekly[wk]?.spend>0);
   const cplWd=cplWk?c.weekly[cplWk]:null;
   const actualCPL=cplWd&&cplWd.leads>0?cplWd.spend/cplWd.leads:null;
-  const d1pct=S.d1pct||0.64;
+  const d1pct=getCampaignD1pct(c,d);
   const projD3pct=d1pct*ratios.d3d1,projD7pct=d1pct*ratios.d7d1;
   const projD3cost=actualCPL?actualCPL/projD3pct:null;
   const projD7cost=actualCPL?actualCPL/projD7pct:null;
@@ -2863,7 +2895,7 @@ function renderAdsets(d){
         const parentCamp=d.camps.find(c=>c.id===a.campId);
         if(!parentCamp||!cpl) return null;
         const ratios=calcRatios(parentCamp,d,false);
-        const d1p=S.d1pct||0.64;
+        const d1p=getCampaignD1pct(parentCamp,d);
         const projD7cost=cpl/(d1p*(ratios.d7d1||0.203));
         return ratios.roasPerD7cost?ratios.roasPerD7cost/projD7cost:null;
       })()};
