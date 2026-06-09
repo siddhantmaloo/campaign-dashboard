@@ -418,6 +418,24 @@ td:first-child{text-align:left;}
   transition:all .15s;
 }
 .settings-btn:hover{background:var(--bg4);color:var(--text);}
+.search-overlay{position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:9000;display:flex;align-items:flex-start;justify-content:center;padding-top:80px;}
+.search-overlay.hidden{display:none;}
+.search-box{background:var(--bg2);border:1px solid var(--border2);border-radius:8px;width:600px;max-width:92vw;overflow:hidden;box-shadow:0 24px 64px rgba(0,0,0,.5);}
+.search-input-wrap{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--border);}
+.search-input-wrap span{font-size:18px;color:var(--text3);}
+.search-input{background:transparent;border:none;outline:none;color:var(--text);font-family:var(--font-mono);font-size:13px;flex:1;}
+.search-hint{font-family:var(--font-mono);font-size:10px;color:var(--text3);}
+.search-results{max-height:420px;overflow-y:auto;}
+.search-group-label{font-family:var(--font-mono);font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);padding:10px 16px 4px;}
+.search-item{display:flex;align-items:center;gap:10px;padding:9px 16px;cursor:pointer;transition:background .1s;}
+.search-item:hover,.search-item.active{background:var(--bg3);}
+.search-item-icon{font-size:11px;width:18px;text-align:center;flex-shrink:0;}
+.search-item-body{flex:1;min-width:0;}
+.search-item-name{font-size:12px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.search-item-sub{font-family:var(--font-mono);font-size:10px;color:var(--text3);margin-top:1px;}
+.search-item-tag{font-family:var(--font-mono);font-size:9px;padding:2px 6px;border-radius:2px;background:var(--bg4);color:var(--text3);flex-shrink:0;}
+.search-empty{padding:32px;text-align:center;font-family:var(--font-mono);font-size:11px;color:var(--text3);}
+
 
 /* Settings modal */
 .ts-metric{
@@ -492,6 +510,7 @@ td:first-child{text-align:left;}
     <div class="cohort-badge" id="cohortBadge">Cohort: —</div>
     <button class="upload-btn" onclick="loadFromGSheets()" id="reloadBtn"><span class="udot" id="xlsxDot"></span>↺ RELOAD</button>
     <button class="upload-btn" onclick="loadSample()">LOAD SAMPLE</button>
+    <button class="settings-btn" onclick="openSearch()" title="Search (Ctrl+K)" style="font-size:14px">⌕</button>
     <button class="settings-btn" onclick="openSettings()" title="Threshold Settings">⚙</button>
   </div>
 </header>
@@ -1022,6 +1041,21 @@ td:first-child{text-align:left;}
   </div>
 </div>
 </main>
+
+
+<!-- GLOBAL SEARCH -->
+<div class="search-overlay hidden" id="searchOverlay" onclick="closeSearchOutside(event)">
+  <div class="search-box">
+    <div class="search-input-wrap">
+      <span>⌕</span>
+      <input class="search-input" id="searchInput" placeholder="Search campaigns, ad sets, creatives or IDs…" oninput="onSearchInput()" onkeydown="onSearchKey(event)" autocomplete="off">
+      <span class="search-hint">ESC to close</span>
+    </div>
+    <div class="search-results" id="searchResults">
+      <div class="search-empty">Start typing to search…</div>
+    </div>
+  </div>
+</div>
 
 <!-- MODAL -->
 <div class="modal-overlay" id="modal" onclick="closeModalOutside(event)">
@@ -2525,7 +2559,7 @@ function renderTree(d){
       const val=cellVal(agg,col,true);
       cc+=`<td class="${ci===0?'col-sep':''}">${val}</td>`; 
     });
-    rows.push(`<tr class="row-camp${isOpen?' open':''}"
+    rows.push(`<tr class="row-camp${isOpen?' open':''}" data-camp-id="${c.id}"
       onclick="toggleCamp('${c.id}')"
       ondblclick="drillCampToAdsets('${c.id}','${campShort(c.name).replace(/'/g,"\\'")}');event.stopPropagation()"
     >${cc}</tr>`);
@@ -3177,7 +3211,7 @@ function renderAdsets(d){
       const val=cellVal(agg,col,weeks.length>0?isMature(weeks[weeks.length-1].key,col.k):false);
       ac+=`<td class="${ci===0?'col-sep':''}">${val}</td>`; 
     });
-    rows.push(`<tr class="row-camp${isOpen?' open':''}"
+    rows.push(`<tr class="row-camp${isOpen?' open':''}" data-as-id="${a.id}"
       onclick="toggleAsRow('${a.id}')"
       ondblclick="drillToCreatives('${a.id}','${a.name.replace(/'/g,"\\'")}','${a.campId}');event.stopPropagation()"
     >${ac}</tr>`);
@@ -3409,7 +3443,7 @@ function renderCreatives(d){
       const val=cellVal(agg,col,isMatureByAge(cr.age,col.k));
       cc+=`<td class="${ci===0?'col-sep':''}">${val}</td>`;
     });
-    rows.push(`<tr class="row-camp${isOpen?' open':''}"
+    rows.push(`<tr class="row-camp${isOpen?' open':''}" data-cr-id="${cr.id}"
       onclick="toggleCrRow('${cr.id}')"
       ondblclick="drillToAdset('${cr.adset}','${cr.adset.replace(/'/g,"\\'")}');event.stopPropagation()"
     >${cc}</tr>`);
@@ -4639,6 +4673,154 @@ document.addEventListener('click', ()=>{
 });
 
 document.addEventListener('DOMContentLoaded', ()=>{ loadFromGSheets(); });
+
+// ═══════════════════════════════════════
+// GLOBAL SEARCH
+// ═══════════════════════════════════════
+let _searchIdx = -1;
+
+function openSearch(){
+  document.getElementById('searchOverlay').classList.remove('hidden');
+  setTimeout(()=>document.getElementById('searchInput').focus(), 50);
+}
+function closeSearch(){
+  document.getElementById('searchOverlay').classList.add('hidden');
+  document.getElementById('searchInput').value='';
+  document.getElementById('searchResults').innerHTML='<div class="search-empty">Start typing to search…</div>';
+  _searchIdx=-1;
+}
+function closeSearchOutside(e){ if(e.target.id==='searchOverlay') closeSearch(); }
+
+document.addEventListener('keydown', e=>{
+  if((e.ctrlKey||e.metaKey)&&e.key==='k'){ e.preventDefault(); openSearch(); }
+  if(e.key==='Escape') closeSearch();
+});
+
+function onSearchInput(){
+  const q = document.getElementById('searchInput').value.trim().toLowerCase();
+  const el = document.getElementById('searchResults');
+  _searchIdx = -1;
+  if(!q || !S.data){ el.innerHTML='<div class="search-empty">Start typing to search…</div>'; return; }
+
+  const match = (str) => str && str.toLowerCase().includes(q);
+  const results = { camps:[], adsets:[], creatives:[] };
+
+  S.data.camps.forEach(c=>{
+    if(match(c.name)||match(c.id)) results.camps.push(c);
+  });
+  S.data.camps.forEach(c=>{
+    c.adsets.forEach(a=>{
+      if(match(a.name)||match(a.id)) results.adsets.push({...a, campName:c.name, campId:c.id, platform:c.platform});
+    });
+  });
+  (S.data.creatives||[]).forEach(cr=>{
+    if(match(cr.name)||match(cr.id)) results.creatives.push(cr);
+  });
+
+  const total = results.camps.length + results.adsets.length + results.creatives.length;
+  if(!total){ el.innerHTML='<div class="search-empty">No results for "'+q+'"</div>'; return; }
+
+  let html = '';
+  const platDot = p => `<span class="plat-dot ${p||''}"></span>`;
+
+  if(results.camps.length){
+    html += `<div class="search-group-label">Campaigns (${results.camps.length})</div>`;
+    results.camps.slice(0,6).forEach(c=>{
+      html += `<div class="search-item" onclick="goToCamp('${c.id}')">
+        <div class="search-item-icon">${platDot(c.platform)}</div>
+        <div class="search-item-body">
+          <div class="search-item-name">${c.name}</div>
+          <div class="search-item-sub">${c.id}</div>
+        </div>
+        <div class="search-item-tag">Campaign</div>
+      </div>`;
+    });
+    if(results.camps.length>6) html+=`<div class="search-empty" style="padding:6px 16px;font-size:10px">+${results.camps.length-6} more</div>`;
+  }
+
+  if(results.adsets.length){
+    html += `<div class="search-group-label">Ad Sets (${results.adsets.length})</div>`;
+    results.adsets.slice(0,6).forEach(a=>{
+      html += `<div class="search-item" onclick="goToAdset('${a.id}','${a.campId}')">
+        <div class="search-item-icon">${platDot(a.platform)}</div>
+        <div class="search-item-body">
+          <div class="search-item-name">${a.name}</div>
+          <div class="search-item-sub">${a.id} · ${campShort(a.campName||'')}</div>
+        </div>
+        <div class="search-item-tag">Ad Set</div>
+      </div>`;
+    });
+    if(results.adsets.length>6) html+=`<div class="search-empty" style="padding:6px 16px;font-size:10px">+${results.adsets.length-6} more</div>`;
+  }
+
+  if(results.creatives.length){
+    html += `<div class="search-group-label">Creatives (${results.creatives.length})</div>`;
+    results.creatives.slice(0,6).forEach(cr=>{
+      html += `<div class="search-item" onclick="goToCreative('${cr.id}')">
+        <div class="search-item-icon">${platDot(cr.platform)}</div>
+        <div class="search-item-body">
+          <div class="search-item-name">${cr.name||cr.id}</div>
+          <div class="search-item-sub">${cr.id}</div>
+        </div>
+        <div class="search-item-tag">Creative</div>
+      </div>`;
+    });
+    if(results.creatives.length>6) html+=`<div class="search-empty" style="padding:6px 16px;font-size:10px">+${results.creatives.length-6} more</div>`;
+  }
+
+  el.innerHTML = html;
+}
+
+function onSearchKey(e){
+  const items = document.querySelectorAll('#searchResults .search-item');
+  if(!items.length) return;
+  if(e.key==='ArrowDown'){ e.preventDefault(); _searchIdx=Math.min(_searchIdx+1,items.length-1); }
+  else if(e.key==='ArrowUp'){ e.preventDefault(); _searchIdx=Math.max(_searchIdx-1,0); }
+  else if(e.key==='Enter'){ if(_searchIdx>=0) items[_searchIdx].click(); return; }
+  items.forEach((el,i)=>el.classList.toggle('active',i===_searchIdx));
+  if(_searchIdx>=0) items[_searchIdx].scrollIntoView({block:'nearest'});
+}
+
+function goToCamp(id){
+  closeSearch();
+  switchTab('campaigns');
+  TS.expanded[id]=true;
+  setTimeout(()=>{
+    if(S.data) renderTree(S.data);
+    setTimeout(()=>{
+      const el=document.querySelector(`[data-camp-id="${id}"]`);
+      if(el) el.scrollIntoView({behavior:'smooth',block:'center'});
+    },100);
+  },50);
+}
+
+function goToAdset(asId, campId){
+  closeSearch();
+  AS.filterCamp={id:campId, name:''};
+  AS.filterAdset=null;
+  AS.expanded[asId]=true;
+  switchTab('adsets');
+  setTimeout(()=>{
+    if(S.data){ buildAsWkItems(S.data); renderAdsets(S.data); }
+    setTimeout(()=>{
+      const el=document.querySelector(`[data-as-id="${asId}"]`);
+      if(el) el.scrollIntoView({behavior:'smooth',block:'center'});
+    },100);
+  },50);
+}
+
+function goToCreative(crId){
+  closeSearch();
+  switchTab('creatives');
+  setTimeout(()=>{
+    if(S.data) renderCreatives(S.data);
+    setTimeout(()=>{
+      const el=document.querySelector(`[data-cr-id="${crId}"]`);
+      if(el) el.scrollIntoView({behavior:'smooth',block:'center'});
+    },100);
+  },50);
+}
+
 </script>
 </body>
 </html>
