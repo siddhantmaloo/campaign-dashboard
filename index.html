@@ -2003,8 +2003,7 @@ function campWeekData(c, w){
       const wkOrd31=Object.keys(c._dailyOrd31||{}).filter(ds=>weekKey(new Date(ds+'T00:00:00Z'))===w.isoWk).reduce((s,ds)=>s+(c._dailyOrd31[ds]||0),0);
       const wkOrdOt=Object.keys(c._dailyOrdOt||{}).filter(ds=>weekKey(new Date(ds+'T00:00:00Z'))===w.isoWk).reduce((s,ds)=>s+(c._dailyOrdOt[ds]||0),0);
       return computeLtvROAS(wd.rev,wkOrd31,wkOrdOt,wd.spend);
-    })(),
-    projroas:null
+    })()
   };
 }
 
@@ -2299,13 +2298,14 @@ function renderTree(d){
     const d3cplTag=matureWk('d3cost')&&d3cost?tagD3(d3cost):'na';
     const d7cplTag=matureWk('d7cost')&&d7cost?tagD7(d7cost):'na';
     const roasTag =matureWk('roas')&&roas?tagROAS(roas):'na';
-    const ps=projSignal(c,d);
+    const {health,conf}=computeSignalHealth(c,d);
+    const action=getAction(health,conf,c.age,false);
 
-    return {health:ps.health,conf:ps.conf,
+    return {health,conf,action,
       spend:totSpend,leads:totLeads,cpl,roas,
       cpm,cpc,ctr,c2db,
       subs,cps:subs>0?totSpend/subs:null,
-      rev:totRev,projroas:ps.projROAS||null,l2s:totLeads>0?subs/totLeads*100:0,
+      rev:totRev,l2s:totLeads>0?subs/totLeads*100:0,
       d1pct,d3pct,d3cost,d7pct,d7cost,d10pct,
       paidroas:roas||null, adjroas:totRev>0&&(totSpend+totLeads*T.waCost)>0?totRev/(totSpend+totLeads*T.waCost):null,
       ltvRoas:computeLtvROAS(totRev,totOrd31,totOrdOt,totSpend)};
@@ -2332,8 +2332,11 @@ function renderTree(d){
     const c2db=totClicks>0&&totLeads>0?totLeads/totClicks*100:null;
     const d3cost=totD3att>0?totSpend/totD3att:null;
     const d7cost=totD7att>0?totSpend/totD7att:null;
-    const _cT=tagCPL(cpl),_d3T=d3cost?tagD3(d3cost):'na',_d7T=d7cost?tagD7(d7cost):'na',_rT=tagROAS(roas);
-    const health=healthScore(_cT,_d3T,_d7T,_rT),conf=tagConf(totSpend);
+    // Grand total health = spend-weighted avg of individual campaign signal health
+    const _campHealthData=camps.map(c=>{const {health:ch,conf:cc}=computeSignalHealth(c,d);const sp4=(d.weeks||[]).map(w=>w.key).sort().reverse().filter(wk=>c.weekly[wk]?.spend>0).slice(0,4).reduce((s,wk)=>s+(c.weekly[wk]?.spend||0),0);return {health:ch,spend:sp4};});
+    const _totalSp4=_campHealthData.reduce((s,x)=>s+x.spend,0);
+    const health=_totalSp4>0?Math.round(_campHealthData.reduce((s,x)=>s+(x.health*x.spend),0)/_totalSp4):0;
+    const conf=tagConf(totSpend);
     return {health,conf,spend:totSpend,leads:totLeads,cpl,roas,cpm,cpc,ctr,c2db,
       subs:totSubs,cps:totSubs>0?totSpend/totSubs:null,rev:totRev,
       l2s:totLeads>0&&totSubs>0?totSubs/totLeads*100:0,
@@ -2347,7 +2350,6 @@ function renderTree(d){
 
   let thCells=`<th style="min-width:240px;text-align:left;padding:7px 10px;background:var(--bg3);border-bottom:1px solid var(--border);position:sticky;left:0;z-index:3;font-family:var(--font-mono);font-size:9px;letter-spacing:.08em;color:var(--text3);text-transform:uppercase">Campaign</th>`;
   COLS.forEach((col,ci)=>{ thCells+=`<th class="${ci===0?'col-sep':''}">${col.label}</th>`; });
-  thCells+=`<th>Signal ROAS</th>`;
 
   // Sort campaigns by spend in selected weeks (descending)
   camps.sort((a,b)=>(weeks.reduce((s,w)=>s+(b.weekly[w.key]?.spend||0),0))-(weeks.reduce((s,w)=>s+(a.weekly[w.key]?.spend||0),0)));
@@ -2358,14 +2360,13 @@ function renderTree(d){
     const agg=campAgg(c);
     // Skip campaigns with no spend in selected weeks
     if(!agg.spend||agg.spend===0) return;
-    const ps=projSignal(c,d); // projected signal for action tag in name
     let cc=`<td style="position:sticky;left:0;background:${isOpen?'var(--bg3)':'var(--bg2)'};z-index:1">
       <div class="tree-name tree-indent-1">
         <span class="tree-toggle${isOpen?' open':''}">›</span>
         <span class="plat-dot ${c.platform}"></span>
         <div>
           <div class="tree-name-main" title="${c.name}">${campShort(c.name)}</div>
-          <div class="tree-name-sub">${c.adsets.length} adsets · ${weeks.length}wk total <span class="drill-hint">· dbl-click → ad sets</span></div>
+          <div class="tree-name-sub">${aTag(agg.action)} · ${c.adsets.length} adsets <span class="drill-hint">· dbl-click → ad sets</span></div>
         </div>
       </div></td>`;
     COLS.forEach((col,ci)=>{ 
@@ -2475,7 +2476,7 @@ function renderTree(d){
                 rev:Math.round(ds*(wd.roas||1)),roas:wd.roas,
                 l2s:dl>0?dSubs/dl*100:null,
                 d1pct:wd.d1pct,d3pct:wd.d3pct,d3cost:wd.d3cost,
-                d7pct:wd.d7pct,d7cost:wd.d7cost,d10pct:wd.d10pct,paidroas:wd.roas||null,adjroas:wd.rev>0&&((wd.spend||0)+(dl*T.waCost))>0?wd.rev/((wd.spend||0)+(dl*T.waCost)):null,ltvRoas:computeLtvROAS(wd.rev,(wd.ord31||0)/7,(wd.ordOt||0)/7,ds),projroas:null};
+                d7pct:wd.d7pct,d7cost:wd.d7cost,d10pct:wd.d10pct,paidroas:wd.roas||null,adjroas:wd.rev>0&&((wd.spend||0)+(dl*T.waCost))>0?wd.rev/((wd.spend||0)+(dl*T.waCost)):null,ltvRoas:computeLtvROAS(wd.rev,(wd.ord31||0)/7,(wd.ordOt||0)/7,ds)};
               let dc=`<td style="position:sticky;left:0;background:var(--bg);z-index:1">
                 <div class="tree-name tree-indent-3">
                   <span style="width:14px;display:inline-block;flex-shrink:0;color:var(--text3);font-size:9px">•</span>
@@ -2879,8 +2880,7 @@ function renderAdsets(d){
     const c2db=totClicks>0&&totLeads>0?totLeads/totClicks*100:null;
     const d3cost=totD3att>0?totSpend/totD3att:null;
     const d7cost=totD7att>0?totSpend/totD7att:null;
-    const cplT=tagCPL(cpl),d3T=d3cost?tagD3(d3cost):'na',d7T=d7cost?tagD7(d7cost):'na',rT=tagROAS(roas);
-    const health=healthScore(cplT,d3T,d7T,rT),conf=tagConf(totSpend);
+    const {health,conf}=computeSignalHealth(a,d);
     return {health,conf,spend:totSpend,cpm,cpc,ctr,c2db,leads:totLeads,cpl,
       subs:totSubs,cps:totSubs>0?totSpend/totSubs:null,
       rev:totRev,roas,l2s:totLeads>0&&totSubs>0?totSubs/totLeads*100:null,
@@ -2890,20 +2890,7 @@ function renderAdsets(d){
       d7pct:totLeads>0?Math.round(totD7att/totLeads*100):0, d7cost,
       d10pct:totLeads>0?Math.round(totD10att/totLeads*100):0,
       paidroas:roas||null, adjroas:totRev>0&&(totSpend+totLeads*T.waCost)>0?totRev/(totSpend+totLeads*T.waCost):null,
-      ltvRoas:computeLtvROAS(totRev,totOrd31,totOrdOt,totSpend),
-      projroas:(()=>{
-        const parentCamp=d.camps.find(c=>c.id===a.campId);
-        if(!parentCamp) return null;
-        const ratios=calcRatios(parentCamp,d,false);
-        const d1p=getCampaignD1pct(parentCamp,d);
-        // Use most recent week's CPL (not aggregate over selected weeks)
-        const allWks=(d.weeks||[]).map(w=>w.key).sort().reverse();
-        const recentWk=allWks.find(wk=>a.weekly?.[wk]?.spend>0&&a.weekly?.[wk]?.leads>0);
-        const recentCPL=recentWk?a.weekly[recentWk].spend/a.weekly[recentWk].leads:cpl;
-        if(!recentCPL) return null;
-        const projD7cost=recentCPL/(d1p*(ratios.d7d1||0.203));
-        return ratios.roasPerD7cost?ratios.roasPerD7cost/projD7cost:null;
-      })()};
+      ltvRoas:computeLtvROAS(totRev,totOrd31,totOrdOt,totSpend)};
   }
   function asWeekData(a,w){
     const wd=a.weekly?.[w.key]||{spend:0,leads:0};
@@ -2923,8 +2910,7 @@ function renderAdsets(d){
         const wkOrd31=Object.keys(a._dailyOrd31||{}).filter(ds=>weekKey(new Date(ds+'T00:00:00Z'))===w.isoWk).reduce((s,ds)=>s+(a._dailyOrd31[ds]||0),0);
         const wkOrdOt=Object.keys(a._dailyOrdOt||{}).filter(ds=>weekKey(new Date(ds+'T00:00:00Z'))===w.isoWk).reduce((s,ds)=>s+(a._dailyOrdOt[ds]||0),0);
         return computeLtvROAS(wd.rev,wkOrd31,wkOrdOt,wd.spend);
-      })(),
-      projroas:null};  // Signal ROAS is projection-only, not shown at week level
+      })()};
   }
 
   let thCells=`<th style="min-width:240px;text-align:left;padding:7px 10px;background:var(--bg3);border-bottom:1px solid var(--border);position:sticky;left:0;z-index:3;font-family:var(--font-mono);font-size:9px;letter-spacing:.08em;color:var(--text3);text-transform:uppercase">
@@ -2932,7 +2918,6 @@ function renderAdsets(d){
     ${filterLabel?`<span class="filter-pill">${filterLabel} <span onclick="clearAsFilter()" style="cursor:pointer;margin-left:4px;opacity:.7">✕</span></span>`:''}
   </th>`;
   COLS.forEach((col,ci)=>{ thCells+=`<th class="${ci===0?'col-sep':''}">${col.label}</th>`; });
-  thCells+=`<th>Signal ROAS</th>`;
 
   const rows=[];
   adsets.forEach(a=>{
@@ -2952,7 +2937,6 @@ function renderAdsets(d){
       const val=(col.k==='health'||col.k==='conf')?'<span style="color:var(--text3)">—</span>':cellVal(agg,col,weeks.length>0?isMature(weeks[weeks.length-1].key,col.k):false);
       ac+=`<td class="${ci===0?'col-sep':''}">${val}</td>`; 
     });
-    ac+=`<td>${cellVal(agg,{k:'projroas'},true)}</td>`;
     rows.push(`<tr class="row-camp${isOpen?' open':''}"
       onclick="toggleAsRow('${a.id}')"
       ondblclick="drillToCreatives('${a.id}','${a.name.replace(/'/g,"\\'")}','${a.campId}');event.stopPropagation()"
@@ -3122,8 +3106,7 @@ function renderCreatives(d){
     const c2db=totClicks>0&&totLeads>0?totLeads/totClicks*100:null;
     const d3cost=totD3att>0?totSpend/totD3att:null;
     const d7cost=totD7att>0?totSpend/totD7att:null;
-    const cplT=tagCPL(cpl),d3T=d3cost?tagD3(d3cost):'na',d7T=d7cost?tagD7(d7cost):'na',rT=tagROAS(roas);
-    const health=healthScore(cplT,d3T,d7T,rT),conf=tagConf(totSpend);
+    const {health,conf}=computeSignalHealth(cr,d);
     return {health,conf,spend:totSpend,cpm,cpc,ctr,c2db,leads:totLeads,cpl,
       subs:totSubs,cps:totSubs>0?totSpend/totSubs:null,
       rev:totRev,roas,l2s:totLeads>0&&totSubs>0?totSubs/totLeads*100:null,
@@ -4289,6 +4272,29 @@ function loadSample(){
   renderAll(S.data);
   showToast('Sample data loaded','Week 23 · Meta + Google · 6 campaigns');
 }
+
+// ── Recency-weighted health from last 4 weeks (independent of week filter) ──
+function computeSignalHealth(entity, d){
+  const allWks=(d.weeks||[]).map(w=>w.key).sort().reverse();
+  const recentWks=allWks.filter(wk=>entity.weekly?.[wk]?.spend>0).slice(0,4);
+  if(!recentWks.length) return {health:0,conf:'low'};
+  const weights=[0.4,0.3,0.2,0.1];
+  let wH=0,wT=0,sp4=0;
+  recentWks.forEach((wk,i)=>{
+    const wd=entity.weekly[wk]; if(!wd) return;
+    sp4+=wd.spend||0;
+    const age=(window._approxAgeMap&&window._approxAgeMap[wk]!==undefined)?window._approxAgeMap[wk]:90;
+    const cpl=wd.leads>0?wd.spend/wd.leads:null;
+    const d3T=age>=14&&wd.d3cost?tagD3(wd.d3cost):'na';
+    const d7T=age>=21&&wd.d7cost?tagD7(wd.d7cost):'na';
+    const roasT=age>=28&&wd.roas?tagROAS(wd.roas):'na';
+    const wkH=healthScore(tagCPL(cpl),d3T,d7T,roasT);
+    const w=weights[i]||0;
+    wH+=wkH*w; wT+=w;
+  });
+  return {health:wT>0?Math.round(wH/wT):0, conf:tagConf(sp4)};
+}
+
 function renderAll(d){ renderOverview(d); renderCampaigns(d); renderAdsets(d); renderCreatives(d); }
 
 // ═══════════════════════════════════════
