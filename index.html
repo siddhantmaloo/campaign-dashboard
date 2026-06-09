@@ -854,6 +854,14 @@ td:first-child{text-align:left;}
           </div>
         </div>
         <div class="tb-sep"></div>
+        <span class="dr-sep">or</span>
+        <div class="dr-wrap">
+          <input type="date" id="tsDrFrom" class="dr-input" oninput="applyTsDr()" onchange="applyTsDr()">
+          <span class="dr-sep">&#8594;</span>
+          <input type="date" id="tsDrTo" class="dr-input" oninput="applyTsDr()" onchange="applyTsDr()">
+          <span class="dr-clear" id="tsDrClear" style="display:none" onclick="clearTsDr()">&#10005;</span>
+        </div>
+        <div class="tb-sep"></div>
         <div class="wk-dd-wrap">
           <button class="wk-dd-btn" id="tsActionBtn" onclick="toggleActionDrop(event)" style="min-width:130px">
             <span id="tsActionLabel">Action: All</span><span class="wk-dd-arrow">▾</span>
@@ -2307,6 +2315,62 @@ function updateAsWkLabel(){}
 function updateCrWkLabel(){}
 
 
+
+// ── CAMPAIGN DATE RANGE FILTER ──
+TS.drFrom=null; TS.drTo=null;
+
+function aggByDateRangeCamp(c, from, to){
+  const f=from||'0000-01-01', t=to||'9999-12-31';
+  const spDaily=c._dailySpend||{}, attDaily=c._dailyAtt||{};
+  const revDaily=c._dailyRev||{}, subsDaily=c._dailySubs||{};
+  let spend=0,impr=0,clicks=0,leads=0,d1=0,d3=0,d7=0,d10=0,rev=0,subs=0;
+  Object.entries(spDaily).forEach(function([ds,sp]){
+    if(ds<f||ds>t) return;
+    spend+=sp.spend||0; impr+=sp.impr||0; clicks+=sp.clicks||0;
+    rev+=revDaily[ds]||0; subs+=subsDaily[ds]||0;
+    const att=attDaily[ds]||{};
+    leads+=att.leads||0; d1+=att.d1||0; d3+=att.d3||0; d7+=att.d7||0; d10+=att.d10||0;
+  });
+  const cpl=leads>0&&spend>0?spend/leads:null;
+  const roas=spend>0&&rev>0?rev/spend:null;
+  const cpm=impr>0?spend/impr*1000:null;
+  const cpc=clicks>0?spend/clicks:null;
+  const ctr=impr>0?clicks/impr*100:null;
+  const c2db=clicks>0&&leads>0?leads/clicks*100:null;
+  const d3cost=d3>0&&spend>0?spend/d3:null;
+  const d7cost=d7>0&&spend>0?spend/d7:null;
+  const sh=computeSignalHealth(c,S.data);
+  const action=getAction(sh.health,sh.conf,c.age,false);
+  return {health:sh.health,conf:sh.conf,action,spend:spend||null,cpm,cpc,ctr,c2db,
+    leads:leads||null,cpl,subs:subs||null,cps:subs>0&&spend>0?spend/subs:null,
+    rev:rev||null,roas,l2s:leads>0&&subs>0?subs/leads*100:null,
+    d1pct:leads>0?Math.round(d1/leads*100)||null:null,
+    d3pct:leads>0?Math.round(d3/leads*100)||null:null,d3cost,
+    d7pct:leads>0?Math.round(d7/leads*100)||null:null,d7cost,
+    d10pct:leads>0?Math.round(d10/leads*100)||null:null,
+    paidroas:roas||null,
+    adjroas:rev>0&&(spend+(leads||0)*T.waCost)>0?rev/(spend+(leads||0)*T.waCost):null,
+    ltvRoas:computeLtvROAS(rev,0,0,spend)};
+}
+
+function applyTsDr(){
+  TS.drFrom=document.getElementById('tsDrFrom').value||null;
+  TS.drTo=document.getElementById('tsDrTo').value||null;
+  const on=!!(TS.drFrom&&TS.drTo&&TS.drFrom<=TS.drTo);
+  const clr=document.getElementById('tsDrClear'); if(clr) clr.style.display=on?'':'none';
+  const wkBtn=document.getElementById('tsWkBtn'); if(wkBtn) wkBtn.classList.toggle('wk-dimmed',on);
+  ['tsDrFrom','tsDrTo'].forEach(function(id){const el=document.getElementById(id);if(el)el.classList.toggle('active',on);});
+  if(S.data) renderTree(S.data);
+}
+
+function clearTsDr(){
+  TS.drFrom=null; TS.drTo=null;
+  ['tsDrFrom','tsDrTo'].forEach(function(id){const el=document.getElementById(id);if(el){el.value='';el.classList.remove('active');}});
+  const clr=document.getElementById('tsDrClear'); if(clr) clr.style.display='none';
+  const wkBtn=document.getElementById('tsWkBtn'); if(wkBtn) wkBtn.classList.remove('wk-dimmed');
+  if(S.data) renderTree(S.data);
+}
+
 // ── ACTION FILTER ──
 const ACTION_FILTER={selected:{'scale-relaunch':true,'scale':true,'watch':true,'wind-down':true,'drop':true,'too-early':true}};
 const ACTION_OPTS=['scale-relaunch','scale','watch','wind-down','drop','too-early'];
@@ -2437,11 +2501,10 @@ function renderTree(d){
   const rows=[];
   camps.forEach(c=>{
     const isOpen=!!TS.expanded[c.id];
-    const agg=campAgg(c);
-    // Skip campaigns with no spend in selected weeks
+    const _tsDrOn=!!(TS.drFrom&&TS.drTo&&TS.drFrom<=TS.drTo);
+    const agg=_tsDrOn?aggByDateRangeCamp(c,TS.drFrom,TS.drTo):campAgg(c);
     if(!agg.spend||agg.spend===0) return;
-    // Action filter
-    if(!ACTION_OPTS.every(a=>ACTION_FILTER.selected[a])&&!ACTION_FILTER.selected[agg.action||'drop']) return;
+    if(!ACTION_OPTS.every(function(a){return ACTION_FILTER.selected[a]})&&!ACTION_FILTER.selected[agg.action||'drop']) return;
     let cc=`<td style="position:sticky;left:0;background:${isOpen?'var(--bg3)':'var(--bg2)'};z-index:1">
       <div class="tree-name tree-indent-1">
         <span class="tree-toggle${isOpen?' open':''}">›</span>
