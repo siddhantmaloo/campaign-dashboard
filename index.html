@@ -461,6 +461,18 @@ td:first-child{text-align:left;}
 .cat-chip{display:inline-flex;align-items:center;padding:4px 12px;border-radius:3px;border:1px solid var(--border2);background:transparent;color:var(--text3);font-family:var(--font-mono);font-size:10px;cursor:pointer;transition:all .12s;letter-spacing:.05em;}
 .cat-chip:hover{color:var(--text2);border-color:var(--accent);}
 .cat-chip.active{background:rgba(124,106,247,.15);color:var(--accent);border-color:var(--accent);}
+
+/* ── DATE RANGE FILTER ── */
+.dr-wrap{display:flex;align-items:center;gap:5px;}
+.dr-input{width:110px;padding:3px 7px;background:var(--bg3);border:1px solid var(--border2);border-radius:3px;color:var(--text);font-family:var(--font-mono);font-size:10px;outline:none;cursor:pointer;transition:border-color .12s;}
+.dr-input:focus{border-color:var(--accent);}
+.dr-input.active{border-color:var(--accent);background:rgba(124,106,247,.1);}
+.dr-input::-webkit-calendar-picker-indicator{filter:invert(0.6);cursor:pointer;margin-left:2px;}
+.dr-sep{font-family:var(--font-mono);font-size:9px;color:var(--text3);}
+.dr-clear{cursor:pointer;color:var(--text3);font-size:13px;transition:color .12s;line-height:1;}
+.dr-clear:hover{color:var(--text);}
+.wk-dd-btn.wk-dimmed{opacity:.35;pointer-events:none;}
+
 .fade-in{animation:fadeIn .28s ease both;}
 @keyframes fadeIn{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:none}}
 </style>
@@ -923,6 +935,14 @@ td:first-child{text-align:left;}
             </div>
             <div id="asWkItems"></div>
           </div>
+        </div>
+        <div class="tb-sep"></div>
+        <span class="dr-sep">or</span>
+        <div class="dr-wrap">
+          <input type="date" id="asDrFrom" class="dr-input" oninput="applyAsDr()" onchange="applyAsDr()">
+          <span class="dr-sep">&#8594;</span>
+          <input type="date" id="asDrTo" class="dr-input" oninput="applyAsDr()" onchange="applyAsDr()">
+          <span class="dr-clear" id="asDrClear" style="display:none" onclick="clearAsDr()">&#10005;</span>
         </div>
         <div class="tb-sep"></div>
         <div class="wk-dd-wrap">
@@ -2904,6 +2924,63 @@ function asWkAll(){ if(!S.data) return; S.data.weeks.forEach(w=>AS.weeks[w.key]=
 function asWkNone(){ if(!S.data) return; S.data.weeks.forEach(w=>AS.weeks[w.key]=false); document.querySelectorAll('#asWkItems input').forEach(cb=>cb.checked=false); updateAsWkLabel(S.data); renderAdsets(S.data); }
 
 
+
+// ── ADSET DATE RANGE FILTER ──
+AS.drFrom=null; AS.drTo=null;
+
+function aggByDateRangeAs(a, from, to){
+  const f=from||'0000-01-01', t=to||'9999-12-31';
+  const spDaily=a._dailySpend||{}, attDaily=a._dailyAtt||{};
+  const revDaily=a._dailyRev||{}, subsDaily=a._dailySubs||{};
+  let spend=0,impr=0,clicks=0,leads=0,d1=0,d3=0,d7=0,d10=0,rev=0,subs=0;
+  Object.entries(spDaily).forEach(function([ds,sp]){
+    if(ds<f||ds>t) return;
+    spend+=sp.spend||0; impr+=sp.impr||0; clicks+=sp.clicks||0;
+    rev+=revDaily[ds]||0; subs+=subsDaily[ds]||0;
+    const att=attDaily[ds]||{};
+    leads+=att.leads||0; d1+=att.d1||0; d3+=att.d3||0; d7+=att.d7||0; d10+=att.d10||0;
+  });
+  const cpl=leads>0&&spend>0?spend/leads:null;
+  const roas=spend>0&&rev>0?rev/spend:null;
+  const cpm=impr>0?spend/impr*1000:null;
+  const cpc=clicks>0?spend/clicks:null;
+  const ctr=impr>0?clicks/impr*100:null;
+  const c2db=clicks>0&&leads>0?leads/clicks*100:null;
+  const d3cost=d3>0&&spend>0?spend/d3:null;
+  const d7cost=d7>0&&spend>0?spend/d7:null;
+  const sh=computeSignalHealth(a,S.data);
+  const action=getAction(sh.health,sh.conf,a.age,false);
+  return {health:sh.health,conf:sh.conf,action,spend:spend||null,cpm,cpc,ctr,c2db,
+    leads:leads||null,cpl,subs:subs||null,cps:subs>0&&spend>0?spend/subs:null,
+    rev:rev||null,roas,l2s:leads>0&&subs>0?subs/leads*100:null,
+    d1att:0,d3att:d3,d7att:d7,d10att:d10,
+    d1pct:leads>0?Math.round(d1/leads*100)||null:null,
+    d3pct:leads>0?Math.round(d3/leads*100)||null:null,d3cost,
+    d7pct:leads>0?Math.round(d7/leads*100)||null:null,d7cost,
+    d10pct:leads>0?Math.round(d10/leads*100)||null:null,
+    paidroas:roas||null,
+    adjroas:rev>0&&(spend+(leads||0)*T.waCost)>0?rev/(spend+(leads||0)*T.waCost):null,
+    ltvRoas:computeLtvROAS(rev,0,0,spend)};
+}
+
+function applyAsDr(){
+  AS.drFrom=document.getElementById('asDrFrom').value||null;
+  AS.drTo=document.getElementById('asDrTo').value||null;
+  const on=!!(AS.drFrom&&AS.drTo&&AS.drFrom<=AS.drTo);
+  const clr=document.getElementById('asDrClear'); if(clr) clr.style.display=on?'':'none';
+  const wkBtn=document.getElementById('asWkBtn'); if(wkBtn) wkBtn.classList.toggle('wk-dimmed',on);
+  ['asDrFrom','asDrTo'].forEach(function(id){const el=document.getElementById(id);if(el)el.classList.toggle('active',on);});
+  if(S.data) renderAdsets(S.data);
+}
+
+function clearAsDr(){
+  AS.drFrom=null; AS.drTo=null;
+  ['asDrFrom','asDrTo'].forEach(function(id){const el=document.getElementById(id);if(el){el.value='';el.classList.remove('active');}});
+  const clr=document.getElementById('asDrClear'); if(clr) clr.style.display='none';
+  const wkBtn=document.getElementById('asWkBtn'); if(wkBtn) wkBtn.classList.remove('wk-dimmed');
+  if(S.data) renderAdsets(S.data);
+}
+
 // ── ADSET ACTION FILTER ──
 const AS_ACTION_FILTER={selected:{'scale-relaunch':true,'scale':true,'watch':true,'wind-down':true,'drop':true,'too-early':true}};
 
@@ -3013,9 +3090,10 @@ function renderAdsets(d){
   const rows=[];
   adsets.forEach(a=>{
     const isOpen=!!AS.expanded[a.id];
-    const agg=asAgg(a);
+    const _asDrOn=!!(AS.drFrom&&AS.drTo&&AS.drFrom<=AS.drTo);
+    const agg=_asDrOn?aggByDateRangeAs(a,AS.drFrom,AS.drTo):asAgg(a);
     if(!agg.spend||agg.spend===0) return;
-    if(!ACTION_OPTS.every(a2=>AS_ACTION_FILTER.selected[a2])&&!AS_ACTION_FILTER.selected[agg.action||'drop']) return;
+    if(!ACTION_OPTS.every(function(a2){return AS_ACTION_FILTER.selected[a2]})&&!AS_ACTION_FILTER.selected[agg.action||'drop']) return;
     let ac=`<td style="position:sticky;left:0;background:${isOpen?'var(--bg3)':'var(--bg2)'};z-index:1">
       <div class="tree-name tree-indent-1">
         <span class="tree-toggle${isOpen?' open':''}">›</span>
