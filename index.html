@@ -2370,7 +2370,7 @@ function renderTree(d){
         </div>
       </div></td>`;
     COLS.forEach((col,ci)=>{ 
-      const val=(col.k==='health'||col.k==='conf')?'<span style="color:var(--text3)">—</span>':cellVal(agg,col,weeks.length>0?isMature(weeks[weeks.length-1].key,col.k):true);
+      const val=cellVal(agg,col,true);
       cc+=`<td class="${ci===0?'col-sep':''}">${val}</td>`; 
     });
     rows.push(`<tr class="row-camp${isOpen?' open':''}"
@@ -2934,7 +2934,7 @@ function renderAdsets(d){
         </div>
       </div></td>`;
     COLS.forEach((col,ci)=>{ 
-      const val=(col.k==='health'||col.k==='conf')?'<span style="color:var(--text3)">—</span>':cellVal(agg,col,weeks.length>0?isMature(weeks[weeks.length-1].key,col.k):false);
+      const val=cellVal(agg,col,weeks.length>0?isMature(weeks[weeks.length-1].key,col.k):false);
       ac+=`<td class="${ci===0?'col-sep':''}">${val}</td>`; 
     });
     rows.push(`<tr class="row-camp${isOpen?' open':''}"
@@ -3166,7 +3166,7 @@ function renderCreatives(d){
         </div>
       </div></td>`;
     COLS.forEach((col,ci)=>{
-      const val=(col.k==='health'||col.k==='conf')?'<span style="color:var(--text3)">—</span>':cellVal(agg,col,isMatureByAge(cr.age,col.k));
+      const val=cellVal(agg,col,isMatureByAge(cr.age,col.k));
       cc+=`<td class="${ci===0?'col-sep':''}">${val}</td>`;
     });
     rows.push(`<tr class="row-camp${isOpen?' open':''}"
