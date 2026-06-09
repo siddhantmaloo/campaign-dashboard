@@ -488,6 +488,7 @@ td:first-child{text-align:left;}
     <div class="header-title">Performance Dashboard</div>
   </div>
   <div class="header-right">
+    <div class="cohort-badge" id="dateRangeBadge" style="font-family:var(--font-mono);font-size:10px;color:var(--text2);letter-spacing:.04em"></div>
     <div class="cohort-badge" id="cohortBadge">Cohort: —</div>
     <button class="upload-btn" onclick="loadFromGSheets()" id="reloadBtn"><span class="udot" id="xlsxDot"></span>↺ RELOAD</button>
     <button class="upload-btn" onclick="loadSample()">LOAD SAMPLE</button>
@@ -3639,6 +3640,24 @@ function parseCSV(text){
   return rows;
 }
 
+function fmtBadgeDate(isoStr){
+  if(!isoStr) return '—';
+  const [y,m,d]=isoStr.split('-').map(Number);
+  const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return `${d} ${months[m-1]} ${y}`;
+}
+function setDateRangeBadge(parsed){
+  const el=document.getElementById('dateRangeBadge'); if(!el) return;
+  // Collect all spend dates from camps
+  let minD=null,maxD=null;
+  (parsed.camps||[]).forEach(c=>{
+    Object.keys(c._dailySpend||{}).forEach(dt=>{
+      if(!minD||dt<minD) minD=dt;
+      if(!maxD||dt>maxD) maxD=dt;
+    });
+  });
+  el.textContent=minD&&maxD?`${fmtBadgeDate(minD)} – ${fmtBadgeDate(maxD)}`:'';
+}
 function applyParsed(parsed,label){
   S.data=parsed;
   const _last6b=new Set(S.data.weeks.slice(-6).map(w=>w.key));
@@ -3648,6 +3667,7 @@ function applyParsed(parsed,label){
   S.data.batches.forEach((b,i)=>{ BS.selected[b.id]=(i<6); });
   document.getElementById('xlsxDot')?.classList.add('active');
   document.getElementById('cohortBadge').textContent=label;
+  setDateRangeBadge(parsed);
   const _last5wk=new Set(S.data.weeklyOv.slice(-6).map(w=>w.key));
   OVW.weeks={}; S.data.weeklyOv.forEach(w=>{ OVW.weeks[w.key]=_last5wk.has(w.key); });
   buildWkDropItems(S.data);
@@ -4563,6 +4583,7 @@ function loadSample(){
   S.data.batches.forEach((b,i)=>{ BS.selected[b.id]=(i<6); }); // default: last 6 batches
   document.getElementById('xlsxDot')?.classList.add('active');
   document.getElementById('cohortBadge').textContent='Sample Data';
+  setDateRangeBadge(S.data);
   OVW.weeks={}; S.data.weeklyOv.forEach(w=>{ OVW.weeks[w.key]=true; });
   buildWkDropItems(S.data);
   buildBatchDropItems(S.data);
