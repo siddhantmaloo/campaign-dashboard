@@ -2120,7 +2120,6 @@ function isMature(wk, col){
 function renderCampaigns(d){
   renderSignals(d);
   renderTree(d);
-  renderBatch(d);
 }
 
 // ── PROJECTION ENGINE (shared by signals + tree) ──
@@ -3539,8 +3538,9 @@ function closeModalOutside(e){ if(e.target===document.getElementById('modal')) c
 // ═══════════════════════════════════════
 function switchTab(t){
   S.tab=t;
-  document.querySelectorAll('.nav-tab').forEach((el,i)=>el.classList.toggle('active',['overview','campaigns','adsets','creatives'][i]===t));
+  document.querySelectorAll('.nav-tab').forEach((el,i)=>el.classList.toggle('active',['overview','campaigns','adsets','creatives','batch','insights'][i]===t));
   document.querySelectorAll('.tab-content').forEach(el=>el.classList.toggle('active',el.id===`tab-${t}`));
+  if(t==='batch'&&S.data) renderBatch(S.data);
 }
 function setCrSort(s,btn){ /* handled above */ }
 
@@ -4535,7 +4535,7 @@ function computeSignalHealth(entity, d){
   return {health:wT>0?Math.round(wH/wT):0, conf:tagConf(sp4)};
 }
 
-function renderAll(d){ renderOverview(d); renderCampaigns(d); renderAdsets(d); renderCreatives(d); }
+function renderAll(d){ renderOverview(d); renderCampaigns(d); renderAdsets(d); renderCreatives(d); renderBatch(d); }
 
 // ═══════════════════════════════════════
 // TOAST
