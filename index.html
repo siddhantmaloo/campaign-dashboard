@@ -401,8 +401,18 @@ td:first-child{text-align:left;}
 .tree-name-sub{font-size:9px;color:var(--text3);margin-top:1px;}
 .dim{color:var(--text3) !important;font-style:italic;}
 .filter-pill{display:inline-flex;align-items:center;gap:4px;margin-left:8px;padding:2px 8px;border-radius:10px;background:rgba(124,106,247,0.15);border:1px solid rgba(124,106,247,0.35);color:var(--accent);font-size:8px;font-weight:500;letter-spacing:.04em;vertical-align:middle;}
+
+.copy-id{font-family:var(--font-mono);font-size:9px;opacity:.45;cursor:pointer;transition:color .15s,opacity .15s;}
+.copy-id:hover{opacity:.8;}
+.copy-id.copied{color:#4ade80;opacity:1;}
+
 .drill-hint{color:var(--text3);font-size:9px;opacity:0;transition:opacity .15s;}
-.tree-table tr:hover .drill-hint{opacity:1;}
+.tree-table tr:hover 
+.copy-id{font-family:var(--font-mono);font-size:9px;opacity:.45;cursor:pointer;transition:color .15s,opacity .15s;}
+.copy-id:hover{opacity:.8;}
+.copy-id.copied{color:#4ade80;opacity:1;}
+
+.drill-hint{opacity:1;}
 
 .ts-proj-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:4px;}
 .ts-proj-card{background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:10px 12px;}
@@ -2552,7 +2562,7 @@ function renderTree(d){
         <span class="plat-dot ${c.platform}"></span>
         <div>
           <div class="tree-name-main" title="${c.name}">${campShort(c.name)}</div>
-          <div class="tree-name-sub">${aTag(agg.action)} · ${c.adsets.length} adsets <span class="drill-hint">· dbl-click → ad sets</span></div>
+          <div class="tree-name-sub">${aTag(agg.action)} · ${c.adsets.length} adsets · <span class="copy-id" onclick="copyId(this,'${c.id}')" title="Click to copy ID">${c.id}</span> <span class="drill-hint">· dbl-click → ad sets</span></div>
         </div>
       </div></td>`;
     COLS.forEach((col,ci)=>{ 
@@ -3204,7 +3214,7 @@ function renderAdsets(d){
         <span class="plat-dot ${a.platform}"></span>
         <div>
           <div class="tree-name-main" title="${a.name}">${a.name}</div>
-          <div class="tree-name-sub">${aTag(agg.action)} · ${campShort(a.campName||'')} <span class="drill-hint">· dbl-click → creatives</span></div>
+          <div class="tree-name-sub">${aTag(agg.action)} · ${campShort(a.campName||'')} · <span class="copy-id" onclick="copyId(this,'${a.id}')" title="Click to copy ID">${a.id}</span> <span class="drill-hint">· dbl-click → creatives</span></div>
         </div>
       </div></td>`;
     COLS.forEach((col,ci)=>{ 
@@ -3434,7 +3444,7 @@ function renderCreatives(d){
           <div class="tree-name-main" title="${cr.name} · ${cr.id}">${cr.name.length>36?cr.name.slice(0,34)+'…':cr.name}</div>
           <div class="tree-name-sub">
             <span class="tag ${themeColor[cr.theme]||'gray'}" style="font-size:8px;padding:1px 5px">${cr.theme}</span>
-            · <span style="font-size:9px;opacity:.5">${cr.id}</span>
+            · <span class="copy-id" onclick="copyId(this,'${cr.id}')" title="Click to copy ID">${cr.id}</span>
             · Age ${cr.age}d <span class="drill-hint">· dbl-click → ad set</span>
           </div>
         </div>
@@ -4821,6 +4831,15 @@ function goToCreative(crId){
       if(el) el.scrollIntoView({behavior:'smooth',block:'center'});
     },100);
   },50);
+}
+
+
+function copyId(el, id){
+  event.stopPropagation();
+  navigator.clipboard.writeText(id).then(()=>{
+    el.classList.add('copied');
+    setTimeout(()=>el.classList.remove('copied'), 1000);
+  });
 }
 
 </script>
