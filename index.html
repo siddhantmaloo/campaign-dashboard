@@ -4811,6 +4811,8 @@ function goToAdset(asId, campId){
 
 function goToCreative(crId){
   closeSearch();
+  CR.expanded=CR.expanded||{};
+  CR.expanded[crId]=true;
   switchTab('creatives');
   setTimeout(()=>{
     if(S.data) renderCreatives(S.data);
