@@ -3609,7 +3609,8 @@ function sheetToRows(wb, name){
 // GOOGLE SHEETS LOADER
 // ═══════════════════════════════════════
 const GS_ID='1iTL73Z2C98699uoM0CZnkVueBuVdPWMsE-QIpAEGbmo';
-const GS_URL=sheet=>`https://docs.google.com/spreadsheets/d/${GS_ID}/export?format=csv&sheet=${encodeURIComponent(sheet)}`;
+const GS_GIDS={name:32647719,spend:977093217,attend:1995427125,payment:1159200261};
+const GS_URL=key=>`https://docs.google.com/spreadsheets/d/${GS_ID}/export?format=csv&gid=${GS_GIDS[key]}`;
 
 function parseCsvLine(line){
   const result=[]; let cur='',inQ=false;
@@ -3665,10 +3666,10 @@ async function loadFromGSheets(){
   showToast('Loading data…','Google Sheets');
   try{
     const [nT,sT,aT,pT]=await Promise.all([
-      fetch(GS_URL('1_Name_Mapping')).then(r=>{if(!r.ok)throw new Error('Name Mapping');return r.text();}),
-      fetch(GS_URL('2_Spend_Data')).then(r=>{if(!r.ok)throw new Error('Spend Data');return r.text();}),
-      fetch(GS_URL('3_Attendance_Data')).then(r=>{if(!r.ok)throw new Error('Attendance Data');return r.text();}),
-      fetch(GS_URL('4_Payment_Data')).then(r=>{if(!r.ok)throw new Error('Payment Data');return r.text();})
+      fetch(GS_URL('name')).then(r=>{if(!r.ok)throw new Error('Name Mapping');return r.text();}),
+      fetch(GS_URL('spend')).then(r=>{if(!r.ok)throw new Error('Spend Data');return r.text();}),
+      fetch(GS_URL('attend')).then(r=>{if(!r.ok)throw new Error('Attendance Data');return r.text();}),
+      fetch(GS_URL('payment')).then(r=>{if(!r.ok)throw new Error('Payment Data');return r.text();})
     ]);
     const parsed=parseSheets(parseCSV(nT),parseCSV(sT),parseCSV(aT),parseCSV(pT));
     if(parsed){
