@@ -841,6 +841,19 @@ td:first-child{text-align:left;}
             <div id="tsWkItems"></div>
           </div>
         </div>
+        <div class="tb-sep"></div>
+        <div class="wk-dd-wrap">
+          <button class="wk-dd-btn" id="tsActionBtn" onclick="toggleActionDrop(event)" style="min-width:130px">
+            <span id="tsActionLabel">Action: All</span><span class="wk-dd-arrow">▾</span>
+          </button>
+          <div class="wk-dd-menu" id="tsActionMenu" onwheel="event.stopPropagation()">
+            <div class="wk-dd-actions">
+              <span class="wk-dd-link" onclick="actionSelectAll()">Select all</span>
+              <span class="wk-dd-link" onclick="actionSelectNone()">Clear</span>
+            </div>
+            <div id="tsActionItems"></div>
+          </div>
+        </div>
       </div>
       <div style="display:flex;align-items:center;gap:6px">
         <button class="tb-btn" onclick="expandAll()">Expand All</button>
@@ -2260,6 +2273,40 @@ function toggleCrDrop(e){ e.stopPropagation(); /* overridden below */ }
 function updateAsWkLabel(){}
 function updateCrWkLabel(){}
 
+
+// ── ACTION FILTER ──
+const ACTION_FILTER={selected:{'scale-relaunch':true,'scale':true,'watch':true,'wind-down':true,'drop':true,'too-early':true}};
+const ACTION_OPTS=['scale-relaunch','scale','watch','wind-down','drop','too-early'];
+const ACTION_LABELS={'scale-relaunch':'⬆ Scale + Relaunch','scale':'⬆ Scale','watch':'👁 Watch','wind-down':'↓ Wind Down','drop':'✕ Drop','too-early':'⏳ Too Early'};
+
+function toggleActionDrop(e){
+  e.stopPropagation();
+  buildActionItems();
+  document.getElementById('tsActionBtn').classList.toggle('open');
+  document.getElementById('tsActionMenu').classList.toggle('open');
+}
+function buildActionItems(){
+  const el=document.getElementById('tsActionItems'); if(!el) return;
+  el.innerHTML=ACTION_OPTS.map(a=>`
+    <div class="wk-dd-item" onclick="event.stopPropagation()">
+      <input type="checkbox" id="af_${a}" ${ACTION_FILTER.selected[a]?'checked':''} onchange="toggleActionFilter('${a}',this.checked)">
+      <label class="wk-dd-item-label" for="af_${a}">${ACTION_LABELS[a]}</label>
+    </div>`).join('');
+  updateActionLabel();
+}
+function updateActionLabel(){
+  const on=ACTION_OPTS.filter(a=>ACTION_FILTER.selected[a]);
+  const lbl=on.length===ACTION_OPTS.length?'Action: All':on.length===0?'Action: None':on.length===1?ACTION_LABELS[on[0]]:`Action: ${on.length} selected`;
+  const el=document.getElementById('tsActionLabel'); if(el) el.textContent=lbl;
+}
+function toggleActionFilter(action,checked){
+  ACTION_FILTER.selected[action]=checked;
+  updateActionLabel();
+  if(S.data) renderTree(S.data);
+}
+function actionSelectAll(){ ACTION_OPTS.forEach(a=>ACTION_FILTER.selected[a]=true); document.querySelectorAll('#tsActionItems input').forEach(cb=>cb.checked=true); updateActionLabel(); if(S.data) renderTree(S.data); }
+function actionSelectNone(){ ACTION_OPTS.forEach(a=>ACTION_FILTER.selected[a]=false); document.querySelectorAll('#tsActionItems input').forEach(cb=>cb.checked=false); updateActionLabel(); if(S.data) renderTree(S.data); }
+
 // ── S2: CAMPAIGN TREE ──
 function renderTree(d){
   const weeks=d.weeks.filter(w=>TS.weeks&&TS.weeks[w.key]!==false);
@@ -2360,6 +2407,8 @@ function renderTree(d){
     const agg=campAgg(c);
     // Skip campaigns with no spend in selected weeks
     if(!agg.spend||agg.spend===0) return;
+    // Action filter
+    if(!ACTION_OPTS.every(a=>ACTION_FILTER.selected[a])&&!ACTION_FILTER.selected[agg.action||'drop']) return;
     let cc=`<td style="position:sticky;left:0;background:${isOpen?'var(--bg3)':'var(--bg2)'};z-index:1">
       <div class="tree-name tree-indent-1">
         <span class="tree-toggle${isOpen?' open':''}">›</span>
