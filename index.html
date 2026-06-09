@@ -710,6 +710,7 @@ td:first-child{text-align:left;}
   <div class="nav-tab"         onclick="switchTab('campaigns')">Campaigns</div>
   <div class="nav-tab"         onclick="switchTab('adsets')">Ad Sets</div>
   <div class="nav-tab"         onclick="switchTab('creatives')">Creatives</div>
+  <div class="nav-tab"         onclick="switchTab('batch')">Batch Diagnostic</div>
 </nav>
 
 
@@ -883,41 +884,6 @@ td:first-child{text-align:left;}
     <div class="tree-scroll"><div id="treeTable"></div></div>
   </div>
 
-  <!-- S3: Batch Diagnostic -->
-  <div class="sec-hdr" style="margin-top:24px">
-    <span class="sec-lbl">Batch Diagnostic</span>
-    <div class="sec-line"></div>
-    <span style="font-family:var(--font-mono);font-size:9px;color:var(--text3)" id="batchWeekLabel"></span>
-  </div>
-  <div class="tbl-wrap fade-in" style="overflow:visible">
-    <div class="tbl-hdr">
-      <div style="display:flex;align-items:center;gap:10px">
-        <div class="tb-group">
-          <button class="tb-btn act-all" onclick="batchPlat('all',this)">ALL</button>
-          <button class="tb-btn" onclick="batchPlat('meta',this)">META</button>
-          <button class="tb-btn" onclick="batchPlat('google',this)">GOOGLE</button>
-        </div>
-        <div class="tb-sep"></div>
-        <div class="wk-dd-wrap" id="batchDropWrap">
-          <button class="wk-dd-btn" id="batchDropBtn" onclick="toggleBatchDrop(event)">
-            <span id="batchDropLabel">Batches: —</span><span class="wk-dd-arrow">▾</span>
-          </button>
-          <div class="wk-dd-menu" onwheel="event.stopPropagation()" id="batchDropMenu">
-            <div class="wk-dd-actions">
-              <span class="wk-dd-link" onclick="batchSelectAll()">Select all</span>
-              <span class="wk-dd-link" onclick="batchSelectNone()">Clear</span>
-            </div>
-            <div id="batchDropItems"></div>
-          </div>
-        </div>
-      </div>
-      <div style="display:flex;align-items:center;gap:6px">
-        <button class="tb-btn" onclick="batchExpandAll()">Expand All</button>
-        <button class="tb-btn" onclick="batchCollapseAll()">Collapse All</button>
-      </div>
-    </div>
-    <div class="tree-scroll"><div id="batchTable"></div></div>
-  </div>
 
 </div>
 
@@ -1011,6 +977,47 @@ td:first-child{text-align:left;}
       </div>
     </div>
     <div class="tree-scroll"><div id="creativeTable"></div></div>
+  </div>
+<!-- ══ BATCH DIAGNOSTIC ══ -->
+<div class="tab-content" id="tab-batch">
+  <div class="main" style="padding:18px 24px">
+
+  <!-- S3: Batch Diagnostic -->
+  <div class="sec-hdr" style="margin-top:24px">
+    <span class="sec-lbl">Batch Diagnostic</span>
+    <div class="sec-line"></div>
+    <span style="font-family:var(--font-mono);font-size:9px;color:var(--text3)" id="batchWeekLabel"></span>
+  </div>
+  <div class="tbl-wrap fade-in" style="overflow:visible">
+    <div class="tbl-hdr">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div class="tb-group">
+          <button class="tb-btn act-all" onclick="batchPlat('all',this)">ALL</button>
+          <button class="tb-btn" onclick="batchPlat('meta',this)">META</button>
+          <button class="tb-btn" onclick="batchPlat('google',this)">GOOGLE</button>
+        </div>
+        <div class="tb-sep"></div>
+        <div class="wk-dd-wrap" id="batchDropWrap">
+          <button class="wk-dd-btn" id="batchDropBtn" onclick="toggleBatchDrop(event)">
+            <span id="batchDropLabel">Batches: —</span><span class="wk-dd-arrow">▾</span>
+          </button>
+          <div class="wk-dd-menu" onwheel="event.stopPropagation()" id="batchDropMenu">
+            <div class="wk-dd-actions">
+              <span class="wk-dd-link" onclick="batchSelectAll()">Select all</span>
+              <span class="wk-dd-link" onclick="batchSelectNone()">Clear</span>
+            </div>
+            <div id="batchDropItems"></div>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px">
+        <button class="tb-btn" onclick="batchExpandAll()">Expand All</button>
+        <button class="tb-btn" onclick="batchCollapseAll()">Collapse All</button>
+      </div>
+    </div>
+    <div class="tree-scroll"><div id="batchTable"></div></div>
+  </div>
+
   </div>
 </div>
 </main>
