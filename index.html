@@ -924,6 +924,19 @@ td:first-child{text-align:left;}
             <div id="asWkItems"></div>
           </div>
         </div>
+        <div class="tb-sep"></div>
+        <div class="wk-dd-wrap">
+          <button class="wk-dd-btn" id="asActionBtn" onclick="toggleAsActionDrop(event)" style="min-width:130px">
+            <span id="asActionLabel">Action: All</span><span class="wk-dd-arrow">▾</span>
+          </button>
+          <div class="wk-dd-menu" id="asActionMenu" onwheel="event.stopPropagation()">
+            <div class="wk-dd-actions">
+              <span class="wk-dd-link" onclick="asActionSelectAll()">Select all</span>
+              <span class="wk-dd-link" onclick="asActionSelectNone()">Clear</span>
+            </div>
+            <div id="asActionItems"></div>
+          </div>
+        </div>
       </div>
       <div style="display:flex;align-items:center;gap:6px">
         <button class="tb-btn" onclick="asExpandAll()">Expand All</button>
@@ -2890,6 +2903,34 @@ function toggleAsWk(key,checked){ AS.weeks[key]=checked; if(S.data){updateAsWkLa
 function asWkAll(){ if(!S.data) return; S.data.weeks.forEach(w=>AS.weeks[w.key]=true); document.querySelectorAll('#asWkItems input').forEach(cb=>cb.checked=true); updateAsWkLabel(S.data); renderAdsets(S.data); }
 function asWkNone(){ if(!S.data) return; S.data.weeks.forEach(w=>AS.weeks[w.key]=false); document.querySelectorAll('#asWkItems input').forEach(cb=>cb.checked=false); updateAsWkLabel(S.data); renderAdsets(S.data); }
 
+
+// ── ADSET ACTION FILTER ──
+const AS_ACTION_FILTER={selected:{'scale-relaunch':true,'scale':true,'watch':true,'wind-down':true,'drop':true,'too-early':true}};
+
+function toggleAsActionDrop(e){
+  e.stopPropagation();
+  buildAsActionItems();
+  document.getElementById('asActionBtn').classList.toggle('open');
+  document.getElementById('asActionMenu').classList.toggle('open');
+}
+function buildAsActionItems(){
+  const el=document.getElementById('asActionItems'); if(!el) return;
+  el.innerHTML=ACTION_OPTS.map(a=>`
+    <div class="wk-dd-item" onclick="event.stopPropagation()">
+      <input type="checkbox" id="asaf_${a}" ${AS_ACTION_FILTER.selected[a]?'checked':''} onchange="toggleAsActionFilter('${a}',this.checked)">
+      <label class="wk-dd-item-label" for="asaf_${a}">${ACTION_LABELS[a]}</label>
+    </div>`).join('');
+  updateAsActionLabel();
+}
+function updateAsActionLabel(){
+  const on=ACTION_OPTS.filter(a=>AS_ACTION_FILTER.selected[a]);
+  const lbl=on.length===ACTION_OPTS.length?'Action: All':on.length===0?'Action: None':on.length===1?ACTION_LABELS[on[0]]:`Action: ${on.length} selected`;
+  const el=document.getElementById('asActionLabel'); if(el) el.textContent=lbl;
+}
+function toggleAsActionFilter(action,checked){ AS_ACTION_FILTER.selected[action]=checked; updateAsActionLabel(); if(S.data) renderAdsets(S.data); }
+function asActionSelectAll(){ ACTION_OPTS.forEach(a=>AS_ACTION_FILTER.selected[a]=true); document.querySelectorAll('#asActionItems input').forEach(cb=>cb.checked=true); updateAsActionLabel(); if(S.data) renderAdsets(S.data); }
+function asActionSelectNone(){ ACTION_OPTS.forEach(a=>AS_ACTION_FILTER.selected[a]=false); document.querySelectorAll('#asActionItems input').forEach(cb=>cb.checked=false); updateAsActionLabel(); if(S.data) renderAdsets(S.data); }
+
 // ── RENDER AD SETS ──
 function renderAdsets(d){
   const weeks=d.weeks.filter(w=>AS.weeks&&AS.weeks[w.key]!==false);
@@ -2930,7 +2971,8 @@ function renderAdsets(d){
     const d3cost=totD3att>0?totSpend/totD3att:null;
     const d7cost=totD7att>0?totSpend/totD7att:null;
     const {health,conf}=computeSignalHealth(a,d);
-    return {health,conf,spend:totSpend,cpm,cpc,ctr,c2db,leads:totLeads,cpl,
+    const action=getAction(health,conf,a.age,false);
+    return {health,conf,action,spend:totSpend,cpm,cpc,ctr,c2db,leads:totLeads,cpl,
       subs:totSubs,cps:totSubs>0?totSpend/totSubs:null,
       rev:totRev,roas,l2s:totLeads>0&&totSubs>0?totSubs/totLeads*100:null,
       d1att:totD1att,d3att:totD3att,d7att:totD7att,d10att:totD10att,
@@ -2972,14 +3014,15 @@ function renderAdsets(d){
   adsets.forEach(a=>{
     const isOpen=!!AS.expanded[a.id];
     const agg=asAgg(a);
-    if(!agg.spend||agg.spend===0) return; // hide adsets with no spend in selected weeks
+    if(!agg.spend||agg.spend===0) return;
+    if(!ACTION_OPTS.every(a2=>AS_ACTION_FILTER.selected[a2])&&!AS_ACTION_FILTER.selected[agg.action||'drop']) return;
     let ac=`<td style="position:sticky;left:0;background:${isOpen?'var(--bg3)':'var(--bg2)'};z-index:1">
       <div class="tree-name tree-indent-1">
         <span class="tree-toggle${isOpen?' open':''}">›</span>
         <span class="plat-dot ${a.platform}"></span>
         <div>
           <div class="tree-name-main" title="${a.name}">${a.name}</div>
-          <div class="tree-name-sub">${campShort(a.campName||'')} <span class="drill-hint">· dbl-click → creatives</span></div>
+          <div class="tree-name-sub">${aTag(agg.action)} · ${campShort(a.campName||'')} <span class="drill-hint">· dbl-click → creatives</span></div>
         </div>
       </div></td>`;
     COLS.forEach((col,ci)=>{ 
