@@ -489,8 +489,7 @@ td:first-child{text-align:left;}
   </div>
   <div class="header-right">
     <div class="cohort-badge" id="cohortBadge">Cohort: —</div>
-    <label class="upload-btn" for="xlsxUpload" id="xlsxUploadBtn"><span class="udot" id="xlsxDot"></span>UPLOAD XLSX</label>
-    <input type="file" id="xlsxUpload" accept=".xlsx,.xls">
+    <button class="upload-btn" onclick="loadFromGSheets()" id="reloadBtn"><span class="udot" id="xlsxDot"></span>↺ RELOAD</button>
     <button class="upload-btn" onclick="loadSample()">LOAD SAMPLE</button>
     <button class="settings-btn" onclick="openSettings()" title="Threshold Settings">⚙</button>
   </div>
@@ -3566,30 +3565,7 @@ function campShort(name){
 // ═══════════════════════════════════════
 // XLSX PARSER
 // ═══════════════════════════════════════
-document.getElementById('xlsxUpload').addEventListener('change', e=>{
-  const file=e.target.files[0]; if(!file) return;
-  showToast('Reading file…', file.name);
-  const reader=new FileReader();
-  reader.onload=ev=>{
-    try {
-      const wb=XLSX.read(ev.target.result,{type:'array'});
-      const parsed=parseXlsx(wb);
-      if(parsed){
-        S.data=parsed;
-        document.getElementById('xlsxDot').classList.add('active');
-        document.getElementById('cohortBadge').textContent='Live Data';
-        buildWkDropItems(S.data);
-        buildBatchDropItems(S.data);
-        buildAsWkItems(S.data);
-        buildCrWkItems(S.data);
-        buildKvMonthItems(S.data);
-        renderAll(S.data);
-        showToast('Data loaded ✓', `${parsed.camps.length} campaigns · ${parsed.creatives.length} creatives`);
-      }
-    } catch(err){ showToast('Parse error', err.message); console.error(err); }
-  };
-  reader.readAsArrayBuffer(file);
-});
+// XLSX file upload removed — data loads from Google Sheets
 
 function sheetToRows(wb, name){
   const ws=wb.Sheets[name]; if(!ws||!ws['!ref']) return [];
@@ -3628,6 +3604,86 @@ function sheetToRows(wb, name){
   });
   return rows;
 }
+
+// ═══════════════════════════════════════
+// GOOGLE SHEETS LOADER
+// ═══════════════════════════════════════
+const GS_ID='1iTL73Z2C98699uoM0CZnkVueBuVdPWMsE-QIpAEGbmo';
+const GS_URL=sheet=>`https://docs.google.com/spreadsheets/d/${GS_ID}/export?format=csv&sheet=${encodeURIComponent(sheet)}`;
+
+function parseCsvLine(line){
+  const result=[]; let cur='',inQ=false;
+  for(let i=0;i<line.length;i++){
+    const ch=line[i];
+    if(ch==='"'){ if(inQ&&line[i+1]==='"'){cur+='"';i++;}else inQ=!inQ; }
+    else if(ch===','&&!inQ){ result.push(cur); cur=''; }
+    else cur+=ch;
+  }
+  result.push(cur);
+  return result;
+}
+
+function parseCSV(text){
+  const lines=text.replace(/\r\n/g,'\n').replace(/\r/g,'\n').split('\n');
+  if(!lines.length) return [];
+  const headers=parseCsvLine(lines[0]);
+  const rows=[];
+  for(let i=1;i<lines.length;i++){
+    const line=lines[i]; if(!line.trim()) continue;
+    const vals=parseCsvLine(line);
+    const row={};
+    headers.forEach((h,j)=>{ const v=vals[j]!==undefined?vals[j]:''; row[h]=v===''?null:v; });
+    rows.push(row);
+  }
+  return rows;
+}
+
+function applyParsed(parsed,label){
+  S.data=parsed;
+  const _last6b=new Set(S.data.weeks.slice(-6).map(w=>w.key));
+  TS.weeks={}; S.data.weeks.forEach(w=>{ TS.weeks[w.key]=_last6b.has(w.key); });
+  AS.weeks={}; S.data.weeks.forEach(w=>{ AS.weeks[w.key]=_last6b.has(w.key); });
+  CR.weeks={}; S.data.weeks.forEach(w=>{ CR.weeks[w.key]=_last6b.has(w.key); });
+  S.data.batches.forEach((b,i)=>{ BS.selected[b.id]=(i<6); });
+  document.getElementById('xlsxDot')?.classList.add('active');
+  document.getElementById('cohortBadge').textContent=label;
+  const _last5wk=new Set(S.data.weeklyOv.slice(-6).map(w=>w.key));
+  OVW.weeks={}; S.data.weeklyOv.forEach(w=>{ OVW.weeks[w.key]=_last5wk.has(w.key); });
+  buildWkDropItems(S.data);
+  buildBatchDropItems(S.data);
+  buildAsWkItems(S.data);
+  buildCrWkItems(S.data);
+  buildOvWkItems(S.data);
+  buildKvMonthItems(S.data);
+  if(S.data.months&&S.data.months.length) setKvMonth(S.data.months[S.data.months.length-1].key);
+  renderAll(S.data);
+}
+
+async function loadFromGSheets(){
+  const btn=document.getElementById('reloadBtn');
+  if(btn){ btn.disabled=true; btn.textContent='Loading…'; }
+  showToast('Loading data…','Google Sheets');
+  try{
+    const [nT,sT,aT,pT]=await Promise.all([
+      fetch(GS_URL('1_Name_Mapping')).then(r=>{if(!r.ok)throw new Error('Name Mapping');return r.text();}),
+      fetch(GS_URL('2_Spend_Data')).then(r=>{if(!r.ok)throw new Error('Spend Data');return r.text();}),
+      fetch(GS_URL('3_Attendance_Data')).then(r=>{if(!r.ok)throw new Error('Attendance Data');return r.text();}),
+      fetch(GS_URL('4_Payment_Data')).then(r=>{if(!r.ok)throw new Error('Payment Data');return r.text();})
+    ]);
+    const parsed=parseSheets(parseCSV(nT),parseCSV(sT),parseCSV(aT),parseCSV(pT));
+    if(parsed){
+      applyParsed(parsed,'Live Data');
+      showToast('Data loaded ✓',`${parsed.camps.length} campaigns · ${parsed.creatives.length} creatives`);
+    } else { showToast('Parse error','No data returned'); loadSample(); }
+  } catch(e){
+    console.error('GSheets load error:',e);
+    showToast('Load failed — using sample',e.message);
+    loadSample();
+  } finally {
+    if(btn){ btn.disabled=false; btn.innerHTML='<span class="udot" id="xlsxDot"></span>↺ RELOAD'; }
+  }
+}
+
 
 function cleanId(v){
   if(v==null) return null;
@@ -3696,10 +3752,14 @@ function monthKey(date){ const d=new Date(date); return `${d.getUTCFullYear()}-$
 function platformFromId(id){ if(!id) return 'unknown'; return String(id).length>=15?'meta':'google'; }
 
 function parseXlsx(wb){
-  const names  = sheetToRows(wb,'1_Name_Mapping');
-  const spend  = sheetToRows(wb,'2_Spend_Data');
-  const attend = sheetToRows(wb,'3_Attendance_Data');
-  const payment= sheetToRows(wb,'4_Payment_Data');
+  return parseSheets(
+    sheetToRows(wb,'1_Name_Mapping'),
+    sheetToRows(wb,'2_Spend_Data'),
+    sheetToRows(wb,'3_Attendance_Data'),
+    sheetToRows(wb,'4_Payment_Data')
+  );
+}
+function parseSheets(names, spend, attend, payment){
 
 
 
@@ -4556,42 +4616,7 @@ document.addEventListener('click', ()=>{
   document.querySelectorAll('.wk-dd-menu.open').forEach(m=>m.classList.remove('open'));
 });
 
-document.addEventListener('DOMContentLoaded', async ()=>{
-  try {
-    showToast('Loading data…', 'data.xlsx');
-    const resp = await fetch('data.xlsx');
-    if(!resp.ok) throw new Error('file not found');
-    const buf = await resp.arrayBuffer();
-    const wb = XLSX.read(buf, {type:'array'});
-    const parsed = parseXlsx(wb);
-    if(parsed){
-      S.data = parsed;
-      const _last6b=new Set(S.data.weeks.slice(-6).map(w=>w.key));
-      TS.weeks={}; S.data.weeks.forEach(w=>{ TS.weeks[w.key]=_last6b.has(w.key); });
-      AS.weeks={}; S.data.weeks.forEach(w=>{ AS.weeks[w.key]=_last6b.has(w.key); });
-      CR.weeks={}; S.data.weeks.forEach(w=>{ CR.weeks[w.key]=_last6b.has(w.key); });
-      S.data.batches.forEach((b,i)=>{ BS.selected[b.id]=(i<6); }); // default: last 6 batches
-      document.getElementById('xlsxDot')?.classList.add('active');
-      document.getElementById('cohortBadge').textContent='Live Data';
-      const _last5wk=new Set(S.data.weeklyOv.slice(-6).map(w=>w.key));
-      OVW.weeks={}; S.data.weeklyOv.forEach(w=>{ OVW.weeks[w.key]=_last5wk.has(w.key); });
-      buildWkDropItems(S.data);
-      buildBatchDropItems(S.data);
-      buildAsWkItems(S.data);
-      buildCrWkItems(S.data);
-      buildOvWkItems(S.data);
-      buildKvMonthItems(S.data);
-      if(S.data.months&&S.data.months.length) setKvMonth(S.data.months[S.data.months.length-1].key);
-      renderAll(S.data);
-      showToast('Data loaded ✓', `${parsed.camps.length} campaigns · ${parsed.creatives.length} creatives`);
-    } else {
-      loadSample();
-    }
-  } catch(e){
-    // data.xlsx not found — fall back to sample data
-    loadSample();
-  }
-});
+document.addEventListener('DOMContentLoaded', ()=>{ loadFromGSheets(); });
 </script>
 </body>
 </html>
