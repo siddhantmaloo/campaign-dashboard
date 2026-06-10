@@ -5006,7 +5006,7 @@ function getGeminiKey(){ return localStorage.getItem('gemini_key')||''; }
 function renderChatBody(){
   const el=document.getElementById('aiBody');
   if(!getGeminiKey()){
-    el.innerHTML='<div class="ai-key-wrap"><div class="ai-key-label">Enter your Gemini API key to start<br><span style="opacity:.6">Free key at aistudio.google.com — stored only in your browser</span></div><input class="ai-key-input" id="aiKeyInput" type="password" placeholder="AIza..." value="'+(getGeminiKey()||'')+'"><div class="ai-key-label" style="margin-top:8px">Model <span style="opacity:.6">(try gemini-1.5-flash if errors)</span></div><input class="ai-key-input" id="aiModelInput" placeholder="gemini-1.5-flash" value="'+(localStorage.getItem('gemini_model')||'gemini-1.5-flash')+'"><button class="ai-key-btn" onclick="saveGeminiKey()">SAVE & START →</button></div>';
+    el.innerHTML='<div class="ai-key-wrap"><div class="ai-key-label">Enter your Gemini API key to start<br><span style="opacity:.6">Free key at aistudio.google.com — stored only in your browser</span></div><input class="ai-key-input" id="aiKeyInput" type="password" placeholder="AIza..." value="'+(getGeminiKey()||'')+'"><button class="ai-key-btn" style="background:var(--bg4);color:var(--text2);margin-top:4px" onclick="detectGeminiModels()">🔍 DETECT AVAILABLE MODELS</button><div class="ai-key-label" style="margin-top:8px">Model</div><input class="ai-key-input" id="aiModelInput" placeholder="gemini-1.5-flash" value="'+(localStorage.getItem('gemini_model')||'gemini-1.5-flash')+'"><div id="aiModelHint" style="font-family:var(--font-mono);font-size:9px;color:var(--text3);margin-top:4px"></div><button class="ai-key-btn" onclick="saveGeminiKey()">SAVE & START →</button></div>';
     return;
   }
   const SUGGESTIONS=['Which adsets should I scale this week?','Which creatives should I stop?','Where is budget being wasted?','What caused CPL to rise recently?','Give me a performance summary'];
@@ -5030,6 +5030,27 @@ function saveGeminiKey(){
 }
 function getGeminiModel(){ return localStorage.getItem('gemini_model')||'gemini-1.5-flash'; }
 function resetGeminiKey(){ localStorage.removeItem('gemini_key'); localStorage.removeItem('gemini_model'); CHAT.history=[]; renderChatBody(); }
+
+async function detectGeminiModels(){
+  const k=document.getElementById('aiKeyInput')?.value?.trim();
+  if(!k){alert('Enter your API key first');return;}
+  const hint=document.getElementById('aiModelHint');
+  hint.textContent='Detecting...';
+  try{
+    const resp=await fetch('https://generativelanguage.googleapis.com/v1beta/models?key='+k);
+    const json=await resp.json();
+    if(json.error){hint.textContent='Error: '+json.error.message;return;}
+    const models=(json.models||[])
+      .filter(m=>m.supportedGenerationMethods?.includes('generateContent'))
+      .map(m=>m.name.replace('models/',''));
+    if(!models.length){hint.textContent='No generateContent models found';return;}
+    // Pick best free model
+    const preferred=['gemini-1.5-flash','gemini-1.5-flash-8b','gemini-1.5-pro','gemini-2.0-flash-lite','gemini-pro'];
+    const best=preferred.find(p=>models.includes(p))||models[0];
+    document.getElementById('aiModelInput').value=best;
+    hint.textContent='Available: '+models.slice(0,6).join(', ')+(models.length>6?'...':'')+' → selected: '+best;
+  }catch(e){hint.textContent='Error: '+e.message;}
+}
 
 function aiKeyDown(e){ if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendAI();} }
 function aiAutoResize(el){ el.style.height='auto'; el.style.height=Math.min(el.scrollHeight,100)+'px'; }
