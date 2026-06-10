@@ -5052,30 +5052,25 @@ function copyDailyReport(){
 function aiKeyDown(e){ if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendAI();} }
 function aiAutoResize(el){ el.style.height='auto'; el.style.height=Math.min(el.scrollHeight,100)+'px'; }
 
-function serializeForAI(campDays=14, assetDays=7, crDays=7){
+function serializeForAI(campDays=7){
   if(!S.data) return 'No data loaded.';
   const d=S.data;
   const camps=d.camps.filter(c=>detectCat(c.name)==='14DayYoga');
   const allDates=[...new Set(camps.flatMap(c=>Object.keys(c._dailySpend||{})))].sort().filter(dt=>dt<'2099');
   if(!allDates.length) return 'No data.';
   const latestDt=allDates[allDates.length-1];
-  const last14=allDates.slice(-campDays);
-  const last7=allDates.slice(-assetDays);
-  const lastCr=allDates.slice(-crDays);
+  const lastN=allDates.slice(-campDays);
   const R=v=>v!=null&&!isNaN(v)&&v!==0?Math.round(v):'-';
   const F1=v=>v!=null&&!isNaN(v)&&v!==0?(Math.round(v*10)/10):'-';
-
-  const hdr='date|name|platform|spend|cpm|cpc|ctr%|leads|cpl|d1%|d3%|d7%|d10%|rev|subs';
-
-  // CAMPAIGN LEVEL — last 14 days
-  const campLines=['## CAMPAIGN DAILY (last 14 days)',hdr];
+  const lines=['KW 14DayYoga — latest:'+latestDt+' today:'+new Date().toDateString(),
+    'date|campaign|platform|spend|cpm|cpc|ctr%|leads|cpl|d1%|d3%|d7%|d10%|rev|subs'];
   camps.forEach(c=>{
-    last14.forEach(dt=>{
+    lastN.forEach(dt=>{
       const ds=c._dailySpend?.[dt]||{}; const da=c._dailyAtt?.[dt]||{};
       const sp=ds.spend||0; if(!sp) return;
       const ld=da.leads||0,im=ds.impr||0,cl=ds.clicks||0;
       const rv=(c._dailyRev?.[dt])||0,sb=(c._dailySubs?.[dt])||0;
-      campLines.push([dt,campShort(c.name),c.platform,
+      lines.push([dt,campShort(c.name),c.platform,
         R(sp),R(im>0?sp/im*1000:null),R(cl>0?sp/cl:null),F1(im>0?cl/im*100:null),
         ld,R(ld>0?sp/ld:null),
         F1(ld>0?(da.d1||0)/ld*100:null),F1(ld>0?(da.d3||0)/ld*100:null),
@@ -5083,63 +5078,16 @@ function serializeForAI(campDays=14, assetDays=7, crDays=7){
         R(rv),sb||0].join('|'));
     });
   });
-
-  // ADSET LEVEL — last 7 days, active only
-  const asLines=['\n## ADSET DAILY (last 7 days)',hdr.replace('name','adset')];
-  camps.forEach(c=>{
-    c.adsets.forEach(a=>{
-      let hasSpend=false;
-      last7.forEach(dt=>{if((a._dailySpend?.[dt]?.spend||0)>0)hasSpend=true;});
-      if(!hasSpend) return;
-      last7.forEach(dt=>{
-        const ds=a._dailySpend?.[dt]||{}; const da=a._dailyAtt?.[dt]||{};
-        const sp=ds.spend||0; if(!sp) return;
-        const ld=da.leads||0,im=ds.impr||0,cl=ds.clicks||0;
-        const rv=(a._dailyRev?.[dt])||0,sb=(a._dailySubs?.[dt])||0;
-        asLines.push([dt,a.name.slice(0,40),c.platform,
-          R(sp),R(im>0?sp/im*1000:null),R(cl>0?sp/cl:null),F1(im>0?cl/im*100:null),
-          ld,R(ld>0?sp/ld:null),
-          F1(ld>0?(da.d1||0)/ld*100:null),F1(ld>0?(da.d3||0)/ld*100:null),
-          F1(ld>0?(da.d7||0)/ld*100:null),F1(ld>0?(da.d10||0)/ld*100:null),
-          R(rv),sb||0].join('|'));
-      });
-    });
-  });
-
-  // CREATIVE LEVEL — last 7 days, top 25 by spend
-  const crSpend={};
-  (d.creatives||[]).forEach(cr=>{last7.forEach(dt=>{crSpend[cr.id]=(crSpend[cr.id]||0)+((cr._dailySpend?.[dt]?.spend)||0);});});
-  const topCrs=(d.creatives||[]).filter(cr=>(crSpend[cr.id]||0)>0).sort((a,b)=>(crSpend[b.id]||0)-(crSpend[a.id]||0)).slice(0,25);
-  const crLines=['\n## CREATIVE DAILY (last 7 days, top 25 by spend)','date|creative|adset|platform|spend|cpm|cpc|ctr%|leads|cpl|d1%|d3%|rev'];
-  topCrs.forEach(cr=>{
-    const asName=(d.camps.flatMap(cc=>cc.adsets).find(a=>a.id===cr.adset)?.name||'').slice(0,30);
-    lastCr.forEach(dt=>{
-      const ds=cr._dailySpend?.[dt]||{}; const da=cr._dailyAtt?.[dt]||{};
-      const sp=ds.spend||0; if(!sp) return;
-      const ld=da.leads||0,im=ds.impr||0,cl=ds.clicks||0,rv=(cr._dailyRev?.[dt])||0;
-      crLines.push([dt,(cr.name||cr.id).slice(0,35),asName,cr.platform,
-        R(sp),R(im>0?sp/im*1000:null),R(cl>0?sp/cl:null),F1(im>0?cl/im*100:null),
-        ld,R(ld>0?sp/ld:null),
-        F1(ld>0?(da.d1||0)/ld*100:null),F1(ld>0?(da.d3||0)/ld*100:null),
-        R(rv)].join('|'));
-    });
-  });
-
-  return 'KW 14DayYoga — latest data: '+latestDt+' | today: '+new Date().toDateString()
-    +'\n'+campLines.join('\n')
-    +'\n'+asLines.join('\n')
-    +'\n'+crLines.join('\n');
+  return lines.join('\n');
 }
 
 
 function detectPeriod(q){
   q=q.toLowerCase();
-  if(/yesterday|today|june? 9|jun 9|june? 10|jun 10/.test(q)) return {camp:2,as:2,cr:2,label:'yesterday'};
-  if(/last 2 week|14 day|fortnight/.test(q)) return {camp:14,as:14,cr:7,label:'last 14 days'};
-  if(/last month|30 day|month/.test(q)) return {camp:30,as:14,cr:7,label:'last 30 days (campaign+adset only)'};
-  if(/last week|this week|7 day|past week/.test(q)) return {camp:7,as:7,cr:7,label:'last 7 days'};
-  if(/creative|ad creati/.test(q)) return {camp:7,as:7,cr:7,label:'last 7 days'};
-  return {camp:7,as:7,cr:7,label:'last 7 days'};
+  if(/yesterday|today/.test(q)) return {camp:2,label:'yesterday'};
+  if(/last month|30 day|month/.test(q)) return {camp:30,label:'last 30 days'};
+  if(/last 2 week|14 day|fortnight/.test(q)) return {camp:14,label:'last 14 days'};
+  return {camp:7,label:'last 7 days'};
 }
 
 async function sendAI(){
@@ -5158,7 +5106,7 @@ async function sendAI(){
 
   // First message always includes report + data context
   const period=detectPeriod(text);
-  const firstUserMsg='YESTERDAY REPORT:\n'+document.getElementById('reportOutput').textContent.split('━━━━ AI')[0].trim()+'\n\nCAMPAIGN DATA ('+period.label+'):\n'+serializeForAI(period.camp,period.as,period.cr);
+  const firstUserMsg='YESTERDAY REPORT:\n'+document.getElementById('reportOutput').textContent.split('━━━━ AI')[0].trim()+'\n\nCAMPAIGN DATA ('+period.label+'):\n'+serializeForAI(period.camp);
 
   const messages=[systemMsg];
   if(CHAT.history.length===0){
