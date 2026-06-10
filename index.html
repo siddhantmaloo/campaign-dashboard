@@ -4933,20 +4933,55 @@ function copyId(el, id){
 const CHAT={open:false,history:[],loading:false};
 const GEMINI_URL='https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=';
 
-const SYSTEM_PROMPT=`You are an expert digital marketing analyst for KW (Karma Wellness), a yoga/wellness company.
-You have access to live campaign performance data. Answer concisely with specific numbers. Be direct and actionable.
+const SYSTEM_PROMPT=`You are an expert digital marketing analyst for KW (Karma Wellness), a yoga/wellness company running Meta and Google ad campaigns.
 
-Metrics:
-- CPL: Cost per Lead (green <Rs10, yellow Rs10-15, red >Rs15)
-- D3/D7 Cost: Cost per Day-3/Day-7 attendee (lower better)
-- D1%/D3%/D7%: % leads attending Day-1/3/7 (higher better)
-- Paid ROAS: Revenue/Spend (green >=1.8x). Adj ROAS adds WhatsApp cost (Rs3/lead) to denominator.
-- Health Score 0-100: weighted avg CPL(30%)+D3(25%)+D7(20%)+ROAS(25%). green=2,yellow=1,red=0.
-- Confidence: High(>Rs20K/4wks), Medium(>Rs5K), Low(<=Rs5K)
-- Actions: Scale+Relaunch(>=80,high conf), Scale(>=60), Watch(40-59), Wind Down(20-39), Drop(<20), Too Early(<=7d)
-- Meta: budget at adset level. Google: budget at campaign level.
-- Categories: 14 Day Yoga (main), Face Yoga, Women Health Yoga, Direct Selling
-- Maturity gates: CPL always, D3>=14d, D7>=21d, ROAS>=28d`;
+You have access to LIVE dashboard data below. Always answer using the EXACT numbers from the data. Never estimate or use training knowledge for numbers.
+
+=== SCORING SYSTEM ===
+METRIC TAGS (colour signals):
+- CPL (Cost per Lead): green=<Rs10, yellow=Rs10-15, red=>Rs15. No age gate.
+- D3 Cost (spend/D3-attendees): green=<Rs33, yellow=Rs33-38, red=>Rs38. Age gate: >=14 days.
+- D7 Cost (spend/D7-attendees): green=<Rs66, yellow=Rs66-95, red=>Rs95. Age gate: >=21 days.
+- ROAS (revenue/spend): green=>=1.8x, yellow=1.2-1.8x, red=<1.2x. Age gate: >=28 days.
+- "na" = metric not yet mature — EXCLUDED from health score (do not penalise)
+
+HEALTH SCORE (0-100):
+Formula: round((weighted_score / weighted_denominator) * 50)
+Weights: CPL=30%, D3=25%, D7=20%, ROAS=25%. Tag values: green=2, yellow=1, red=0.
+Only eligible (non-na) metrics are included. Higher = better.
+
+SIGNAL HEALTH (shown on campaign/adset/creative rows):
+Recency-weighted health using last 5 weeks with spend: W1=30%, W2=20%, W3=20%, W4=15%, W5=15%.
+Independent of any week filter. This is the primary health indicator.
+
+CONFIDENCE (based on 5-week total spend):
+- high = spend > Rs20,000
+- medium = spend > Rs5,000
+- low = spend <= Rs5,000
+
+ACTION TAGS:
+- scale-relaunch: Health>=80 AND confidence=high → increase budget aggressively
+- scale: Health>=60 AND confidence=medium/high → increase budget
+- watch: Health 40-59 → monitor before scaling
+- wind-down: Health 20-39 → reduce budget
+- drop: Health<20 → stop immediately
+- too-early: age<=7 days → insufficient data
+
+PLATFORM NOTES:
+- Meta: budget decisions at ADSET level
+- Google: budget decisions at CAMPAIGN level
+
+MATURITY CONTEXT (why some metrics show "immature"):
+Week age is approximate — most recent week ~2-7 days, each prior week adds 7 days.
+A metric tagged "immature" or "na" simply hasn't enough time to collect data — not a negative signal.
+
+DATA FORMAT IN CONTEXT:
+- Daily totals: exact spend/leads/CPL/revenue by date
+- Weekly rows per campaign/adset: spend|leads|cpl(tag) d3c(tag) d7c(tag) roas(tag) wkH=weeklyHealthScore
+- [AS] = adset row, [CR] = creative row
+- H = signal health score, conf = confidence level
+
+Always cite specific campaign/adset/creative names and exact numbers from the data when answering.`;
 
 function fmtAI(v,type){
   if(v==null||v===undefined) return '--';
@@ -4978,52 +5013,115 @@ function aiAgg(entity){
 function serializeForAI(){
   if(!S.data) return 'No data loaded yet.';
   const d=S.data;
-  const lines=[];
-  lines.push('KW Dashboard '+new Date().toDateString());
+  const L=[];
+  const today=new Date();
+  L.push('=== KW CAMPAIGNS DASHBOARD === '+today.toDateString());
 
-  // Only active camps (spend in last 4 weeks)
-  const recentWks=(d.weeks||[]).slice(-4).map(w=>w.key);
-  const camps=d.camps.filter(c=>catMatch(c.name)&&recentWks.some(wk=>c.weekly?.[wk]?.spend>0));
-  lines.push('Active campaigns: '+camps.length);
+  // ── DAILY TOTALS last 14 days ──
+  const allDates=[...new Set(d.camps.flatMap(c=>Object.keys(c._dailySpend||{})))].sort().slice(-14);
+  if(allDates.length){
+    L.push('\n## DAILY TOTALS (last 14 days)');
+    L.push('date|spend|leads|cpl|rev|roas');
+    allDates.forEach(dt=>{
+      let sp=0,ld=0,rv=0;
+      d.camps.forEach(c=>{
+        const ds=c._dailySpend?.[dt]||{}; const da=c._dailyAtt?.[dt]||{};
+        sp+=ds.spend||0; ld+=da.leads||0; rv+=(c._dailyRev?.[dt])||0;
+      });
+      if(sp>0) L.push(dt+'|'+fmtAI(sp,'inr')+'|'+ld+'|'+fmtAI(ld>0?sp/ld:null,'inr')+'|'+fmtAI(rv,'inr')+'|'+fmtAI(rv>0?rv/sp:null,'x'));
+    });
+  }
 
-  camps.forEach(c=>{
-    const agg=aiAgg(c);
+  // ── CAMPAIGNS — 5-week breakdown + signal health ──
+  const wks5=(d.weeks||[]).slice(-5);
+  const activeCamps=d.camps.filter(c=>catMatch(c.name)&&wks5.some(w=>c.weekly?.[w.key]?.spend>0));
+  L.push('\n## CAMPAIGNS ('+activeCamps.length+' active) — last 5 weeks + signal health');
+  L.push('Format: [name] platform age | SignalH conf action | wk:spend/leads/cpl/d3c/d7c/roas(color)');
+
+  activeCamps.forEach(c=>{
     const sh=computeSignalHealth(c,d);
     const act=getAction(sh.health,sh.conf,c.age,false);
-    // Compact single line per campaign
-    lines.push('['+campShort(c.name)+'] '+c.platform+' age:'+c.age+'d H:'+sh.health+' '+act+' conf:'+sh.conf);
-    lines.push(' spend:'+fmtAI(agg.spend,'inr')+' leads:'+agg.leads+' cpl:'+fmtAI(agg.cpl,'inr')+' d3c:'+fmtAI(agg.d3cost,'inr')+' d7c:'+fmtAI(agg.d7cost,'inr')+' roas:'+fmtAI(agg.paidroas,'x')+' d1%:'+fmtAI(agg.d1pct,'pct')+' d3%:'+fmtAI(agg.d3pct,'pct'));
-    // Adsets — compact, only with spend
-    const activeAs=c.adsets.filter(a=>recentWks.some(wk=>a.weekly?.[wk]?.spend>0));
-    if(activeAs.length){
-      lines.push(' adsets: '+activeAs.map(a=>{
-        const aa=aiAgg(a);const ash=computeSignalHealth(a,d);
-        return a.name.slice(0,20)+' H:'+ash.health+' '+getAction(ash.health,ash.conf,c.age,false)+' '+fmtAI(aa.spend,'inr');
-      }).join(' | '));
-    }
+    L.push('\n['+campShort(c.name)+'] '+c.platform+' age:'+c.age+'d | H:'+sh.health+' '+sh.conf+' '+act);
+    // 5 weeks
+    wks5.forEach(w=>{
+      const wd=c.weekly?.[w.key]; if(!wd||!wd.spend) return;
+      const age=window._approxAgeMap?.[w.key]??90;
+      const cpl=wd.leads>0?wd.spend/wd.leads:null;
+      const cplTag=tagCPL(cpl); const d3Tag=age>=14&&wd.d3cost?tagD3(wd.d3cost):'na';
+      const d7Tag=age>=21&&wd.d7cost?tagD7(wd.d7cost):'na'; const roasTag=age>=28&&wd.roas?tagROAS(wd.roas):'na';
+      const wH=healthScore(cplTag,d3Tag,d7Tag,roasTag);
+      L.push('  '+w.label+': spend='+fmtAI(wd.spend,'inr')+' leads='+wd.leads+' cpl='+fmtAI(cpl,'inr')+'('+cplTag+')'
+        +(age>=14&&wd.d3cost?' d3c='+fmtAI(wd.d3cost,'inr')+'('+d3Tag+')':'')
+        +(age>=21&&wd.d7cost?' d7c='+fmtAI(wd.d7cost,'inr')+'('+d7Tag+')':'')
+        +(age>=28&&wd.roas?' roas='+fmtAI(wd.roas,'x')+'('+roasTag+')':'')
+        +' wkH='+wH);
+    });
+    // Adsets
+    const activeAs=c.adsets.filter(a=>wks5.some(w=>a.weekly?.[w.key]?.spend>0));
+    activeAs.forEach(a=>{
+      const ash=computeSignalHealth(a,d);
+      const aact=getAction(ash.health,ash.conf,c.age,false);
+      const wkStr=wks5.map(w=>{
+        const wd=a.weekly?.[w.key]; if(!wd||!wd.spend) return null;
+        const age=window._approxAgeMap?.[w.key]??90;
+        const cpl=wd.leads>0?wd.spend/wd.leads:null;
+        const cplT=tagCPL(cpl);const d3T=age>=14&&wd.d3cost?tagD3(wd.d3cost):'na';
+        const d7T=age>=21&&wd.d7cost?tagD7(wd.d7cost):'na';const roasT=age>=28&&wd.roas?tagROAS(wd.roas):'na';
+        return w.label+':'+fmtAI(wd.spend,'inr')+'/'+wd.leads+'/'+fmtAI(cpl,'inr')+'('+cplT+')'+(d3T!='na'?' d3('+d3T+')':(age>=14?'':' d3:immature'))+(d7T!='na'?' d7('+d7T+')':(age>=21?'':' d7:immature'))+(roasT!='na'?' roas('+roasT+')':(age>=28?'':' roas:immature'));
+      }).filter(Boolean).join(' | ');
+      L.push('  [AS] '+a.name.slice(0,25)+' H:'+ash.health+' '+aact+' conf:'+ash.conf+' | '+wkStr);
+    });
   });
 
-  // Creatives — top5 + bottom5 only
-  const allCrs=(d.creatives||[]).filter(cr=>recentWks.some(wk=>cr.weekly?.[wk]?.spend>0));
+  // ── CREATIVES — top10 + bottom5 with 5-week health ──
+  const allCrs=(d.creatives||[]).filter(cr=>wks5.some(w=>cr.weekly?.[w.key]?.spend>0));
   if(allCrs.length){
-    const scored=allCrs.map(cr=>{const h=computeSignalHealth(cr,d);const agg=aiAgg(cr);return{cr,h:h.health,conf:h.conf,agg};}).sort((a,b)=>b.h-a.h);
-    lines.push('\nTop creatives:');
-    scored.slice(0,5).forEach(({cr,h,conf,agg})=>lines.push(cr.name.slice(0,30)+' H:'+h+' '+getAction(h,conf,cr.age,false)+' '+fmtAI(agg.spend,'inr')+' cpl:'+fmtAI(agg.cpl,'inr')));
-    lines.push('Bottom creatives:');
-    scored.slice(-5).reverse().forEach(({cr,h,conf,agg})=>lines.push(cr.name.slice(0,30)+' H:'+h+' '+getAction(h,conf,cr.age,false)+' '+fmtAI(agg.spend,'inr')+' cpl:'+fmtAI(agg.cpl,'inr')));
+    const scored=allCrs.map(cr=>{
+      const sh=computeSignalHealth(cr,d); const agg=aiAgg(cr);
+      const wkH=wks5.map(w=>{
+        const wd=cr.weekly?.[w.key]; if(!wd||!wd.spend) return null;
+        const age=window._approxAgeMap?.[w.key]??90;
+        const cpl=wd.leads>0?wd.spend/wd.leads:null;
+        return w.label+':H='+healthScore(tagCPL(cpl),age>=14&&wd.d3cost?tagD3(wd.d3cost):'na',age>=21&&wd.d7cost?tagD7(wd.d7cost):'na',age>=28&&wd.roas?tagROAS(wd.roas):'na')+'/cpl='+fmtAI(cpl,'inr');
+      }).filter(Boolean).join(' ');
+      return {cr,h:sh.health,conf:sh.conf,agg,wkH};
+    }).sort((a,b)=>b.h-a.h);
+    L.push('\n## CREATIVES — top10 + bottom5 with weekly health');
+    scored.slice(0,10).forEach(({cr,h,conf,agg,wkH})=>L.push('[CR] '+cr.name.slice(0,30)+' age:'+cr.age+'d H:'+h+' '+getAction(h,conf,cr.age,false)+' conf:'+conf+' spend:'+fmtAI(agg.spend,'inr')+' cpl:'+fmtAI(agg.cpl,'inr')+' | '+wkH));
+    L.push('-- bottom --');
+    scored.slice(-5).reverse().forEach(({cr,h,conf,agg,wkH})=>L.push('[CR] '+cr.name.slice(0,30)+' age:'+cr.age+'d H:'+h+' '+getAction(h,conf,cr.age,false)+' conf:'+conf+' spend:'+fmtAI(agg.spend,'inr')+' cpl:'+fmtAI(agg.cpl,'inr')+' | '+wkH));
   }
-  return lines.join('\n');
+
+  return L.join('\n');
 }
 
 
 function formatAIResponse(text){
-  return text
+  // Split into paragraphs on blank lines
+  const escaped = text
     .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-    .replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')
-    .replace(/^\* (.+)$/gm,'<li>$1</li>')
-    .replace(/^\d+\. (.+)$/gm,'<li>$1</li>')
-    .replace(/(<li>.*<\/li>\n?)+/g,'<ul>$&</ul>')
-    .replace(/\n/g,'<br>');
+    .replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>');
+
+  const blocks = escaped.split(/\n{2,}/);
+  return blocks.map(block => {
+    const lines = block.split('\n').filter(l=>l.trim());
+    if(!lines.length) return '';
+
+    // Check if all lines are list items (* or - or 1.)
+    const isList = lines.every(l=>/^[\*\-] /.test(l.trim())||/^\d+\. /.test(l.trim()));
+    if(isList){
+      const items = lines.map(l=>l.replace(/^[\*\-] /,'').replace(/^\d+\. /,'')).map(l=>`<li>${l}</li>`).join('');
+      return `<ul>${items}</ul>`;
+    }
+
+    // Heading line (ends with : and is short)
+    if(lines.length===1 && lines[0].length<80 && lines[0].endsWith(':')){
+      return `<div class="ai-heading">${lines[0]}</div>`;
+    }
+
+    // Regular paragraph
+    return `<p>${lines.join('<br>')}</p>`;
+  }).join('');
 }
 
 function toggleChat(){ /* legacy - now uses tab */ }
