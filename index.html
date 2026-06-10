@@ -5108,7 +5108,7 @@ function renderChatBody(){
   const el=document.getElementById('aiBody');
   if(!el) return;
   if(!getGeminiKey()){
-    el.innerHTML='<div style="max-width:480px;margin:40px auto;display:flex;flex-direction:column;gap:12px;"><div style="font-family:var(--font-mono);font-size:11px;color:var(--text2);">Enter your Groq API key to start<br><span style="opacity:.6;font-size:10px;">Free at console.groq.com · stored only in your browser</span></div><input class="ai-key-input" id="aiKeyInput" type="password" placeholder="gsk_..." style="padding:10px 14px;font-size:12px;"><button class="ai-key-btn" style="padding:10px;font-size:11px;" onclick="saveGeminiKey()">SAVE & START →</button></div>';
+    el.innerHTML='<div style="max-width:480px;margin:40px auto;display:flex;flex-direction:column;gap:12px;"><div style="font-family:var(--font-mono);font-size:11px;color:var(--text2);">Groq API Key<br><span style="opacity:.6;font-size:10px;">Free at console.groq.com</span></div><input class="ai-key-input" id="aiKeyInput" type="password" placeholder="gsk_..." style="padding:10px 14px;font-size:12px;" value="'+(getGeminiKey()||'')+'"><div style="font-family:var(--font-mono);font-size:11px;color:var(--text2);">Model<br><span style="opacity:.6;font-size:10px;">Recommended: meta-llama/llama-4-scout-17b-16e-instruct</span></div><input class="ai-key-input" id="aiModelInput" placeholder="meta-llama/llama-4-scout-17b-16e-instruct" style="padding:10px 14px;font-size:12px;" value="'+(getGeminiModel()||'meta-llama/llama-4-scout-17b-16e-instruct')+'"><button class="ai-key-btn" style="padding:10px;font-size:11px;" onclick="saveGeminiKey()">SAVE & START →</button></div>';
     return;
   }
   const SUGGESTIONS=['Which adsets should I scale this week?','Which creatives should I stop?','Where is budget being wasted?','What caused CPL to rise recently?','Give me a performance summary'];
@@ -5124,14 +5124,14 @@ function renderChatBody(){
 
 function saveGeminiKey(){
   const k=document.getElementById('aiKeyInput')?.value?.trim();
-  const m=document.getElementById('aiModelInput')?.value?.trim()||'gemini-1.5-flash';
+  const m=document.getElementById('aiModelInput')?.value?.trim()||'meta-llama/llama-4-scout-17b-16e-instruct';
   if(!k){alert('Please enter a valid API key');return;}
   localStorage.setItem('gemini_key',k);
   localStorage.setItem('gemini_model',m);
   CHAT.history=[];
   renderChatBody();
 }
-function getGeminiModel(){ return localStorage.getItem('gemini_model')||'gemini-1.5-flash'; }
+function getGeminiModel(){ return localStorage.getItem('gemini_model')||'meta-llama/llama-4-scout-17b-16e-instruct'; }
 function resetGeminiKey(){ localStorage.removeItem('gemini_key'); localStorage.removeItem('gemini_model'); CHAT.history=[]; renderChatBody(); }
 
 async function detectGeminiModels(){
@@ -5177,7 +5177,7 @@ async function sendAI(){
       method:'POST',
       headers:{'Content-Type':'application/json','Authorization':'Bearer '+getGeminiKey()},
       body:JSON.stringify({
-        model:'llama-3.3-70b-versatile',
+        model:getGeminiModel(),
         messages:[
           {role:'system',content:SYSTEM_PROMPT},
           ...CHAT.history.slice(0,-1).map(m=>({role:m.role==='model'?'assistant':'user',content:m.text})),
