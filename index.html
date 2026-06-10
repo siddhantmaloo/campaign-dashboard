@@ -4962,15 +4962,17 @@ function dirStr(v){ if(v==null) return 'unchanged'; return v>0?'increased':'decr
 function computeDailyMetrics(){
   if(!S.data) return null;
   const d=S.data;
-  const camps=d.camps.filter(c=>detectCat(c.name)==='14DayYoga'&&!c.name.toLowerCase().includes('experimental'));
+  // All 14DayYoga for totals (incl. experimental); exclude experimental from Meta/Google breakdown
+  const camps=d.camps.filter(c=>detectCat(c.name)==='14DayYoga');
+  const campsNoExp=camps.filter(c=>!c.name.toLowerCase().includes('experimental'));
   const allDates=[...new Set(camps.flatMap(c=>Object.keys(c._dailySpend||{})))].sort().filter(dt=>dt<'2099');
   if(allDates.length<2) return null;
   const yd=allDates[allDates.length-1];
   const db=allDates[allDates.length-2];
 
-  function mx(dt,plat){
+  function mx(dt,plat,src){
     let sp=0,ld=0,im=0,cl=0;
-    camps.forEach(c=>{
+    (src||camps).forEach(c=>{
       if(plat&&c.platform!==plat) return;
       const ds=c._dailySpend?.[dt]||{};
       const da=c._dailyAtt?.[dt]||{};
@@ -4982,9 +4984,9 @@ function computeDailyMetrics(){
       c2db:cl>0&&ld>0?ld/cl*100:null};
   }
   return {date:yd,prev:db,
-    all:{y:mx(yd,null),p:mx(db,null)},
-    meta:{y:mx(yd,'meta'),p:mx(db,'meta')},
-    google:{y:mx(yd,'google'),p:mx(db,'google')}};
+    all:{y:mx(yd,null,camps),p:mx(db,null,camps)},
+    meta:{y:mx(yd,'meta',campsNoExp),p:mx(db,'meta',campsNoExp)},
+    google:{y:mx(yd,'google',campsNoExp),p:mx(db,'google',campsNoExp)}};
 }
 
 async function generateBasicReport(){
