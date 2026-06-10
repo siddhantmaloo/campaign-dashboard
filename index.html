@@ -4957,14 +4957,14 @@ Structure your response exactly like this:
 **CPL SIGNAL**
 [per campaign and adset: name — CPL tag — one-line note if red or green]
 
-**D3 SIGNAL** (only show if eligible — age>=14d)
-[per campaign and adset: name — D3 tag — trend across weeks]
+**D3 SIGNAL** (only weeks with age>=14d — always cite which week e.g. "W23: red")
+[per campaign and adset: name — W23:D3(red), W22:D3(yellow) — trend direction]
 
-**D7 SIGNAL** (only show if eligible — age>=21d)
-[per campaign and adset: name — D7 tag — trend]
+**D7 SIGNAL** (only weeks with age>=21d — always cite which week)
+[per campaign and adset: name — W23:D7(yellow), W22:D7(green) — trend direction]
 
-**ROAS SIGNAL** (only show if eligible — age>=28d)
-[per campaign and adset: name — ROAS tag — trend]
+**ROAS SIGNAL** (only weeks with age>=28d — always cite which week)
+[per campaign and adset: name — W23:ROAS(red), W22:ROAS(yellow) — trend direction]
 
 **RECOMMENDATIONS**
 SCALE → name: reason (only if Action=scale or Action=scale-relaunch)
