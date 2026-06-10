@@ -5068,13 +5068,18 @@ function serializeForAI(){
   L.push('\nCAMPAIGNS & ADSETS (last 5 weeks):');
   activeCamps.forEach(c=>{
     const sh=computeSignalHealth(c,d);
-    let sp=0,ld=0;wks5.forEach(w=>{const wd=c.weekly?.[w.key];if(wd){sp+=wd.spend||0;ld+=wd.leads||0;}});
-    L.push('['+campShort(c.name)+'] '+c.platform+' age:'+c.age+'d H:'+sh.health+' action:'+getAction(sh.health,sh.conf,c.age,false)+' conf:'+sh.conf+' spend=Rs'+Math.round(sp)+' leads='+ld+' cpl=Rs'+(ld>0?Math.round(sp/ld):'-'));
+    // Use last 2 weeks for recent CPL (not 5-week aggregate)
+    const wks2=wks5.slice(-2);
+    let sp=0,ld=0; wks2.forEach(w=>{const wd=c.weekly?.[w.key];if(wd){sp+=wd.spend||0;ld+=wd.leads||0;}});
+    let sp5=0,ld5=0; wks5.forEach(w=>{const wd=c.weekly?.[w.key];if(wd){sp5+=wd.spend||0;ld5+=wd.leads||0;}});
+    L.push('[CAMP:'+c.name.slice(0,55)+'] '+c.platform+' age:'+c.age+'d H:'+sh.health+' action:'+getAction(sh.health,sh.conf,c.age,false)+' conf:'+sh.conf+' recent_spend=Rs'+Math.round(sp)+' recent_leads='+ld+' recent_cpl=Rs'+(ld>0?Math.round(sp/ld):'-')+' total5wk_spend=Rs'+Math.round(sp5));
     c.adsets.forEach(a=>{
-      let asp=0,ald=0;wks5.forEach(w=>{const wd=a.weekly?.[w.key];if(wd){asp+=wd.spend||0;ald+=wd.leads||0;}});
-      if(!asp) return;
+      let asp=0,ald=0; wks2.forEach(w=>{const wd=a.weekly?.[w.key];if(wd){asp+=wd.spend||0;ald+=wd.leads||0;}});
+      let asp5=0; wks5.forEach(w=>{const wd=a.weekly?.[w.key];if(wd){asp5+=wd.spend||0;}});
+      if(!asp5) return;
       const ash=computeSignalHealth(a,d);
-      L.push('  [AS] '+a.name.slice(0,32)+' H:'+ash.health+' action:'+getAction(ash.health,ash.conf,c.age,false)+' conf:'+ash.conf+' spend=Rs'+Math.round(asp)+' leads='+ald+' cpl=Rs'+(ald>0?Math.round(asp/ald):'-'));
+      // Full name to avoid truncation confusion
+      L.push('  [AS:'+a.name+'] camp:['+campShort(c.name)+'] H:'+ash.health+' action:'+getAction(ash.health,ash.conf,c.age,false)+' conf:'+ash.conf+' recent_spend=Rs'+Math.round(asp)+' recent_leads='+ald+' recent_cpl=Rs'+(ald>0?Math.round(asp/ald):'-')+' total5wk_spend=Rs'+Math.round(asp5));
     });
   });
   return L.join('\n');
