@@ -5056,21 +5056,15 @@ function serializeForAI(){
         +(age>=28&&wd.roas?' roas='+fmtAI(wd.roas,'x')+'('+roasTag+')':'')
         +' wkH='+wH);
     });
-    // Adsets
+    // Adsets — single summary line only (no weekly breakdown to save tokens)
     const activeAs=c.adsets.filter(a=>wks5.some(w=>a.weekly?.[w.key]?.spend>0));
-    activeAs.forEach(a=>{
-      const ash=computeSignalHealth(a,d);
-      const aact=getAction(ash.health,ash.conf,c.age,false);
-      const wkStr=wks5.map(w=>{
-        const wd=a.weekly?.[w.key]; if(!wd||!wd.spend) return null;
-        const age=window._approxAgeMap?.[w.key]??90;
-        const cpl=wd.leads>0?wd.spend/wd.leads:null;
-        const cplT=tagCPL(cpl);const d3T=age>=14&&wd.d3cost?tagD3(wd.d3cost):'na';
-        const d7T=age>=21&&wd.d7cost?tagD7(wd.d7cost):'na';const roasT=age>=28&&wd.roas?tagROAS(wd.roas):'na';
-        return w.label+':'+fmtAI(wd.spend,'inr')+'/'+wd.leads+'/'+fmtAI(cpl,'inr')+'('+cplT+')'+(d3T!='na'?' d3('+d3T+')':(age>=14?'':' d3:immature'))+(d7T!='na'?' d7('+d7T+')':(age>=21?'':' d7:immature'))+(roasT!='na'?' roas('+roasT+')':(age>=28?'':' roas:immature'));
-      }).filter(Boolean).join(' | ');
-      L.push('  [AS] '+a.name.slice(0,25)+' H:'+ash.health+' '+aact+' conf:'+ash.conf+' | '+wkStr);
-    });
+    if(activeAs.length){
+      activeAs.forEach(a=>{
+        const ash=computeSignalHealth(a,d); const aa=aiAgg(a);
+        const aact=getAction(ash.health,ash.conf,c.age,false);
+        L.push('  [AS] '+a.name.slice(0,28)+' H:'+ash.health+' '+aact+' conf:'+ash.conf+' spend:'+fmtAI(aa.spend,'inr')+' leads:'+aa.leads+' cpl:'+fmtAI(aa.cpl,'inr'));
+      });
+    }
   });
 
   // ── CREATIVES — top10 + bottom5 with 5-week health ──
@@ -5202,7 +5196,7 @@ async function sendAI(){
       method:'POST',
       headers:{'Content-Type':'application/json','Authorization':'Bearer '+getGeminiKey()},
       body:JSON.stringify({
-        model:'llama-3.3-70b-versatile',
+        model:'llama-3.1-8b-instant',
         messages:[
           {role:'system',content:SYSTEM_PROMPT},
           ...CHAT.history.slice(0,-1).map(m=>({role:m.role==='model'?'assistant':'user',content:m.text})),
