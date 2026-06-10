@@ -1101,24 +1101,21 @@ td:first-child{text-align:left;}
 
 <!-- ══ AI TAB ══ -->
 <div class="tab-content" id="tab-ai">
-  <div style="max-width:720px;margin:0 auto;padding:20px 24px 0;height:calc(100vh - 110px);display:flex;flex-direction:column;">
-    <div style="display:flex;align-items:center;justify-content:space-between;padding-bottom:12px;border-bottom:1px solid var(--border);flex-shrink:0;">
+  <div style="max-width:620px;margin:0 auto;padding:20px 24px 0;height:calc(100vh - 110px);display:flex;flex-direction:column;">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding-bottom:14px;border-bottom:1px solid var(--border);flex-shrink:0;">
       <div>
-        <span style="font-family:var(--font-mono);font-size:13px;font-weight:700;color:var(--text);">✦ Reports</span>
+        <span style="font-family:var(--font-mono);font-size:13px;font-weight:700;color:var(--text);">✦ Daily Report</span>
         <span style="font-family:var(--font-mono);font-size:9px;color:var(--text3);margin-left:10px;">14 Day Yoga · Meta + Google</span>
       </div>
-      <div style="display:flex;gap:6px;align-items:center;">
+      <div style="display:flex;gap:8px;align-items:center;">
         <span style="font-family:var(--font-mono);font-size:9px;color:var(--text3);cursor:pointer;text-decoration:underline" onclick="resetGeminiKey()">AI key</span>
-        <button id="copyReportBtn" onclick="copyDailyReport()" style="display:none;font-family:var(--font-mono);font-size:9px;background:var(--bg3);border:1px solid var(--border2);color:var(--text2);padding:5px 10px;border-radius:4px;cursor:pointer;">⎘ COPY</button>
+        <button id="copyReportBtn" onclick="copyDailyReport()" style="display:none;font-family:var(--font-mono);font-size:9px;background:var(--bg3);border:1px solid var(--border2);color:var(--text2);padding:5px 12px;border-radius:4px;cursor:pointer;">⎘ COPY</button>
+        <button id="genReportBtn" onclick="generateBasicReport()" style="font-family:var(--font-mono);font-size:9px;background:#6366f1;border:none;color:#fff;padding:6px 12px;border-radius:4px;cursor:pointer;font-weight:700;">📊 Yesterday</button>
+        <button onclick="generateWeekReport(2)" style="font-family:var(--font-mono);font-size:9px;background:var(--bg3);border:1px solid var(--border2);color:var(--text2);padding:6px 10px;border-radius:4px;cursor:pointer;">W-2·CPL+D1%</button>
+        <button onclick="generateWeekReport(3)" style="font-family:var(--font-mono);font-size:9px;background:var(--bg3);border:1px solid var(--border2);color:var(--text2);padding:6px 10px;border-radius:4px;cursor:pointer;">W-3·D3%+D3C</button>
+        <button onclick="generateWeekReport(4)" style="font-family:var(--font-mono);font-size:9px;background:var(--bg3);border:1px solid var(--border2);color:var(--text2);padding:6px 10px;border-radius:4px;cursor:pointer;">W-4·D7%+D7C</button>
+        <button onclick="generateWeekReport(5)" style="font-family:var(--font-mono);font-size:9px;background:var(--bg3);border:1px solid var(--border2);color:var(--text2);padding:6px 10px;border-radius:4px;cursor:pointer;">W-5·L2S%+ROAS</button>
       </div>
-    </div>
-    <!-- Report buttons -->
-    <div style="display:flex;gap:6px;padding:10px 0 12px;flex-shrink:0;flex-wrap:wrap;border-bottom:1px solid var(--border);">
-      <button onclick="generateBasicReport()" id="genReportBtn" style="font-family:var(--font-mono);font-size:9px;background:#6366f1;border:none;color:#fff;padding:6px 12px;border-radius:4px;cursor:pointer;font-weight:700;">📊 Yesterday's Report</button>
-      <button onclick="generateWeekReport(2)" style="font-family:var(--font-mono);font-size:9px;background:var(--bg3);border:1px solid var(--border2);color:var(--text2);padding:6px 12px;border-radius:4px;cursor:pointer;">W-2 · CPL + D1%</button>
-      <button onclick="generateWeekReport(3)" style="font-family:var(--font-mono);font-size:9px;background:var(--bg3);border:1px solid var(--border2);color:var(--text2);padding:6px 12px;border-radius:4px;cursor:pointer;">W-3 · D3% + D3 Cost</button>
-      <button onclick="generateWeekReport(4)" style="font-family:var(--font-mono);font-size:9px;background:var(--bg3);border:1px solid var(--border2);color:var(--text2);padding:6px 12px;border-radius:4px;cursor:pointer;">W-4 · D7% + D7 Cost</button>
-      <button onclick="generateWeekReport(5)" style="font-family:var(--font-mono);font-size:9px;background:var(--bg3);border:1px solid var(--border2);color:var(--text2);padding:6px 12px;border-radius:4px;cursor:pointer;">W-5 · L2S% + ROAS</button>
     </div>
     <div id="reportOutput" style="flex:1;overflow-y:auto;padding:20px 0 8px;font-family:var(--font-mono);font-size:12px;line-height:2;color:var(--text);white-space:pre-wrap;"></div>
     <div style="border-top:1px solid var(--border);padding:10px 0 14px;flex-shrink:0;display:flex;gap:8px;align-items:flex-end;">
@@ -5052,158 +5049,78 @@ function generateWeekReport(wOffset){
   if(!S.data){alert('Load data first');return;}
   const d=S.data;
   const out=document.getElementById('reportOutput');
-  const btn=event.target; btn.textContent='Generating...'; btn.disabled=true;
+  const btn=event.target;
+  const origLabel=btn.textContent;
+  btn.textContent='...'; btn.disabled=true;
   CHAT.history=[];
-
-  const camps=d.camps.filter(cc=>detectCat(cc.name)==='14DayYoga');
-  const allWks=(d.weeks||[]).slice().sort((a,b)=>a.key<b.key?-1:1);
+  const camps=d.camps.filter(function(cc){return detectCat(cc.name)==='14DayYoga';});
+  const allWks=(d.weeks||[]).slice().sort(function(a,b){return a.key<b.key?-1:1;});
   const wk=allWks[allWks.length-wOffset];
-  if(!wk){out.textContent='Not enough weekly data.';btn.textContent=btn.getAttribute('data-label')||'W Report';btn.disabled=false;return;}
-
+  if(!wk){out.textContent='Not enough weekly data.';btn.textContent=origLabel;btn.disabled=false;return;}
   const wLabel='W-'+wOffset;
   const wRange=wk.full||wk.key;
-
-  // Get metrics for each campaign this week
   const rows=[];
-  camps.forEach(cc=>{
+  camps.forEach(function(cc){
     const wd=cc.weekly?.[wk.key]; if(!wd||!wd.spend) return;
     const ld=wd.leads||0, sp=wd.spend||0;
-    const d1=wd.d1||0, d3=wd.d3||0, d7=wd.d7||0;
-    const rv=wd.rev||0, sb=wd.subs||0;
     rows.push({
-      name:campShort(cc.name), platform:cc.platform,
-      spend:sp, leads:ld,
+      name:campShort(cc.name), platform:cc.platform, spend:sp, leads:ld,
       cpl:ld>0?sp/ld:null,
-      d1pct:ld>0?d1/ld*100:null,
-      d3pct:ld>0?d3/ld*100:null, d3cost:d3>0?sp/d3:null,
-      d7pct:ld>0?d7/ld*100:null, d7cost:d7>0?sp/d7:null,
-      l2s:ld>0&&sb>0?sb/ld*100:null,
-      roas:sp>0&&rv>0?rv/sp:null
+      d1pct:ld>0?(wd.d1||0)/ld*100:null,
+      d3pct:ld>0?(wd.d3||0)/ld*100:null, d3cost:(wd.d3||0)>0?sp/(wd.d3||0):null,
+      d7pct:ld>0?(wd.d7||0)/ld*100:null, d7cost:(wd.d7||0)>0?sp/(wd.d7||0):null,
+      l2s:ld>0&&(wd.subs||0)>0?(wd.subs||0)/ld*100:null,
+      roas:sp>0&&(wd.rev||0)>0?(wd.rev||0)/sp:null
     });
   });
-
-  const f1=v=>v!=null?Math.round(v*10)/10:'—';
-  const fi=v=>v!=null?'₹'+Math.round(v):'—';
-  const top5=(arr,key,asc)=>[...arr].filter(r=>r[key]!=null&&r.leads>=30)
-    .sort((a,b)=>asc?a[key]-b[key]:b[key]-a[key]).slice(0,5);
-
-  let report='';
-  const divider='━━━━━━━━━━━━━━━━━━━━━━━━
-';
-
-  if(wOffset===2){
-    report=`${wLabel} Report — ${wRange}
-${divider}
-`;
-    report+=`FOCUS: CPL & D1% (min 30 leads)
-
-`;
-    report+=`TOP 5 CPL (lowest = best):
-`;
-    top5(rows,'cpl',true).forEach((r,i)=>report+=`${i+1}. [${r.name}] ${r.platform} — CPL: ${fi(r.cpl)} | Leads: ${r.leads} | Spend: ${fi(r.spend)}
-`);
-    report+=`
-BOTTOM 5 CPL (highest = worst):
-`;
-    top5(rows,'cpl',false).forEach((r,i)=>report+=`${i+1}. [${r.name}] ${r.platform} — CPL: ${fi(r.cpl)} | Leads: ${r.leads} | Spend: ${fi(r.spend)}
-`);
-    report+=`
-TOP 5 D1% (highest = best):
-`;
-    top5(rows,'d1pct',false).forEach((r,i)=>report+=`${i+1}. [${r.name}] ${r.platform} — D1%: ${f1(r.d1pct)}% | CPL: ${fi(r.cpl)}
-`);
-    report+=`
-BOTTOM 5 D1% (lowest = worst):
-`;
-    top5(rows,'d1pct',true).forEach((r,i)=>report+=`${i+1}. [${r.name}] ${r.platform} — D1%: ${f1(r.d1pct)}% | CPL: ${fi(r.cpl)}
-`);
-  } else if(wOffset===3){
-    report=`${wLabel} Report — ${wRange}
-${divider}
-`;
-    report+=`FOCUS: D3% & D3 Cost (min 30 leads)
-
-`;
-    report+=`TOP 5 D3% (highest = best):
-`;
-    top5(rows,'d3pct',false).forEach((r,i)=>report+=`${i+1}. [${r.name}] ${r.platform} — D3%: ${f1(r.d3pct)}% | D3 Cost: ${fi(r.d3cost)} | Leads: ${r.leads}
-`);
-    report+=`
-BOTTOM 5 D3% (lowest = worst):
-`;
-    top5(rows,'d3pct',true).forEach((r,i)=>report+=`${i+1}. [${r.name}] ${r.platform} — D3%: ${f1(r.d3pct)}% | D3 Cost: ${fi(r.d3cost)} | Leads: ${r.leads}
-`);
-    report+=`
-TOP 5 D3 Cost (lowest = best):
-`;
-    top5(rows,'d3cost',true).forEach((r,i)=>report+=`${i+1}. [${r.name}] ${r.platform} — D3 Cost: ${fi(r.d3cost)} | D3%: ${f1(r.d3pct)}% | Spend: ${fi(r.spend)}
-`);
-    report+=`
-BOTTOM 5 D3 Cost (highest = worst):
-`;
-    top5(rows,'d3cost',false).forEach((r,i)=>report+=`${i+1}. [${r.name}] ${r.platform} — D3 Cost: ${fi(r.d3cost)} | D3%: ${f1(r.d3pct)}% | Spend: ${fi(r.spend)}
-`);
-  } else if(wOffset===4){
-    report=`${wLabel} Report — ${wRange}
-${divider}
-`;
-    report+=`FOCUS: D7% & D7 Cost (min 30 leads)
-
-`;
-    report+=`TOP 5 D7% (highest = best):
-`;
-    top5(rows,'d7pct',false).forEach((r,i)=>report+=`${i+1}. [${r.name}] ${r.platform} — D7%: ${f1(r.d7pct)}% | D7 Cost: ${fi(r.d7cost)} | Leads: ${r.leads}
-`);
-    report+=`
-BOTTOM 5 D7% (lowest = worst):
-`;
-    top5(rows,'d7pct',true).forEach((r,i)=>report+=`${i+1}. [${r.name}] ${r.platform} — D7%: ${f1(r.d7pct)}% | D7 Cost: ${fi(r.d7cost)} | Leads: ${r.leads}
-`);
-    report+=`
-TOP 5 D7 Cost (lowest = best):
-`;
-    top5(rows,'d7cost',true).forEach((r,i)=>report+=`${i+1}. [${r.name}] ${r.platform} — D7 Cost: ${fi(r.d7cost)} | D7%: ${f1(r.d7pct)}% | Spend: ${fi(r.spend)}
-`);
-    report+=`
-BOTTOM 5 D7 Cost (highest = worst):
-`;
-    top5(rows,'d7cost',false).forEach((r,i)=>report+=`${i+1}. [${r.name}] ${r.platform} — D7 Cost: ${fi(r.d7cost)} | D7%: ${f1(r.d7pct)}% | Spend: ${fi(r.spend)}
-`);
-  } else if(wOffset===5){
-    report=`${wLabel} Report — ${wRange}
-${divider}
-`;
-    report+=`FOCUS: Lead-to-Subscription% & ROAS (min 30 leads)
-
-`;
-    report+=`TOP 5 L2S% (highest = best):
-`;
-    top5(rows,'l2s',false).forEach((r,i)=>report+=`${i+1}. [${r.name}] ${r.platform} — L2S%: ${f1(r.l2s)}% | ROAS: ${r.roas?r.roas.toFixed(2)+'x':'—'} | Leads: ${r.leads}
-`);
-    report+=`
-BOTTOM 5 L2S% (lowest = worst):
-`;
-    top5(rows,'l2s',true).forEach((r,i)=>report+=`${i+1}. [${r.name}] ${r.platform} — L2S%: ${f1(r.l2s)}% | ROAS: ${r.roas?r.roas.toFixed(2)+'x':'—'} | Leads: ${r.leads}
-`);
-    report+=`
-TOP 5 ROAS (highest = best):
-`;
-    top5(rows,'roas',false).forEach((r,i)=>report+=`${i+1}. [${r.name}] ${r.platform} — ROAS: ${r.roas?r.roas.toFixed(2)+'x':'—'} | L2S%: ${f1(r.l2s)}% | Spend: ${fi(r.spend)}
-`);
-    report+=`
-BOTTOM 5 ROAS (lowest = worst):
-`;
-    top5(rows,'roas',true).forEach((r,i)=>report+=`${i+1}. [${r.name}] ${r.platform} — ROAS: ${r.roas?r.roas.toFixed(2)+'x':'—'} | L2S%: ${f1(r.l2s)}% | Spend: ${fi(r.spend)}
-`);
+  const f1=function(v){return v!=null?Math.round(v*10)/10:'--';};
+  const fi=function(v){return v!=null?'Rs'+Math.round(v):'--';};
+  const top5=function(arr,key,asc){
+    return arr.slice().filter(function(r){return r[key]!=null&&r.leads>=30;})
+      .sort(function(a,b){return asc?a[key]-b[key]:b[key]-a[key];}).slice(0,5);
+  };
+  var report=wLabel+' Report -- '+wRange+'\n========================\n\n';
+  var configs={
+    2:{label:'CPL + D1%',sections:[
+      {title:'TOP 5 CPL (lowest=best)',key:'cpl',asc:true,fmt:function(r){return 'CPL: '+fi(r.cpl)+' | D1%: '+f1(r.d1pct)+'% | Leads: '+r.leads;}},
+      {title:'BOTTOM 5 CPL (highest=worst)',key:'cpl',asc:false,fmt:function(r){return 'CPL: '+fi(r.cpl)+' | D1%: '+f1(r.d1pct)+'% | Leads: '+r.leads;}},
+      {title:'TOP 5 D1% (highest=best)',key:'d1pct',asc:false,fmt:function(r){return 'D1%: '+f1(r.d1pct)+'% | CPL: '+fi(r.cpl)+' | Leads: '+r.leads;}},
+      {title:'BOTTOM 5 D1% (lowest=worst)',key:'d1pct',asc:true,fmt:function(r){return 'D1%: '+f1(r.d1pct)+'% | CPL: '+fi(r.cpl)+' | Leads: '+r.leads;}}
+    ]},
+    3:{label:'D3% + D3 Cost',sections:[
+      {title:'TOP 5 D3% (highest=best)',key:'d3pct',asc:false,fmt:function(r){return 'D3%: '+f1(r.d3pct)+'% | D3 Cost: '+fi(r.d3cost)+' | Leads: '+r.leads;}},
+      {title:'BOTTOM 5 D3% (lowest=worst)',key:'d3pct',asc:true,fmt:function(r){return 'D3%: '+f1(r.d3pct)+'% | D3 Cost: '+fi(r.d3cost)+' | Leads: '+r.leads;}},
+      {title:'TOP 5 D3 Cost (lowest=best)',key:'d3cost',asc:true,fmt:function(r){return 'D3 Cost: '+fi(r.d3cost)+' | D3%: '+f1(r.d3pct)+'% | Spend: '+fi(r.spend);}},
+      {title:'BOTTOM 5 D3 Cost (highest=worst)',key:'d3cost',asc:false,fmt:function(r){return 'D3 Cost: '+fi(r.d3cost)+' | D3%: '+f1(r.d3pct)+'% | Spend: '+fi(r.spend);}}
+    ]},
+    4:{label:'D7% + D7 Cost',sections:[
+      {title:'TOP 5 D7% (highest=best)',key:'d7pct',asc:false,fmt:function(r){return 'D7%: '+f1(r.d7pct)+'% | D7 Cost: '+fi(r.d7cost)+' | Leads: '+r.leads;}},
+      {title:'BOTTOM 5 D7% (lowest=worst)',key:'d7pct',asc:true,fmt:function(r){return 'D7%: '+f1(r.d7pct)+'% | D7 Cost: '+fi(r.d7cost)+' | Leads: '+r.leads;}},
+      {title:'TOP 5 D7 Cost (lowest=best)',key:'d7cost',asc:true,fmt:function(r){return 'D7 Cost: '+fi(r.d7cost)+' | D7%: '+f1(r.d7pct)+'% | Spend: '+fi(r.spend);}},
+      {title:'BOTTOM 5 D7 Cost (highest=worst)',key:'d7cost',asc:false,fmt:function(r){return 'D7 Cost: '+fi(r.d7cost)+' | D7%: '+f1(r.d7pct)+'% | Spend: '+fi(r.spend);}}
+    ]},
+    5:{label:'L2S% + ROAS',sections:[
+      {title:'TOP 5 L2S% (highest=best)',key:'l2s',asc:false,fmt:function(r){return 'L2S%: '+f1(r.l2s)+'% | ROAS: '+(r.roas?r.roas.toFixed(2)+'x':'--')+' | Leads: '+r.leads;}},
+      {title:'BOTTOM 5 L2S% (lowest=worst)',key:'l2s',asc:true,fmt:function(r){return 'L2S%: '+f1(r.l2s)+'% | ROAS: '+(r.roas?r.roas.toFixed(2)+'x':'--')+' | Leads: '+r.leads;}},
+      {title:'TOP 5 ROAS (highest=best)',key:'roas',asc:false,fmt:function(r){return 'ROAS: '+(r.roas?r.roas.toFixed(2)+'x':'--')+' | L2S%: '+f1(r.l2s)+'% | Spend: '+fi(r.spend);}},
+      {title:'BOTTOM 5 ROAS (lowest=worst)',key:'roas',asc:true,fmt:function(r){return 'ROAS: '+(r.roas?r.roas.toFixed(2)+'x':'--')+' | L2S%: '+f1(r.l2s)+'% | Spend: '+fi(r.spend);}}
+    ]}
+  };
+  var cfg=configs[wOffset];
+  if(cfg){
+    cfg.sections.forEach(function(sec){
+      report+=sec.title+':\n';
+      var items=top5(rows,sec.key,sec.asc);
+      if(!items.length){report+='  (no campaigns with 30+ leads)\n';}
+      else{items.forEach(function(r,i){report+=(i+1)+'. ['+r.name+'] '+r.platform+' -- '+sec.fmt(r)+'\n';});}
+      report+='\n';
+    });
   }
-
-  if(!rows.length) report='No data found for '+wLabel+' ('+wRange+').';
+  if(!rows.length) report='No data for '+wLabel+' ('+wRange+').';
   out.textContent=report;
   document.getElementById('copyReportBtn').style.display='';
-  btn.textContent=btn.textContent.replace('Generating...', btn.getAttribute('data-orig')||('W-'+wOffset+' Report'));
-  btn.disabled=false;
+  btn.textContent=origLabel; btn.disabled=false;
 }
-
 
 function copyDailyReport(){
   const text=document.getElementById('reportOutput').textContent;
