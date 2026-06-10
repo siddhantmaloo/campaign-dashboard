@@ -5052,15 +5052,16 @@ function copyDailyReport(){
 function aiKeyDown(e){ if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendAI();} }
 function aiAutoResize(el){ el.style.height='auto'; el.style.height=Math.min(el.scrollHeight,100)+'px'; }
 
-function serializeForAI(){
+function serializeForAI(campDays=14, assetDays=7, crDays=7){
   if(!S.data) return 'No data loaded.';
   const d=S.data;
   const camps=d.camps.filter(c=>detectCat(c.name)==='14DayYoga');
   const allDates=[...new Set(camps.flatMap(c=>Object.keys(c._dailySpend||{})))].sort().filter(dt=>dt<'2099');
   if(!allDates.length) return 'No data.';
   const latestDt=allDates[allDates.length-1];
-  const last14=allDates.slice(-14);
-  const last7=allDates.slice(-7);
+  const last14=allDates.slice(-campDays);
+  const last7=allDates.slice(-assetDays);
+  const lastCr=allDates.slice(-crDays);
   const R=v=>v!=null&&!isNaN(v)&&v!==0?Math.round(v):'-';
   const F1=v=>v!=null&&!isNaN(v)&&v!==0?(Math.round(v*10)/10):'-';
 
@@ -5112,7 +5113,7 @@ function serializeForAI(){
   const crLines=['\n## CREATIVE DAILY (last 7 days, top 25 by spend)','date|creative|adset|platform|spend|cpm|cpc|ctr%|leads|cpl|d1%|d3%|rev'];
   topCrs.forEach(cr=>{
     const asName=(d.camps.flatMap(cc=>cc.adsets).find(a=>a.id===cr.adset)?.name||'').slice(0,30);
-    last7.forEach(dt=>{
+    lastCr.forEach(dt=>{
       const ds=cr._dailySpend?.[dt]||{}; const da=cr._dailyAtt?.[dt]||{};
       const sp=ds.spend||0; if(!sp) return;
       const ld=da.leads||0,im=ds.impr||0,cl=ds.clicks||0,rv=(cr._dailyRev?.[dt])||0;
@@ -5130,6 +5131,17 @@ function serializeForAI(){
     +'\n'+crLines.join('\n');
 }
 
+
+function detectPeriod(q){
+  q=q.toLowerCase();
+  if(/yesterday|today|june? 9|jun 9|june? 10|jun 10/.test(q)) return {camp:2,as:2,cr:2,label:'yesterday'};
+  if(/last 2 week|14 day|fortnight/.test(q)) return {camp:14,as:14,cr:7,label:'last 14 days'};
+  if(/last month|30 day|month/.test(q)) return {camp:30,as:14,cr:7,label:'last 30 days (campaign+adset only)'};
+  if(/last week|this week|7 day|past week/.test(q)) return {camp:7,as:7,cr:7,label:'last 7 days'};
+  if(/creative|ad creati/.test(q)) return {camp:7,as:7,cr:7,label:'last 7 days'};
+  return {camp:7,as:7,cr:7,label:'last 7 days'};
+}
+
 async function sendAI(){
   if(!getGeminiKey()){alert('Click "AI key" to add your Groq API key first');return;}
   const input=document.getElementById('aiInput');
@@ -5145,7 +5157,8 @@ async function sendAI(){
   const systemMsg={role:'system',content:'You are a data analyst for KW Karma Wellness 14 Day Yoga campaigns. RULES: (1) Answer ONLY using exact numbers from the data. (2) Never give generic marketing advice. (3) Always cite specific campaign/adset names with actual numbers. (4) The daily report context shows YESTERDAY performance. Follow-up questions refer to that report unless stated otherwise. (5) State which date/period numbers are from.'};
 
   // First message always includes report + data context
-  const firstUserMsg='YESTERDAY REPORT:\n'+document.getElementById('reportOutput').textContent.split('━━━━ AI')[0].trim()+'\n\nFULL CAMPAIGN DATA:\n'+serializeForAI();
+  const period=detectPeriod(text);
+  const firstUserMsg='YESTERDAY REPORT:\n'+document.getElementById('reportOutput').textContent.split('━━━━ AI')[0].trim()+'\n\nCAMPAIGN DATA ('+period.label+'):\n'+serializeForAI(period.camp,period.as,period.cr);
 
   const messages=[systemMsg];
   if(CHAT.history.length===0){
