@@ -4936,68 +4936,55 @@ const GEMINI_URL='https://generativelanguage.googleapis.com/v1/models/gemini-1.5
 const SYSTEM_PROMPT=`You are a performance marketing analyst for KW (Karma Wellness) 14 Day Free Yoga campaigns.
 
 RULES:
-- Only analyse 14 Day Yoga campaigns/adsets. Skip all others.
+- Only analyse 14 Day Yoga campaigns/adsets. Skip Face Yoga, Women Health Yoga, Direct Selling.
 - Ignore adsets spending less than Rs300/day.
-- Meta budget decisions = ADSET level. Google = CAMPAIGN level.
+- Meta budget = ADSET level. Google budget = CAMPAIGN level.
 - Use EXACT numbers from the data. Never estimate.
-- Currency: K=thousands (Rs65K=Rs65,000), L=lakhs (Rs1L=Rs100,000). Never confuse K and L.
-- green=good, yellow=caution, red=problem. na/immature=window not closed, NOT a negative signal.
-- Each entity appears in EXACTLY ONE recommendation. No contradictions.
-- Health score trend: compare W-1 H score vs W-2 vs W-3 to determine direction.
+- Currency: K=thousands (Rs65K=Rs65,000), L=lakhs (Rs1L=Rs100,000).
+- Always show metric tags: green/yellow/red. na/immature = not penalised.
+- Each entity in EXACTLY ONE recommendation. No contradictions.
 
-METRIC THRESHOLDS:
+THRESHOLDS:
 CPL: green<Rs10 | yellow=Rs10-15 | red>Rs15 (no age gate)
-D3 Cost: green<Rs33 | yellow=Rs33-38 | red>Rs38 (eligible only if age>=14 days)
-D7 Cost: green<Rs66 | yellow=Rs66-95 | red>Rs95 (eligible only if age>=21 days)
-ROAS: green>=1.8x | yellow=1.2-1.8x | red<1.2x (eligible only if age>=28 days)
+D3C: green<Rs33 | yellow=Rs33-38 | red>Rs38 (age>=14d)
+D7C: green<Rs66 | yellow=Rs66-95 | red>Rs95 (age>=21d)
+ROAS: green>=1.8x | yellow=1.2-1.8x | red<1.2x (age>=28d)
+Health: 80-100=excellent | 60-79=good | 40-59=watch | 20-39=cut | <20=pause
+Signal Health = recency-weighted 5-week score (W1=30%,W2=20%,W3=20%,W4=15%,W5=15%)
 
-DAILY REPORT STRUCTURE — follow exactly:
+REPORT STRUCTURE — follow exactly:
 
 ═══ YESTERDAY ([date]) ═══
-Total: Spend Rs___ | Leads ___ | CPL Rs___(tag) | 3-day avg CPL: Rs___ | [higher/lower/same]
+Spend: Rs___ | Leads: ___ | CPL: Rs___(tag) | 3-day avg: Rs___(tag) | [higher/lower by Rs___]
+[One line: which platform/campaign type drove the change]
 
-Campaign CPL:
-• [name] | CPL Rs___(tag) | W-1: Rs___ W-2: Rs___ W-3: Rs___ | [rising/stable/falling]
+═══ W-1 PORTFOLIO ([date range]) ═══
+Leads: ___ | CPL: Rs___(tag) | D3C: Rs___(tag or immature)
+Top performers: [top 2 campaigns by health score with H score]
+Needs attention: [campaigns with red CPL or red D3C]
 
-Adset CPL (>Rs300/day):
-• [name] | CPL Rs___(tag) | W-1: Rs___ W-2: Rs___ | [flag if red]
+═══ W-2 PORTFOLIO ([date range]) ═══
+D3C: Rs___(tag) vs W-1: Rs___ [trend] | D7C: Rs___(tag or immature) vs W-1: Rs___ [trend]
+Flagged: [campaigns where D3C or D7C is red or worsening]
 
-═══ W-1 LAST WEEK ([date range]) ═══
-Total: Leads ___ | CPL Rs___(tag) | D3C Rs___(tag if eligible)
+═══ W-3 PORTFOLIO ([date range]) ═══
+D3C: Rs___(tag) vs W-2: Rs___ [trend] | D7C: Rs___(tag) vs W-2: Rs___ [trend]
+Flagged: [campaigns where trend is worsening vs W-2]
 
-Campaign:
-• [name] | Leads: ___ | CPL Rs___(tag) vs W-2:Rs___ W-3:Rs___ [trend] | D3C Rs___(tag) vs W-2:Rs___ W-3:Rs___ [trend]
+═══ W-4 & W-5 — ROAS ([date ranges]) ═══
+W-4 ROAS: ___(tag) | W-5 ROAS: ___(tag) | Trend: [improving/stable/declining]
+Flagged: [campaigns with red ROAS]
 
-Adset:
-• [name] | CPL Rs___(tag) | D3C Rs___(tag or immature)
-
-═══ W-2 ([date range]) ═══
-Campaign:
-• [name] | D3C Rs___(tag) vs W-3:Rs___ W-4:Rs___ [trend] | D7C Rs___(tag) vs W-3:Rs___ W-4:Rs___ [trend]
-
-Adset:
-• [name] | D3C Rs___(tag) | D7C Rs___(tag or immature)
-
-═══ W-3 ([date range]) ═══
-Campaign:
-• [name] | D3C Rs___(tag) vs W-4:Rs___ [trend] | D7C Rs___(tag) vs W-4:Rs___ [trend]
-
-Adset:
-• [name] | D3C Rs___(tag) | D7C Rs___(tag)
-
-═══ W-4 & W-5 — ROAS ═══
-Campaign:
-• [name] | W-4 ROAS: ___(tag) | W-5 ROAS: ___(tag) | [improving/stable/declining]
-
-Adset:
-• [name] | W-4 ROAS: ___(tag) | W-5 ROAS: ___(tag)
+═══ ATTENTION NEEDED ═══
+List ONLY campaigns/adsets with red signals or 2+ consecutive weeks of deterioration:
+• [name] | Issue: [specific metric] | Trend: [data]
 
 ═══ RECOMMENDATIONS ═══
 SCALE (Meta=adset / Google=campaign):
 → [name]: reason with numbers
 
 WATCH:
-→ [name]: specific metric to monitor
+→ [name]: what to monitor
 
 CUT BUDGET 20-30%:
 → [name]: reason
@@ -5039,63 +5026,83 @@ function serializeForAI(){
   const L=[];
   L.push('=== KW 14DayYoga Dashboard === '+new Date().toDateString());
 
-  // 14DayYoga only
   const camps14=d.camps.filter(c=>detectCat(c.name)==='14DayYoga');
   const wks5=(d.weeks||[]).slice(-5);
 
-  // DAILY TOTALS last 7 days (compact)
+  // ── DAILY TOTALS last 7 days ──
   const allDates=[...new Set(camps14.flatMap(c=>Object.keys(c._dailySpend||{})))].sort().slice(-7);
-  L.push('\nDAILY (last 7 days): date|spend|leads|cpl');
+  L.push('\nDAILY (last 7 days):');
   allDates.forEach(dt=>{
     let sp=0,ld=0;
     camps14.forEach(c=>{const ds=c._dailySpend?.[dt]||{};const da=c._dailyAtt?.[dt]||{};sp+=ds.spend||0;ld+=da.leads||0;});
     if(sp>0) L.push(dt+': spend='+fmtAI(sp,'inr')+' leads='+ld+' cpl='+fmtAI(ld>0?sp/ld:null,'inr')+'('+tagCPL(ld>0?sp/ld:null)+')');
   });
 
-  // CAMPAIGNS — pre-tagged summary
+  // ── PORTFOLIO WEEKLY AGGREGATES (all 5 weeks) ──
+  L.push('\nPORTFOLIO WEEKLY AGGREGATES:');
+  wks5.forEach((w,wi)=>{
+    let sp=0,ld=0,d1=0,d3=0,d7=0,d10=0,rv=0,im=0,cl=0;
+    camps14.forEach(c=>{
+      const wd=c.weekly?.[w.key]; if(!wd||!wd.spend) return;
+      sp+=wd.spend||0; ld+=wd.leads||0; d3+=wd.d3||0; d7+=wd.d7||0; d1+=wd.d1||0; rv+=wd.rev||0; im+=wd.impr||0; cl+=wd.clicks||0;
+    });
+    if(!sp) return;
+    const age=window._approxAgeMap?.[w.key]??90;
+    const cpl=ld>0?sp/ld:null;
+    const d3c=d3>0?sp/d3:null; const d7c=d7>0?sp/d7:null; const roas=rv>0?rv/sp:null;
+    const d3Tag=age>=14&&d3c?tagD3(d3c):'immature';
+    const d7Tag=age>=21&&d7c?tagD7(d7c):'immature';
+    const roasTag=age>=28&&roas?tagROAS(roas):'immature';
+    L.push(w.label+' ('+w.full+'): spend='+fmtAI(sp,'inr')+' leads='+ld
+      +' cpl='+fmtAI(cpl,'inr')+'('+tagCPL(cpl)+')'
+      +' d3c='+fmtAI(d3c,'inr')+'('+d3Tag+')'
+      +' d7c='+fmtAI(d7c,'inr')+'('+d7Tag+')'
+      +' roas='+fmtAI(roas,'x')+'('+roasTag+')');
+  });
+
+  // ── CAMPAIGN SUMMARY — all active, compact ──
   const activeCamps=camps14.filter(c=>wks5.some(w=>c.weekly?.[w.key]?.spend>0));
-  L.push('\nCAMPAIGNS ('+activeCamps.length+'):');
+  L.push('\nCAMPAIGNS ('+activeCamps.length+' active):');
   activeCamps.forEach(c=>{
     const sh=computeSignalHealth(c,d);
     const act=getAction(sh.health,sh.conf,c.age,false);
-    // Latest week metrics
+    // Latest week CPL
     const latestWk=wks5.slice().reverse().find(w=>c.weekly?.[w.key]?.spend>0);
     const lw=latestWk?c.weekly[latestWk.key]:null;
     const latestCpl=lw&&lw.leads>0?lw.spend/lw.leads:null;
-    // 5-week signal summary
-    const wkSig=wks5.map(w=>{
+    // W1-W5 compact signal
+    const sig=wks5.map(w=>{
       const wd=c.weekly?.[w.key]; if(!wd||!wd.spend) return null;
       const age=window._approxAgeMap?.[w.key]??90;
       const cpl=wd.leads>0?wd.spend/wd.leads:null;
       const d3T=age>=14&&wd.d3cost?tagD3(wd.d3cost):'na';
       const d7T=age>=21&&wd.d7cost?tagD7(wd.d7cost):'na';
       const rT=age>=28&&wd.roas?tagROAS(wd.roas):'na';
-      const wkH=healthScore(tagCPL(cpl),d3T,d7T,rT);
-      return w.label+'[H:'+wkH+' cpl:'+fmtAI(cpl,'inr')+'('+tagCPL(cpl)+')'+(d3T!='na'?' d3('+d3T+')':'')+(d7T!='na'?' d7('+d7T+')':'')+(rT!='na'?' roas('+rT+')':'')+']';
+      const wH=healthScore(tagCPL(cpl),d3T,d7T,rT);
+      return w.label+'[H:'+wH+' cpl('+tagCPL(cpl)+')'+(d3T!='na'?' d3('+d3T+')':'')+(d7T!='na'?' d7('+d7T+')':'')+(rT!='na'?' roas('+rT+')':'')+']';
     }).filter(Boolean).join(' ');
-    L.push('['+campShort(c.name)+'] '+c.platform+' age:'+c.age+'d | SignalHealth:'+sh.health+'/100 | Action:'+act+' | Confidence:'+sh.conf);
-    L.push('  weeks: '+wkSig);
-    // Adsets >Rs300/day
+    L.push('['+campShort(c.name)+'] '+c.platform+' age:'+c.age+'d SignalH:'+sh.health+' Action:'+act+' Conf:'+sh.conf+' | '+sig);
+
+    // Active adsets >Rs300/day
     const activeAs=c.adsets.filter(a=>{
-      const recentSpend=wks5.reduce((s,w)=>s+(a.weekly?.[w.key]?.spend||0),0);
-      const recentDays=Math.max(1,wks5.filter(w=>a.weekly?.[w.key]?.spend>0).length*7);
-      return recentSpend>0 && recentSpend/recentDays>300;
+      const rs=wks5.reduce((s,w)=>s+(a.weekly?.[w.key]?.spend||0),0);
+      const rd=Math.max(1,wks5.filter(w=>a.weekly?.[w.key]?.spend>0).length*7);
+      return rs>0&&rs/rd>300;
     });
     activeAs.forEach(a=>{
       const ash=computeSignalHealth(a,d);
-      const aa=aiAgg(a);
       const aact=getAction(ash.health,ash.conf,c.age,false);
-      const awkSig=wks5.map(w=>{
+      const asig=wks5.map(w=>{
         const wd=a.weekly?.[w.key]; if(!wd||!wd.spend) return null;
         const age=window._approxAgeMap?.[w.key]??90;
         const cpl=wd.leads>0?wd.spend/wd.leads:null;
         const d3T=age>=14&&wd.d3cost?tagD3(wd.d3cost):'na';
         const d7T=age>=21&&wd.d7cost?tagD7(wd.d7cost):'na';
         const rT=age>=28&&wd.roas?tagROAS(wd.roas):'na';
-        const wkH=healthScore(tagCPL(cpl),d3T,d7T,rT);
-        return w.label+'[H:'+wkH+' cpl('+tagCPL(cpl)+')'+(d3T!='na'?' d3('+d3T+')':'')+(d7T!='na'?' d7('+d7T+')':'')+(rT!='na'?' roas('+rT+')':'')+']';
+        const wH=healthScore(tagCPL(cpl),d3T,d7T,rT);
+        return w.label+'[H:'+wH+' cpl('+tagCPL(cpl)+')'+(d3T!='na'?' d3('+d3T+')':'')+(d7T!='na'?' d7('+d7T+')':'')+(rT!='na'?' roas('+rT+')':'')+']';
       }).filter(Boolean).join(' ');
-      L.push('  [AS] '+a.name.slice(0,28)+' | HealthScore:'+ash.health+'/100 | Action:'+aact+' | Confidence:'+ash.conf+' | TotalSpend:'+fmtAI(aa.spend,'inr')+' | WeeklySignals:'+awkSig);
+      L.push('  [AS] '+a.name.slice(0,30)+' SignalH:'+ash.health+' Action:'+aact+' Conf:'+ash.conf+' | '+asig);
     });
   });
 
@@ -5141,7 +5148,7 @@ function generateDailyReport(){
   const yStr=yesterday.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
   const input=document.getElementById('aiInput');
   if(input){
-    input.value='Generate the complete daily report for '+yStr+'. Use the exact report structure. Include all active 14 Day Yoga campaigns and adsets spending >Rs300/day. Show all 5 weeks of data with trend comparisons.';
+    input.value='Generate the complete daily report for '+yStr+'. Start with portfolio-level aggregates for each week, then flag specific campaigns/adsets needing attention. Follow the exact report structure.';
     sendAI();
   }
 }
