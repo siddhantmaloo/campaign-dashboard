@@ -5006,7 +5006,7 @@ function getGeminiKey(){ return localStorage.getItem('gemini_key')||''; }
 function renderChatBody(){
   const el=document.getElementById('aiBody');
   if(!getGeminiKey()){
-    el.innerHTML='<div class="ai-key-wrap"><div class="ai-key-label">Enter your Gemini API key to start<br><span style="opacity:.6">Free key at aistudio.google.com — stored only in your browser</span></div><input class="ai-key-input" id="aiKeyInput" type="password" placeholder="AIza..." value="'+(getGeminiKey()||'')+'"><button class="ai-key-btn" style="background:var(--bg4);color:var(--text2);margin-top:4px" onclick="detectGeminiModels()">🔍 DETECT AVAILABLE MODELS</button><div class="ai-key-label" style="margin-top:8px">Model</div><input class="ai-key-input" id="aiModelInput" placeholder="gemini-1.5-flash" value="'+(localStorage.getItem('gemini_model')||'gemini-1.5-flash')+'"><div id="aiModelHint" style="font-family:var(--font-mono);font-size:9px;color:var(--text3);margin-top:4px"></div><button class="ai-key-btn" onclick="saveGeminiKey()">SAVE & START →</button></div>';
+    el.innerHTML='<div class="ai-key-wrap"><div class="ai-key-label">Enter your Groq API key<br><span style="opacity:.6">Free at console.groq.com · stored only in your browser</span></div><input class="ai-key-input" id="aiKeyInput" type="password" placeholder="gsk_..." value="'+(getGeminiKey()||'')+'"><button class="ai-key-btn" onclick="saveGeminiKey()">SAVE & START →</button></div>';
     return;
   }
   const SUGGESTIONS=['Which adsets should I scale this week?','Which creatives should I stop?','Where is budget being wasted?','What caused CPL to rise recently?','Give me a performance summary'];
@@ -5045,7 +5045,7 @@ async function detectGeminiModels(){
       .map(m=>m.name.replace('models/',''));
     if(!models.length){hint.textContent='No generateContent models found';return;}
     // Pick best free model
-    const preferred=['gemini-1.5-flash','gemini-1.5-flash-8b','gemini-1.5-pro','gemini-2.0-flash-lite','gemini-pro'];
+    const preferred=['gemini-2.5-flash','gemini-2.5-pro','gemini-2.0-flash','gemini-2.0-flash-lite','gemini-1.5-flash','gemini-pro'];
     const best=preferred.find(p=>models.includes(p))||models[0];
     document.getElementById('aiModelInput').value=best;
     hint.textContent='Available: '+models.slice(0,6).join(', ')+(models.length>6?'...':'')+' → selected: '+best;
@@ -5070,14 +5070,23 @@ async function sendAI(){
       role:m.role==='model'?'model':'user',
       parts:[{text:i===0&&m.role==='user'?dataCtx+'\n\n---\nQuestion: '+m.text:m.text}]
     }));
-    const model=getGeminiModel();
-    const url='https://generativelanguage.googleapis.com/v1/models/'+model+':generateContent?key='+getGeminiKey();
-    // Prepend system prompt to first user message (v1 doesn't support system_instruction)
-    const contentsWithSys=contents.map((m,i)=>i===0&&m.role==='user'?{role:'user',parts:[{text:SYSTEM_PROMPT+'\n\n---\n'+m.parts[0].text}]}:m);
-    const resp=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:contentsWithSys,generationConfig:{temperature:0.2,maxOutputTokens:1024,topP:0.8}})});
+    const resp=await fetch('https://api.groq.com/openai/v1/chat/completions',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+getGeminiKey()},
+      body:JSON.stringify({
+        model:'llama-3.3-70b-versatile',
+        messages:[
+          {role:'system',content:SYSTEM_PROMPT},
+          ...CHAT.history.slice(0,-1).map(m=>({role:m.role==='model'?'assistant':'user',content:m.text})),
+          {role:'user',content:serializeForAI()+'\n\n---\nQuestion: '+text}
+        ],
+        temperature:0.2,
+        max_tokens:1024
+      })
+    });
     const json=await resp.json();
-    if(json.error) throw new Error(json.error.message);
-    const reply=json.candidates?.[0]?.content?.parts?.[0]?.text||'No response received.';
+    if(json.error) throw new Error(json.error.error||json.error.message||JSON.stringify(json.error));
+    const reply=json.choices?.[0]?.message?.content||'No response received.';
     CHAT.history.push({role:'model',text:reply});
   } catch(e){
     CHAT.history.push({role:'model',text:'Error: '+e.message+'\n\nCheck your API key or try again.'});
@@ -5094,7 +5103,7 @@ async function sendAI(){
   <div class="ai-panel-hdr">
     <div>
       <div class="ai-panel-title">✦ Campaign AI</div>
-      <div class="ai-panel-sub">Powered by Gemini · <span style="cursor:pointer;text-decoration:underline" onclick="resetGeminiKey()">change key/model</span></div>
+      <div class="ai-panel-sub">Powered by Groq · Llama 3.3 70B · <span style="cursor:pointer;text-decoration:underline" onclick="resetGeminiKey()">change key</span></div>
     </div>
     <button class="ai-panel-close" onclick="toggleChat()">✕</button>
   </div>
