@@ -420,6 +420,46 @@ td:first-child{text-align:left;}
 .ts-proj-card-val{font-family:var(--font-mono);font-size:16px;font-weight:600;color:var(--accent);}
 .ts-proj-card-sub{font-family:var(--font-mono);font-size:9px;color:var(--text3);margin-top:2px;}
 
+
+/* ── AI CHATBOT ── */
+.ai-fab{position:fixed;bottom:28px;right:28px;z-index:8000;width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,#6366f1,#8b5cf6);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:22px;box-shadow:0 4px 20px rgba(99,102,241,.45);transition:transform .15s,box-shadow .15s;}
+.ai-fab:hover{transform:scale(1.08);box-shadow:0 6px 28px rgba(99,102,241,.6);}
+.ai-panel{position:fixed;bottom:92px;right:28px;z-index:8000;width:400px;max-height:72vh;background:var(--bg2);border:1px solid var(--border2);border-radius:12px;display:flex;flex-direction:column;box-shadow:0 12px 48px rgba(0,0,0,.55);transition:opacity .2s,transform .2s;transform-origin:bottom right;}
+.ai-panel.hidden{opacity:0;pointer-events:none;transform:scale(.94);}
+.ai-panel-hdr{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--border);flex-shrink:0;}
+.ai-panel-title{font-family:var(--font-mono);font-size:11px;letter-spacing:.08em;color:var(--text);font-weight:600;}
+.ai-panel-sub{font-family:var(--font-mono);font-size:9px;color:var(--text3);margin-top:1px;}
+.ai-panel-close{background:none;border:none;color:var(--text3);font-size:16px;cursor:pointer;padding:2px 6px;border-radius:3px;}
+.ai-panel-close:hover{background:var(--bg3);color:var(--text);}
+.ai-msgs{flex:1;overflow-y:auto;padding:14px 14px 8px;display:flex;flex-direction:column;gap:10px;}
+.ai-msg{max-width:88%;display:flex;flex-direction:column;gap:3px;}
+.ai-msg.user{align-self:flex-end;}
+.ai-msg.model{align-self:flex-start;}
+.ai-bubble{padding:9px 13px;border-radius:10px;font-size:12px;line-height:1.55;white-space:pre-wrap;word-break:break-word;}
+.ai-msg.user .ai-bubble{background:#6366f1;color:#fff;border-bottom-right-radius:3px;}
+.ai-msg.model .ai-bubble{background:var(--bg3);color:var(--text);border-bottom-left-radius:3px;border:1px solid var(--border);}
+.ai-msg-time{font-family:var(--font-mono);font-size:9px;color:var(--text3);padding:0 4px;}
+.ai-typing{display:flex;gap:4px;align-items:center;padding:10px 13px;}
+.ai-typing span{width:6px;height:6px;border-radius:50%;background:var(--text3);animation:aiDot 1.2s infinite;}
+.ai-typing span:nth-child(2){animation-delay:.2s;}
+.ai-typing span:nth-child(3){animation-delay:.4s;}
+@keyframes aiDot{0%,60%,100%{transform:translateY(0);opacity:.4;}30%{transform:translateY(-5px);opacity:1;}}
+.ai-input-wrap{padding:10px 12px;border-top:1px solid var(--border);display:flex;gap:8px;align-items:flex-end;flex-shrink:0;}
+.ai-input{flex:1;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:8px 11px;color:var(--text);font-family:var(--font-sans,sans-serif);font-size:12px;resize:none;outline:none;max-height:100px;line-height:1.4;}
+.ai-input:focus{border-color:#6366f1;}
+.ai-send{width:34px;height:34px;border-radius:8px;background:#6366f1;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;transition:background .15s;}
+.ai-send:hover{background:#5558e8;}
+.ai-send:disabled{background:var(--bg4);cursor:not-allowed;}
+.ai-key-wrap{padding:14px;display:flex;flex-direction:column;gap:8px;}
+.ai-key-label{font-family:var(--font-mono);font-size:10px;color:var(--text2);}
+.ai-key-input{background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:8px 11px;color:var(--text);font-family:var(--font-mono);font-size:11px;outline:none;width:100%;box-sizing:border-box;}
+.ai-key-input:focus{border-color:#6366f1;}
+.ai-key-btn{background:#6366f1;border:none;border-radius:6px;color:#fff;font-family:var(--font-mono);font-size:10px;padding:8px;cursor:pointer;letter-spacing:.05em;}
+.ai-key-btn:hover{background:#5558e8;}
+.ai-suggestions{padding:0 14px 10px;display:flex;flex-wrap:wrap;gap:6px;}
+.ai-chip{background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:4px 10px;font-family:var(--font-mono);font-size:9px;color:var(--text2);cursor:pointer;transition:all .15s;}
+.ai-chip:hover{border-color:#6366f1;color:#a5b4fc;}
+
 .settings-btn{
   width:32px;height:32px;border-radius:4px;
   border:1px solid var(--border2);background:var(--bg3);
@@ -4863,6 +4903,147 @@ function copyId(el, id){
   });
 }
 
+// ═══════════════════════════════════════
+// AI CHATBOT — Gemini
+// ═══════════════════════════════════════
+const CHAT={open:false,history:[],loading:false};
+const GEMINI_URL='https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=';
+
+const SYSTEM_PROMPT=`You are an expert digital marketing analyst for KW (Karma Wellness), a yoga/wellness company.
+You have access to live campaign performance data. Answer concisely with specific numbers. Be direct and actionable.
+
+Metrics:
+- CPL: Cost per Lead (green <Rs10, yellow Rs10-15, red >Rs15)
+- D3/D7 Cost: Cost per Day-3/Day-7 attendee (lower better)
+- D1%/D3%/D7%: % leads attending Day-1/3/7 (higher better)
+- Paid ROAS: Revenue/Spend (green >=1.8x). Adj ROAS adds WhatsApp cost (Rs3/lead) to denominator.
+- Health Score 0-100: weighted avg CPL(30%)+D3(25%)+D7(20%)+ROAS(25%). green=2,yellow=1,red=0.
+- Confidence: High(>Rs20K/4wks), Medium(>Rs5K), Low(<=Rs5K)
+- Actions: Scale+Relaunch(>=80,high conf), Scale(>=60), Watch(40-59), Wind Down(20-39), Drop(<20), Too Early(<=7d)
+- Meta: budget at adset level. Google: budget at campaign level.
+- Categories: 14 Day Yoga (main), Face Yoga, Women Health Yoga, Direct Selling
+- Maturity gates: CPL always, D3>=14d, D7>=21d, ROAS>=28d`;
+
+function fmtAI(v,type){
+  if(v==null||v===undefined) return '--';
+  if(type==='inr') return v>=100000?'Rs'+(v/100000).toFixed(1)+'L':v>=1000?'Rs'+(v/1000).toFixed(1)+'K':'Rs'+Math.round(v);
+  if(type==='pct') return Math.round(v)+'%';
+  if(type==='x') return v.toFixed(2)+'x';
+  return String(v);
+}
+
+function serializeForAI(){
+  if(!S.data) return 'No data loaded yet.';
+  const d=S.data;
+  const lines=[];
+  lines.push('=== KW Campaign Dashboard === '+new Date().toDateString());
+  const camps=d.camps.filter(c=>catMatch(c.name));
+  lines.push('Total campaigns: '+camps.length);
+  lines.push('\n## CAMPAIGNS');
+  camps.forEach(c=>{
+    const agg=campAgg(c);
+    if(!agg.spend) return;
+    lines.push('\n['+campShort(c.name)+'] '+c.platform.toUpperCase()+' age:'+c.age+'d');
+    lines.push('  Health:'+agg.health+' Action:'+agg.action+' Conf:'+agg.conf);
+    lines.push('  Spend:'+fmtAI(agg.spend,'inr')+' Leads:'+(agg.leads||0)+' CPL:'+fmtAI(agg.cpl,'inr')+' D3cost:'+fmtAI(agg.d3cost,'inr')+' D7cost:'+fmtAI(agg.d7cost,'inr'));
+    lines.push('  PaidROAS:'+fmtAI(agg.paidroas,'x')+' AdjROAS:'+fmtAI(agg.adjroas,'x')+' D1%:'+fmtAI(agg.d1pct,'pct')+' D3%:'+fmtAI(agg.d3pct,'pct')+' D7%:'+fmtAI(agg.d7pct,'pct'));
+    const wkTrend=(d.weeks||[]).filter(w=>c.weekly?.[w.key]?.spend>0).slice(-5).map(w=>{
+      const wd=c.weekly[w.key]; const cpl=wd.leads>0?wd.spend/wd.leads:null;
+      return w.label+':spend='+fmtAI(wd.spend,'inr')+',cpl='+fmtAI(cpl,'inr')+',roas='+fmtAI(wd.roas,'x');
+    });
+    if(wkTrend.length) lines.push('  WeekTrend: '+wkTrend.join(' | '));
+    if(c.adsets.length){
+      const asLines=c.adsets.map(a=>{const aa=asAgg(a);return a.name.slice(0,25)+' H:'+aa.health+' '+aa.action+' '+fmtAI(aa.spend,'inr');}).join('; ');
+      lines.push('  Adsets: '+asLines);
+    }
+  });
+  const allCrs=(d.creatives||[]).filter(cr=>{const agg=crAgg(cr);return agg.spend>0;});
+  if(allCrs.length){
+    const scored=allCrs.map(cr=>{const h=computeSignalHealth(cr,d);const agg=crAgg(cr);return {cr,h:h.health,conf:h.conf,agg};}).sort((a,b)=>b.h-a.h);
+    lines.push('\n## TOP 5 CREATIVES');
+    scored.slice(0,5).forEach(({cr,h,conf,agg})=>{lines.push(cr.name.slice(0,35)+' H:'+h+' '+getAction(h,conf,cr.age,false)+' Spend:'+fmtAI(agg.spend,'inr')+' CPL:'+fmtAI(agg.cpl,'inr')+' age:'+cr.age+'d');});
+    lines.push('## BOTTOM 5 CREATIVES');
+    scored.slice(-5).reverse().forEach(({cr,h,conf,agg})=>{lines.push(cr.name.slice(0,35)+' H:'+h+' '+getAction(h,conf,cr.age,false)+' Spend:'+fmtAI(agg.spend,'inr')+' CPL:'+fmtAI(agg.cpl,'inr')+' age:'+cr.age+'d');});
+  }
+  return lines.join('\n');
+}
+
+function toggleChat(){
+  CHAT.open=!CHAT.open;
+  document.getElementById('aiPanel').classList.toggle('hidden',!CHAT.open);
+  if(CHAT.open) renderChatBody();
+}
+
+function getGeminiKey(){ return localStorage.getItem('gemini_key')||''; }
+
+function renderChatBody(){
+  const el=document.getElementById('aiBody');
+  if(!getGeminiKey()){
+    el.innerHTML='<div class="ai-key-wrap"><div class="ai-key-label">Enter your Gemini API key to start<br><span style="opacity:.6">Free key at aistudio.google.com — stored only in your browser</span></div><input class="ai-key-input" id="aiKeyInput" type="password" placeholder="AIza..."><button class="ai-key-btn" onclick="saveGeminiKey()">SAVE KEY & START →</button></div>';
+    return;
+  }
+  const SUGGESTIONS=['Which adsets should I scale this week?','Which creatives should I stop?','Where is budget being wasted?','What caused CPL to rise recently?','Give me a performance summary'];
+  const msgsHtml=CHAT.history.map(m=>'<div class="ai-msg '+m.role+'"><div class="ai-bubble">'+(m.role==='model'?m.text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/\n/g,'<br>'):m.text.replace(/&/g,'&amp;').replace(/</g,'&lt;'))+'</div></div>').join('');
+  const typingHtml=CHAT.loading?'<div class="ai-msg model"><div class="ai-bubble ai-typing"><span></span><span></span><span></span></div></div>':'';
+  const suggsHtml=CHAT.history.length===0?'<div class="ai-suggestions">'+SUGGESTIONS.map(s=>'<span class="ai-chip" onclick="sendChip(this)">'+s+'</span>').join('')+'</div>':'';
+  el.innerHTML='<div class="ai-msgs" id="aiMsgs">'+msgsHtml+typingHtml+'</div>'+suggsHtml+'<div class="ai-input-wrap"><textarea class="ai-input" id="aiInput" rows="1" placeholder="Ask about campaigns, adsets, creatives..." onkeydown="aiKeyDown(event)" oninput="aiAutoResize(this)"></textarea><button class="ai-send" id="aiSendBtn" onclick="sendAI()" '+(CHAT.loading?'disabled':'')+'>↑</button></div>';
+  const msgs=document.getElementById('aiMsgs');
+  if(msgs) msgs.scrollTop=msgs.scrollHeight;
+  if(!CHAT.loading) setTimeout(()=>document.getElementById('aiInput')?.focus(),50);
+}
+
+function saveGeminiKey(){
+  const k=document.getElementById('aiKeyInput')?.value?.trim();
+  if(!k){alert('Please enter a valid API key');return;}
+  localStorage.setItem('gemini_key',k);
+  CHAT.history=[];
+  renderChatBody();
+}
+
+function aiKeyDown(e){ if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendAI();} }
+function aiAutoResize(el){ el.style.height='auto'; el.style.height=Math.min(el.scrollHeight,100)+'px'; }
+function sendChip(el){ const t=el.textContent; el.closest('.ai-suggestions').remove(); document.getElementById('aiInput').value=t; sendAI(); }
+
+async function sendAI(){
+  const input=document.getElementById('aiInput');
+  const text=(input?.value||'').trim();
+  if(!text||CHAT.loading) return;
+  input.value=''; input.style.height='auto';
+  CHAT.history.push({role:'user',text});
+  CHAT.loading=true;
+  renderChatBody();
+  try{
+    const dataCtx=serializeForAI();
+    const contents=CHAT.history.map((m,i)=>({
+      role:m.role==='model'?'model':'user',
+      parts:[{text:i===0&&m.role==='user'?dataCtx+'\n\n---\nQuestion: '+m.text:m.text}]
+    }));
+    const resp=await fetch(GEMINI_URL+getGeminiKey(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents,system_instruction:{parts:[{text:SYSTEM_PROMPT}]},generationConfig:{temperature:0.2,maxOutputTokens:1024,topP:0.8}})});
+    const json=await resp.json();
+    if(json.error) throw new Error(json.error.message);
+    const reply=json.candidates?.[0]?.content?.parts?.[0]?.text||'No response received.';
+    CHAT.history.push({role:'model',text:reply});
+  } catch(e){
+    CHAT.history.push({role:'model',text:'Error: '+e.message+'\n\nCheck your API key or try again.'});
+  }
+  CHAT.loading=false;
+  renderChatBody();
+}
+
 </script>
+
+<!-- AI CHATBOT -->
+<button class="ai-fab" onclick="toggleChat()" title="Ask AI">✦</button>
+<div class="ai-panel hidden" id="aiPanel">
+  <div class="ai-panel-hdr">
+    <div>
+      <div class="ai-panel-title">✦ Campaign AI</div>
+      <div class="ai-panel-sub">Powered by Gemini · your data stays in browser</div>
+    </div>
+    <button class="ai-panel-close" onclick="toggleChat()">✕</button>
+  </div>
+  <div id="aiBody"><!-- key setup or chat --></div>
+</div>
+
 </body>
 </html>
