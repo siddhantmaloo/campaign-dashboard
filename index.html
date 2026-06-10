@@ -4980,17 +4980,19 @@ List ONLY campaigns/adsets with red signals or 2+ consecutive weeks of deteriora
 • [name] | Issue: [specific metric] | Trend: [data]
 
 ═══ RECOMMENDATIONS ═══
-SCALE (Meta=adset / Google=campaign):
+SCALE (Meta=adset / Google=campaign) — ONLY if Action=scale or Action=scale-relaunch:
 → [name]: reason with numbers
 
-WATCH:
+WATCH — ONLY if Action=watch:
 → [name]: what to monitor
 
-CUT BUDGET 20-30%:
+CUT BUDGET 20-30% — ONLY if Action=wind-down:
 → [name]: reason
 
-PAUSE:
+PAUSE — ONLY if Action=drop:
 → [name]: reason
+
+IMPORTANT: Use the pre-computed Action tag. Do NOT derive your own action from health score alone.
 `;
 
 function fmtAI(v,type){
@@ -5029,13 +5031,26 @@ function serializeForAI(){
   const camps14=d.camps.filter(c=>detectCat(c.name)==='14DayYoga');
   const wks5=(d.weeks||[]).slice(-5);
 
-  // ── DAILY TOTALS last 7 days ──
+  // ── DAILY TOTALS last 7 days + pre-computed 3-day avg ──
   const allDates=[...new Set(camps14.flatMap(c=>Object.keys(c._dailySpend||{})))].sort().slice(-7);
-  L.push('\nDAILY (last 7 days):');
+  // Pre-compute daily totals
+  const dailyTotals={};
   allDates.forEach(dt=>{
     let sp=0,ld=0;
     camps14.forEach(c=>{const ds=c._dailySpend?.[dt]||{};const da=c._dailyAtt?.[dt]||{};sp+=ds.spend||0;ld+=da.leads||0;});
-    if(sp>0) L.push(dt+': spend='+fmtAI(sp,'inr')+' leads='+ld+' cpl='+fmtAI(ld>0?sp/ld:null,'inr')+'('+tagCPL(ld>0?sp/ld:null)+')');
+    if(sp>0) dailyTotals[dt]={spend:sp,leads:ld,cpl:ld>0?sp/ld:null};
+  });
+  // 3-day average CPL (days before yesterday)
+  const sortedDates=Object.keys(dailyTotals).sort();
+  const yesterdayIdx=sortedDates.length-1;
+  const prior3=sortedDates.slice(Math.max(0,yesterdayIdx-3),yesterdayIdx);
+  const p3sp=prior3.reduce((s,dt)=>s+dailyTotals[dt].spend,0);
+  const p3ld=prior3.reduce((s,dt)=>s+dailyTotals[dt].leads,0);
+  const avg3cpl=p3ld>0?p3sp/p3ld:null;
+  L.push('\nDAILY (last 7 days) — 3-day-avg-cpl='+fmtAI(avg3cpl,'inr')+'('+tagCPL(avg3cpl)+'):');
+  sortedDates.forEach(dt=>{
+    const t=dailyTotals[dt];
+    L.push(dt+': spend='+fmtAI(t.spend,'inr')+' leads='+t.leads+' cpl='+fmtAI(t.cpl,'inr')+'('+tagCPL(t.cpl)+')');
   });
 
   // ── PORTFOLIO WEEKLY AGGREGATES (all 5 weeks) ──
@@ -5053,7 +5068,7 @@ function serializeForAI(){
     const d3Tag=age>=14&&d3c?tagD3(d3c):'immature';
     const d7Tag=age>=21&&d7c?tagD7(d7c):'immature';
     const roasTag=age>=28&&roas?tagROAS(roas):'immature';
-    L.push(w.label+' ('+w.full+'): spend='+fmtAI(sp,'inr')+' leads='+ld
+    L.push(w.label+' [age~'+(window._approxAgeMap?.[w.key]??'?')+'d] ('+w.full+'): spend='+fmtAI(sp,'inr')+' leads='+ld
       +' cpl='+fmtAI(cpl,'inr')+'('+tagCPL(cpl)+')'
       +' d3c='+fmtAI(d3c,'inr')+'('+d3Tag+')'
       +' d7c='+fmtAI(d7c,'inr')+'('+d7Tag+')'
