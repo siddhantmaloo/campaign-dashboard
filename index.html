@@ -5063,7 +5063,7 @@ function serializeForAI(campDays=7){
   const R=v=>v!=null&&!isNaN(v)&&v!==0?Math.round(v):'-';
   const F1=v=>v!=null&&!isNaN(v)&&v!==0?(Math.round(v*10)/10):'-';
   const lines=['KW 14DayYoga — latest:'+latestDt+' today:'+new Date().toDateString(),
-    'date|campaign|platform|spend|cpm|cpc|ctr%|leads|cpl|d1%|d3%|d7%|d10%|rev|subs'];
+    'date|campaign|platform|spend_inr|cpm_inr|cpc_inr|ctr_pct|db_leads_count|cpl_inr|d1_pct|d3_pct|d7_pct|d10_pct|revenue_inr|paid_subs'];
   camps.forEach(c=>{
     lastN.forEach(dt=>{
       const ds=c._dailySpend?.[dt]||{}; const da=c._dailyAtt?.[dt]||{};
