@@ -5047,7 +5047,9 @@ function serializeForAI(){
   const p3sp=prior3.reduce((s,dt)=>s+dailyTotals[dt].spend,0);
   const p3ld=prior3.reduce((s,dt)=>s+dailyTotals[dt].leads,0);
   const avg3cpl=p3ld>0?p3sp/p3ld:null;
-  L.push('\nDAILY (last 7 days) — 3-day-avg-cpl='+fmtAI(avg3cpl,'inr')+'('+tagCPL(avg3cpl)+'):');
+  L.push('\n=== YESTERDAY KEY NUMBERS ===');
+  L.push('3-day-avg-cpl='+fmtAI(avg3cpl,'inr')+'('+tagCPL(avg3cpl)+')');
+  L.push('\nDAILY (last 7 days):');
   sortedDates.forEach(dt=>{
     const t=dailyTotals[dt];
     L.push(dt+': spend='+fmtAI(t.spend,'inr')+' leads='+t.leads+' cpl='+fmtAI(t.cpl,'inr')+'('+tagCPL(t.cpl)+')');
@@ -5055,7 +5057,8 @@ function serializeForAI(){
 
   // ── PORTFOLIO WEEKLY AGGREGATES (all 5 weeks) ──
   L.push('\nPORTFOLIO WEEKLY AGGREGATES:');
-  wks5.forEach((w,wi)=>{
+  // Send W-1 first (most recent), W-5 last (oldest) — matches report template
+  [...wks5].reverse().forEach((w,wi)=>{
     let sp=0,ld=0,d1=0,d3=0,d7=0,d10=0,rv=0,im=0,cl=0;
     camps14.forEach(c=>{
       const wd=c.weekly?.[w.key]; if(!wd||!wd.spend) return;
@@ -5068,7 +5071,8 @@ function serializeForAI(){
     const d3Tag=age>=14&&d3c?tagD3(d3c):'immature';
     const d7Tag=age>=21&&d7c?tagD7(d7c):'immature';
     const roasTag=age>=28&&roas?tagROAS(roas):'immature';
-    L.push(w.label+' [age~'+(window._approxAgeMap?.[w.key]??'?')+'d] ('+w.full+'): spend='+fmtAI(sp,'inr')+' leads='+ld
+    const wLabel=['W-1(most recent)','W-2','W-3','W-4','W-5'][wi];
+    L.push(wLabel+' '+w.label+' [age~'+(window._approxAgeMap?.[w.key]??'?')+'d] ('+w.full+'): spend='+fmtAI(sp,'inr')+' leads='+ld
       +' cpl='+fmtAI(cpl,'inr')+'('+tagCPL(cpl)+')'
       +' d3c='+fmtAI(d3c,'inr')+'('+d3Tag+')'
       +' d7c='+fmtAI(d7c,'inr')+'('+d7Tag+')'
@@ -5086,7 +5090,7 @@ function serializeForAI(){
     const lw=latestWk?c.weekly[latestWk.key]:null;
     const latestCpl=lw&&lw.leads>0?lw.spend/lw.leads:null;
     // W1-W5 compact signal
-    const sig=wks5.map(w=>{
+    const sig=[...wks5].reverse().map(w=>{
       const wd=c.weekly?.[w.key]; if(!wd||!wd.spend) return null;
       const age=window._approxAgeMap?.[w.key]??90;
       const cpl=wd.leads>0?wd.spend/wd.leads:null;
@@ -5107,7 +5111,7 @@ function serializeForAI(){
     activeAs.forEach(a=>{
       const ash=computeSignalHealth(a,d);
       const aact=getAction(ash.health,ash.conf,c.age,false);
-      const asig=wks5.map(w=>{
+      const asig=[...wks5].reverse().map(w=>{
         const wd=a.weekly?.[w.key]; if(!wd||!wd.spend) return null;
         const age=window._approxAgeMap?.[w.key]??90;
         const cpl=wd.leads>0?wd.spend/wd.leads:null;
