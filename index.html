@@ -5051,6 +5051,35 @@ function copyDailyReport(){
 function aiKeyDown(e){ if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendAI();} }
 function aiAutoResize(el){ el.style.height='auto'; el.style.height=Math.min(el.scrollHeight,100)+'px'; }
 
+function serializeForAI(){
+  if(!S.data) return 'No data loaded.';
+  const d=S.data;
+  const L=[];
+  const camps=d.camps.filter(c=>detectCat(c.name)==='14DayYoga');
+  const wks5=(d.weeks||[]).slice(-5);
+  L.push('KW 14DayYoga Dashboard — '+new Date().toDateString());
+  const allDates=[...new Set(camps.flatMap(c=>Object.keys(c._dailySpend||{})))].sort().slice(-7);
+  L.push('\nDAILY last 7 days:');
+  allDates.forEach(dt=>{
+    let sp=0,ld=0;camps.forEach(c=>{const ds=c._dailySpend?.[dt]||{};const da=c._dailyAtt?.[dt]||{};sp+=ds.spend||0;ld+=da.leads||0;});
+    if(sp>0) L.push(dt+': spend=Rs'+Math.round(sp)+' leads='+ld+' cpl=Rs'+(ld>0?Math.round(sp/ld):'-'));
+  });
+  const activeCamps=camps.filter(c=>wks5.some(w=>c.weekly?.[w.key]?.spend>0));
+  L.push('\nCAMPAIGNS & ADSETS (last 5 weeks):');
+  activeCamps.forEach(c=>{
+    const sh=computeSignalHealth(c,d);
+    let sp=0,ld=0;wks5.forEach(w=>{const wd=c.weekly?.[w.key];if(wd){sp+=wd.spend||0;ld+=wd.leads||0;}});
+    L.push('['+campShort(c.name)+'] '+c.platform+' age:'+c.age+'d H:'+sh.health+' action:'+getAction(sh.health,sh.conf,c.age,false)+' conf:'+sh.conf+' spend=Rs'+Math.round(sp)+' leads='+ld+' cpl=Rs'+(ld>0?Math.round(sp/ld):'-'));
+    c.adsets.forEach(a=>{
+      let asp=0,ald=0;wks5.forEach(w=>{const wd=a.weekly?.[w.key];if(wd){asp+=wd.spend||0;ald+=wd.leads||0;}});
+      if(!asp) return;
+      const ash=computeSignalHealth(a,d);
+      L.push('  [AS] '+a.name.slice(0,32)+' H:'+ash.health+' action:'+getAction(ash.health,ash.conf,c.age,false)+' conf:'+ash.conf+' spend=Rs'+Math.round(asp)+' leads='+ald+' cpl=Rs'+(ald>0?Math.round(asp/ald):'-'));
+    });
+  });
+  return L.join('\n');
+}
+
 async function sendAI(){
   if(!getGeminiKey()){alert('Click "AI key" to add your Groq API key first');return;}
   const input=document.getElementById('aiInput');
