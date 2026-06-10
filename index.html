@@ -5051,7 +5051,9 @@ async function sendAI(){
     }));
     const model=getGeminiModel();
     const url='https://generativelanguage.googleapis.com/v1/models/'+model+':generateContent?key='+getGeminiKey();
-    const resp=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents,system_instruction:{parts:[{text:SYSTEM_PROMPT}]},generationConfig:{temperature:0.2,maxOutputTokens:1024,topP:0.8}})});
+    // Prepend system prompt to first user message (v1 doesn't support system_instruction)
+    const contentsWithSys=contents.map((m,i)=>i===0&&m.role==='user'?{role:'user',parts:[{text:SYSTEM_PROMPT+'\n\n---\n'+m.parts[0].text}]}:m);
+    const resp=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:contentsWithSys,generationConfig:{temperature:0.2,maxOutputTokens:1024,topP:0.8}})});
     const json=await resp.json();
     if(json.error) throw new Error(json.error.message);
     const reply=json.candidates?.[0]?.content?.parts?.[0]?.text||'No response received.';
