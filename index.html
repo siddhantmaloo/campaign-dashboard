@@ -463,7 +463,7 @@ td:first-child{text-align:left;}
 .ai-key-input:focus{border-color:#6366f1;}
 .ai-key-btn{background:#6366f1;border:none;border-radius:6px;color:#fff;font-family:var(--font-mono);font-size:10px;padding:8px;cursor:pointer;letter-spacing:.05em;}
 .ai-key-btn:hover{background:#5558e8;}
-.ai-suggestions{padding:0 14px 10px;display:flex;flex-wrap:wrap;gap:6px;}
+.ai-suggestions{padding:0 0 10px;display:flex;flex-wrap:wrap;gap:6px;}
 .ai-chip{background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:4px 10px;font-family:var(--font-mono);font-size:9px;color:var(--text2);cursor:pointer;transition:all .15s;}
 .ai-chip:hover{border-color:#6366f1;color:#a5b4fc;}
 
@@ -787,6 +787,7 @@ td:first-child{text-align:left;}
   <div class="nav-tab"         onclick="switchTab('adsets')">Ad Sets</div>
   <div class="nav-tab"         onclick="switchTab('creatives')">Creatives</div>
   <div class="nav-tab"         onclick="switchTab('batch')">Batch Diagnostic</div>
+  <div class="nav-tab"         onclick="switchTab('ai')">✦ AI</div>
 </nav>
 
 
@@ -1097,6 +1098,21 @@ td:first-child{text-align:left;}
 
   </div>
 </div>
+
+<!-- ══ AI TAB ══ -->
+<div class="tab-content" id="tab-ai">
+  <div style="max-width:720px;margin:0 auto;height:calc(100vh - 120px);display:flex;flex-direction:column;padding:0 24px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 0 12px;flex-shrink:0;border-bottom:1px solid var(--border);">
+      <div>
+        <span style="font-family:var(--font-mono);font-size:13px;font-weight:700;color:var(--text);letter-spacing:.05em;">✦ Campaign AI</span>
+        <span style="font-family:var(--font-mono);font-size:9px;color:var(--text3);margin-left:10px;">Powered by Groq · Llama 3.3 70B</span>
+      </div>
+      <span style="font-family:var(--font-mono);font-size:9px;color:var(--text3);cursor:pointer;text-decoration:underline" onclick="resetGeminiKey()">change key</span>
+    </div>
+    <div id="aiBody" style="flex:1;overflow:hidden;display:flex;flex-direction:column;"></div>
+  </div>
+</div>
+
 </main>
 
 
@@ -3630,9 +3646,10 @@ function closeModalOutside(e){ if(e.target===document.getElementById('modal')) c
 // ═══════════════════════════════════════
 function switchTab(t){
   S.tab=t;
-  document.querySelectorAll('.nav-tab').forEach((el,i)=>el.classList.toggle('active',['overview','campaigns','adsets','creatives','batch','insights'][i]===t));
+  document.querySelectorAll('.nav-tab').forEach((el,i)=>el.classList.toggle('active',['overview','campaigns','adsets','creatives','batch','ai','insights'][i]===t));
   document.querySelectorAll('.tab-content').forEach(el=>el.classList.toggle('active',el.id===`tab-${t}`));
   if(t==='batch'&&S.data) renderBatch(S.data);
+  if(t==='ai') initAITab();
 }
 function setCrSort(s,btn){ /* handled above */ }
 
@@ -5009,25 +5026,23 @@ function formatAIResponse(text){
     .replace(/\n/g,'<br>');
 }
 
-function toggleChat(){
-  CHAT.open=!CHAT.open;
-  document.getElementById('aiPanel').classList.toggle('hidden',!CHAT.open);
-  if(CHAT.open) renderChatBody();
-}
+function toggleChat(){ /* legacy - now uses tab */ }
 
 function getGeminiKey(){ return localStorage.getItem('gemini_key')||''; }
 
+function initAITab(){ renderChatBody(); }
 function renderChatBody(){
   const el=document.getElementById('aiBody');
+  if(!el) return;
   if(!getGeminiKey()){
-    el.innerHTML='<div class="ai-key-wrap"><div class="ai-key-label">Enter your Groq API key<br><span style="opacity:.6">Free at console.groq.com · stored only in your browser</span></div><input class="ai-key-input" id="aiKeyInput" type="password" placeholder="gsk_..." value="'+(getGeminiKey()||'')+'"><button class="ai-key-btn" onclick="saveGeminiKey()">SAVE & START →</button></div>';
+    el.innerHTML='<div style="max-width:480px;margin:40px auto;display:flex;flex-direction:column;gap:12px;"><div style="font-family:var(--font-mono);font-size:11px;color:var(--text2);">Enter your Groq API key to start<br><span style="opacity:.6;font-size:10px;">Free at console.groq.com · stored only in your browser</span></div><input class="ai-key-input" id="aiKeyInput" type="password" placeholder="gsk_..." style="padding:10px 14px;font-size:12px;"><button class="ai-key-btn" style="padding:10px;font-size:11px;" onclick="saveGeminiKey()">SAVE & START →</button></div>';
     return;
   }
   const SUGGESTIONS=['Which adsets should I scale this week?','Which creatives should I stop?','Where is budget being wasted?','What caused CPL to rise recently?','Give me a performance summary'];
   const msgsHtml=CHAT.history.map(m=>m.role==='model'?'<div class="ai-msg model"><div class="ai-msg-row"><div class="ai-model-icon">✦</div><div class="ai-bubble">'+formatAIResponse(m.text)+'</div></div></div>':'<div class="ai-msg user"><div class="ai-bubble">'+m.text.replace(/&/g,'&amp;').replace(/</g,'&lt;')+'</div></div>').join('');
   const typingHtml=CHAT.loading?'<div class="ai-msg model"><div class="ai-msg-row"><div class="ai-model-icon">✦</div><div class="ai-bubble ai-typing"><span></span><span></span><span></span></div></div></div>':'';
   const suggsHtml=CHAT.history.length===0?'<div class="ai-suggestions">'+SUGGESTIONS.map(s=>'<span class="ai-chip" onclick="sendChip(this)">'+s+'</span>').join('')+'</div>':'';
-  el.innerHTML='<div class="ai-msgs" id="aiMsgs">'+msgsHtml+typingHtml+'</div>'+suggsHtml+'<div class="ai-input-wrap"><textarea class="ai-input" id="aiInput" rows="1" placeholder="Ask about campaigns, adsets, creatives..." onkeydown="aiKeyDown(event)" oninput="aiAutoResize(this)"></textarea><button class="ai-send" id="aiSendBtn" onclick="sendAI()" '+(CHAT.loading?'disabled':'')+'>↑</button></div>';
+  el.innerHTML='<div class="ai-msgs" id="aiMsgs" style="flex:1;overflow-y:auto;padding:20px 0 12px;">'+msgsHtml+typingHtml+'</div>'+suggsHtml+'<div class="ai-input-wrap" style="padding:12px 0 16px;"><textarea class="ai-input" id="aiInput" rows="1" placeholder="Ask about your campaigns, adsets, creatives, budget..." onkeydown="aiKeyDown(event)" oninput="aiAutoResize(this)"></textarea><button class="ai-send" id="aiSendBtn" onclick="sendAI()" '+(CHAT.loading?'disabled':'')+'>↑</button></div>';
   const msgs=document.getElementById('aiMsgs');
   if(msgs) msgs.scrollTop=msgs.scrollHeight;
   if(!CHAT.loading) setTimeout(()=>document.getElementById('aiInput')?.focus(),50);
@@ -5111,18 +5126,7 @@ async function sendAI(){
 
 </script>
 
-<!-- AI CHATBOT -->
-<button class="ai-fab" onclick="toggleChat()" title="Ask AI">✦</button>
-<div class="ai-panel hidden" id="aiPanel">
-  <div class="ai-panel-hdr">
-    <div>
-      <div class="ai-panel-title">✦ Campaign AI</div>
-      <div class="ai-panel-sub">Powered by Groq · Llama 3.3 70B · <span style="cursor:pointer;text-decoration:underline" onclick="resetGeminiKey()">change key</span></div>
-    </div>
-    <button class="ai-panel-close" onclick="toggleChat()">✕</button>
-  </div>
-  <div id="aiBody"><!-- key setup or chat --></div>
-</div>
+
 
 </body>
 </html>
