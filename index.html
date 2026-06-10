@@ -1101,15 +1101,24 @@ td:first-child{text-align:left;}
 
 <!-- ══ AI TAB ══ -->
 <div class="tab-content" id="tab-ai">
-  <div style="max-width:720px;margin:0 auto;height:calc(100vh - 110px);display:flex;flex-direction:column;padding:0 24px;">
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 0 12px;flex-shrink:0;border-bottom:1px solid var(--border);">
+  <div style="max-width:620px;margin:0 auto;padding:20px 24px 0;height:calc(100vh - 110px);display:flex;flex-direction:column;">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding-bottom:14px;border-bottom:1px solid var(--border);flex-shrink:0;">
       <div>
-        <span style="font-family:var(--font-mono);font-size:13px;font-weight:700;color:var(--text);letter-spacing:.05em;">✦ Campaign AI</span>
-        <span id="aiModelLabel" style="font-family:var(--font-mono);font-size:9px;color:var(--text3);margin-left:10px;">Powered by Groq</span>
+        <span style="font-family:var(--font-mono);font-size:13px;font-weight:700;color:var(--text);">✦ Daily Report</span>
+        <span style="font-family:var(--font-mono);font-size:9px;color:var(--text3);margin-left:10px;">14 Day Yoga · Meta + Google</span>
       </div>
-      <span style="font-family:var(--font-mono);font-size:9px;color:var(--text3);cursor:pointer;text-decoration:underline" onclick="resetGeminiKey()">change key</span>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <span style="font-family:var(--font-mono);font-size:9px;color:var(--text3);cursor:pointer;text-decoration:underline" onclick="resetGeminiKey()">AI key</span>
+        <button id="copyReportBtn" onclick="copyDailyReport()" style="display:none;font-family:var(--font-mono);font-size:9px;background:var(--bg3);border:1px solid var(--border2);color:var(--text2);padding:5px 12px;border-radius:4px;cursor:pointer;">⎘ COPY</button>
+        <button id="genReportBtn" onclick="generateBasicReport()" style="font-family:var(--font-mono);font-size:9px;background:#6366f1;border:none;color:#fff;padding:6px 16px;border-radius:4px;cursor:pointer;font-weight:700;">📊 GENERATE REPORT</button>
+      </div>
     </div>
-    <div id="aiBody" style="flex:1;overflow:hidden;display:flex;flex-direction:column;"></div>
+    <div id="reportOutput" style="flex:1;overflow-y:auto;padding:20px 0 8px;font-family:var(--font-mono);font-size:12px;line-height:2;color:var(--text);white-space:pre-wrap;"></div>
+    <div style="border-top:1px solid var(--border);padding:10px 0 14px;flex-shrink:0;display:flex;gap:8px;align-items:flex-end;">
+      <textarea id="aiInput" class="ai-input" rows="1" placeholder="Ask a follow-up question..." onkeydown="aiKeyDown(event)" oninput="aiAutoResize(this)" style="flex:1;"></textarea>
+      <button class="ai-send" onclick="sendAI()" id="aiSendBtn">↑</button>
+    </div>
+    <div id="aiBody" style="display:none;"></div>
   </div>
 </div>
 
@@ -4928,363 +4937,144 @@ function copyId(el, id){
 }
 
 // ═══════════════════════════════════════
-// AI CHATBOT — Gemini
 // ═══════════════════════════════════════
-const CHAT={open:false,history:[],loading:false};
-const GEMINI_URL='https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=';
-
-const SYSTEM_PROMPT=`You are a performance marketing analyst for KW (Karma Wellness) 14 Day Free Yoga campaigns.
-
-RULES:
-- Only analyse 14 Day Yoga campaigns/adsets. Skip Face Yoga, Women Health Yoga, Direct Selling.
-- Ignore adsets spending less than Rs300/day.
-- Meta budget = ADSET level. Google budget = CAMPAIGN level.
-- Use EXACT numbers from the data. Never estimate.
-- Currency: K=thousands (Rs65K=Rs65,000), L=lakhs (Rs1L=Rs100,000).
-- Always show metric tags: green/yellow/red. na/immature = not penalised.
-- Each entity in EXACTLY ONE recommendation. No contradictions.
-
-THRESHOLDS:
-CPL: green<Rs10 | yellow=Rs10-15 | red>Rs15 (no age gate)
-D3C: green<Rs33 | yellow=Rs33-38 | red>Rs38 (age>=14d)
-D7C: green<Rs66 | yellow=Rs66-95 | red>Rs95 (age>=21d)
-ROAS: green>=1.8x | yellow=1.2-1.8x | red<1.2x (age>=28d)
-Health: 80-100=excellent | 60-79=good | 40-59=watch | 20-39=cut | <20=pause
-Signal Health = recency-weighted 5-week score (W1=30%,W2=20%,W3=20%,W4=15%,W5=15%)
-
-REPORT STRUCTURE — follow exactly:
-
-═══ YESTERDAY ([date]) ═══
-Spend: Rs___ | Leads: ___ | CPL: Rs___(tag) | 3-day avg: Rs___(tag) | [higher/lower by Rs___]
-[One line: which platform/campaign type drove the change]
-
-═══ W-1 PORTFOLIO ([date range]) ═══
-Leads: ___ | CPL: Rs___(tag) | D3C: Rs___(tag or immature)
-Top performers: [top 2 campaigns by health score with H score]
-Needs attention: [campaigns with red CPL or red D3C]
-
-═══ W-2 PORTFOLIO ([date range]) ═══
-D3C: Rs___(tag) vs W-1: Rs___ [trend] | D7C: Rs___(tag or immature) vs W-1: Rs___ [trend]
-Flagged: [campaigns where D3C or D7C is red or worsening]
-
-═══ W-3 PORTFOLIO ([date range]) ═══
-D3C: Rs___(tag) vs W-2: Rs___ [trend] | D7C: Rs___(tag) vs W-2: Rs___ [trend]
-Flagged: [campaigns where trend is worsening vs W-2]
-
-═══ W-4 & W-5 — ROAS ([date ranges]) ═══
-W-4 ROAS: ___(tag) | W-5 ROAS: ___(tag) | Trend: [improving/stable/declining]
-Flagged: [campaigns with red ROAS]
-
-═══ ATTENTION NEEDED ═══
-List ONLY campaigns/adsets with red signals or 2+ consecutive weeks of deterioration:
-• [name] | Issue: [specific metric] | Trend: [data]
-
-═══ RECOMMENDATIONS ═══
-SCALE (Meta=adset / Google=campaign) — ONLY if Action=scale or Action=scale-relaunch:
-→ [name]: reason with numbers
-
-WATCH — ONLY if Action=watch:
-→ [name]: what to monitor
-
-CUT BUDGET 20-30% — ONLY if Action=wind-down:
-→ [name]: reason
-
-PAUSE — ONLY if Action=drop:
-→ [name]: reason
-
-IMPORTANT: Use the pre-computed Action tag. Do NOT derive your own action from health score alone.
-`;
-
-function fmtAI(v,type){
-  if(v==null||v===undefined) return '--';
-  if(type==='inr') return v>=100000?'Rs'+(v/100000).toFixed(1)+'L':v>=1000?'Rs'+(v/1000).toFixed(1)+'K':'Rs'+Math.round(v);
-  if(type==='pct') return Math.round(v)+'%';
-  if(type==='x') return v.toFixed(2)+'x';
-  return String(v);
-}
-
-// Standalone aggregators for AI (use all weeks, no filter dependency)
-function aiAgg(entity){
-  let spend=0,leads=0,clicks=0,impr=0,rev=0,subs=0,d1=0,d3=0,d7=0,d10=0;
-  Object.values(entity.weekly||{}).forEach(wd=>{
-    if(!wd.spend) return;
-    spend+=wd.spend||0; leads+=wd.leads||0; clicks+=wd.clicks||0; impr+=wd.impr||0;
-    rev+=wd.rev||0; subs+=wd.subs||0; d1+=wd.d1||0; d3+=wd.d3||0; d7+=wd.d7||0; d10+=wd.d10||0;
-  });
-  const cpl=leads>0?spend/leads:null;
-  const roas=spend>0&&rev>0?rev/spend:null;
-  const d3cost=d3>0?spend/d3:null;
-  const d7cost=d7>0?spend/d7:null;
-  return {spend,leads,rev,subs,cpl,roas,d3cost,d7cost,
-    d1pct:leads>0?Math.round(d1/leads*100):0,
-    d3pct:leads>0?Math.round(d3/leads*100):0,
-    d7pct:leads>0?Math.round(d7/leads*100):0,
-    paidroas:roas, adjroas:rev>0&&(spend+leads*T.waCost)>0?rev/(spend+leads*T.waCost):null};
-}
-
-function serializeForAI(){
-  if(!S.data) return 'No data loaded yet.';
-  const d=S.data;
-  const L=[];
-  L.push('=== KW 14DayYoga Dashboard === '+new Date().toDateString());
-
-  const camps14=d.camps.filter(c=>detectCat(c.name)==='14DayYoga');
-  const wks5=(d.weeks||[]).slice(-5);
-
-  // ── DAILY TOTALS last 7 days + pre-computed 3-day avg ──
-  const allDates=[...new Set(camps14.flatMap(c=>Object.keys(c._dailySpend||{})))].sort().slice(-7);
-  // Pre-compute daily totals
-  const dailyTotals={};
-  allDates.forEach(dt=>{
-    let sp=0,ld=0;
-    camps14.forEach(c=>{const ds=c._dailySpend?.[dt]||{};const da=c._dailyAtt?.[dt]||{};sp+=ds.spend||0;ld+=da.leads||0;});
-    if(sp>0) dailyTotals[dt]={spend:sp,leads:ld,cpl:ld>0?sp/ld:null};
-  });
-  // 3-day average CPL (days before yesterday)
-  const sortedDates=Object.keys(dailyTotals).sort();
-  const yesterdayIdx=sortedDates.length-1;
-  const prior3=sortedDates.slice(Math.max(0,yesterdayIdx-3),yesterdayIdx);
-  const p3sp=prior3.reduce((s,dt)=>s+dailyTotals[dt].spend,0);
-  const p3ld=prior3.reduce((s,dt)=>s+dailyTotals[dt].leads,0);
-  const avg3cpl=p3ld>0?p3sp/p3ld:null;
-  L.push('\n=== YESTERDAY KEY NUMBERS ===');
-  L.push('3-day-avg-cpl='+fmtAI(avg3cpl,'inr')+'('+tagCPL(avg3cpl)+')');
-  L.push('\nDAILY (last 7 days):');
-  sortedDates.forEach(dt=>{
-    const t=dailyTotals[dt];
-    L.push(dt+': spend='+fmtAI(t.spend,'inr')+' leads='+t.leads+' cpl='+fmtAI(t.cpl,'inr')+'('+tagCPL(t.cpl)+')');
-  });
-
-  // ── PORTFOLIO WEEKLY AGGREGATES (all 5 weeks) ──
-  L.push('\nPORTFOLIO WEEKLY AGGREGATES:');
-  // Send W-1 first (most recent), W-5 last (oldest) — matches report template
-  [...wks5].reverse().forEach((w,wi)=>{
-    let sp=0,ld=0,d1=0,d3=0,d7=0,d10=0,rv=0,im=0,cl=0;
-    camps14.forEach(c=>{
-      const wd=c.weekly?.[w.key]; if(!wd||!wd.spend) return;
-      sp+=wd.spend||0; ld+=wd.leads||0; d3+=wd.d3||0; d7+=wd.d7||0; d1+=wd.d1||0; rv+=wd.rev||0; im+=wd.impr||0; cl+=wd.clicks||0;
-    });
-    if(!sp) return;
-    const age=window._approxAgeMap?.[w.key]??90;
-    const cpl=ld>0?sp/ld:null;
-    const d3c=d3>0?sp/d3:null; const d7c=d7>0?sp/d7:null; const roas=rv>0?rv/sp:null;
-    const d3Tag=age>=14&&d3c?tagD3(d3c):'immature';
-    const d7Tag=age>=21&&d7c?tagD7(d7c):'immature';
-    const roasTag=age>=28&&roas?tagROAS(roas):'immature';
-    const wLabel=['W-1(most recent)','W-2','W-3','W-4','W-5'][wi];
-    L.push(wLabel+' '+w.label+' [age~'+(window._approxAgeMap?.[w.key]??'?')+'d] ('+w.full+'): spend='+fmtAI(sp,'inr')+' leads='+ld
-      +' cpl='+fmtAI(cpl,'inr')+'('+tagCPL(cpl)+')'
-      +' d3c='+fmtAI(d3c,'inr')+'('+d3Tag+')'
-      +' d7c='+fmtAI(d7c,'inr')+'('+d7Tag+')'
-      +' roas='+fmtAI(roas,'x')+'('+roasTag+')');
-  });
-
-  // ── CAMPAIGN SUMMARY — all active, compact ──
-  const activeCamps=camps14.filter(c=>wks5.some(w=>c.weekly?.[w.key]?.spend>0));
-  L.push('\nCAMPAIGNS ('+activeCamps.length+' active):');
-  activeCamps.forEach(c=>{
-    const sh=computeSignalHealth(c,d);
-    const act=getAction(sh.health,sh.conf,c.age,false);
-    // Latest week CPL
-    const latestWk=wks5.slice().reverse().find(w=>c.weekly?.[w.key]?.spend>0);
-    const lw=latestWk?c.weekly[latestWk.key]:null;
-    const latestCpl=lw&&lw.leads>0?lw.spend/lw.leads:null;
-    // W1-W5 compact signal
-    const sig=[...wks5].reverse().map(w=>{
-      const wd=c.weekly?.[w.key]; if(!wd||!wd.spend) return null;
-      const age=window._approxAgeMap?.[w.key]??90;
-      const cpl=wd.leads>0?wd.spend/wd.leads:null;
-      const d3T=age>=14&&wd.d3cost?tagD3(wd.d3cost):'na';
-      const d7T=age>=21&&wd.d7cost?tagD7(wd.d7cost):'na';
-      const rT=age>=28&&wd.roas?tagROAS(wd.roas):'na';
-      const wH=healthScore(tagCPL(cpl),d3T,d7T,rT);
-      return w.label+'[H:'+wH+' cpl('+tagCPL(cpl)+')'+(d3T!='na'?' d3('+d3T+')':'')+(d7T!='na'?' d7('+d7T+')':'')+(rT!='na'?' roas('+rT+')':'')+']';
-    }).filter(Boolean).join(' ');
-    L.push('['+campShort(c.name)+'] '+c.platform+' age:'+c.age+'d SignalH:'+sh.health+' Action:'+act+' Conf:'+sh.conf+' | '+sig);
-
-    // Active adsets >Rs300/day
-    const activeAs=c.adsets.filter(a=>{
-      const rs=wks5.reduce((s,w)=>s+(a.weekly?.[w.key]?.spend||0),0);
-      const rd=Math.max(1,wks5.filter(w=>a.weekly?.[w.key]?.spend>0).length*7);
-      return rs>0&&rs/rd>300;
-    });
-    activeAs.forEach(a=>{
-      const ash=computeSignalHealth(a,d);
-      const aact=getAction(ash.health,ash.conf,c.age,false);
-      const asig=[...wks5].reverse().map(w=>{
-        const wd=a.weekly?.[w.key]; if(!wd||!wd.spend) return null;
-        const age=window._approxAgeMap?.[w.key]??90;
-        const cpl=wd.leads>0?wd.spend/wd.leads:null;
-        const d3T=age>=14&&wd.d3cost?tagD3(wd.d3cost):'na';
-        const d7T=age>=21&&wd.d7cost?tagD7(wd.d7cost):'na';
-        const rT=age>=28&&wd.roas?tagROAS(wd.roas):'na';
-        const wH=healthScore(tagCPL(cpl),d3T,d7T,rT);
-        return w.label+'[H:'+wH+' cpl('+tagCPL(cpl)+')'+(d3T!='na'?' d3('+d3T+')':'')+(d7T!='na'?' d7('+d7T+')':'')+(rT!='na'?' roas('+rT+')':'')+']';
-      }).filter(Boolean).join(' ');
-      L.push('  [AS] '+a.name.slice(0,30)+' SignalH:'+ash.health+' Action:'+aact+' Conf:'+ash.conf+' | '+asig);
-    });
-  });
-
-  return L.join('\n');
-}
-
-
-function formatAIResponse(text){
-  // Split into paragraphs on blank lines
-  const escaped = text
-    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-    .replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>');
-
-  const blocks = escaped.split(/\n{2,}/);
-  return blocks.map(block => {
-    const lines = block.split('\n').filter(l=>l.trim());
-    if(!lines.length) return '';
-
-    // Check if all lines are list items (* or - or 1.)
-    const isList = lines.every(l=>/^[\*\-] /.test(l.trim())||/^\d+\. /.test(l.trim()));
-    if(isList){
-      const items = lines.map(l=>l.replace(/^[\*\-] /,'').replace(/^\d+\. /,'')).map(l=>`<li>${l}</li>`).join('');
-      return `<ul>${items}</ul>`;
-    }
-
-    // Heading line (ends with : and is short)
-    if(lines.length===1 && lines[0].length<80 && lines[0].endsWith(':')){
-      return `<div class="ai-heading">${lines[0]}</div>`;
-    }
-
-    // Regular paragraph
-    return `<p>${lines.join('<br>')}</p>`;
-  }).join('');
-}
-
-function toggleChat(){ /* legacy - now uses tab */ }
+// DAILY REPORT + AI ASSISTANT
+// ═══════════════════════════════════════
+const CHAT={history:[],loading:false};
 
 function getGeminiKey(){ return localStorage.getItem('gemini_key')||''; }
-
-
-function generateDailyReport(){
-  const yesterday=new Date(); yesterday.setDate(yesterday.getDate()-1);
-  const yStr=yesterday.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
-  const input=document.getElementById('aiInput');
-  if(input){
-    // Compute 3-day avg to inject into prompt
-const d=S.data;
-const camps14=d?d.camps.filter(cc=>detectCat(cc.name)==='14DayYoga'):[];
-const allDts=[...new Set(camps14.flatMap(cc=>Object.keys(cc._dailySpend||{})))].sort().slice(-7);
-const dtTotals={};
-allDts.forEach(dt=>{let sp=0,ld=0;camps14.forEach(cc=>{const ds=cc._dailySpend?.[dt]||{};const da=cc._dailyAtt?.[dt]||{};sp+=ds.spend||0;ld+=da.leads||0;});if(sp>0)dtTotals[dt]={spend:sp,leads:ld,cpl:ld>0?sp/ld:null};});
-const sdts=Object.keys(dtTotals).sort();
-const prior=sdts.slice(Math.max(0,sdts.length-4),sdts.length-1);
-const p3sp=prior.reduce((s,dt)=>s+dtTotals[dt].spend,0);
-const p3ld=prior.reduce((s,dt)=>s+dtTotals[dt].leads,0);
-const avg3=p3ld>0?Math.round(p3sp/p3ld):null;
-const ytd=sdts[sdts.length-1];
-const ytdData=dtTotals[ytd]||{};
-const ytdCpl=ytdData.cpl?Math.round(ytdData.cpl):null;
-const cplDiff=avg3&&ytdCpl?ytdCpl-avg3:null;
-const avgStr=avg3?'Rs'+avg3:'unknown';
-const diffStr=cplDiff!=null?(cplDiff>0?'+Rs'+cplDiff+' higher':cplDiff<0?'Rs'+Math.abs(cplDiff)+' lower':'same as'):'';
-input.value='Generate the complete daily report for '+yStr+'. IMPORTANT: Yesterday CPL=Rs'+(ytdCpl||'?')+', 3-day-avg-CPL='+avgStr+', difference='+diffStr+' average. Use these exact numbers in the YESTERDAY section header. Start with portfolio-level aggregates for each week, then flag specific campaigns/adsets needing attention. Follow the exact report structure.';
-    sendAI();
-  }
-}
-
-function initAITab(){ renderChatBody(); }
-function renderChatBody(){
-  const el=document.getElementById('aiBody');
-  if(!el) return;
-  const lbl=document.getElementById('aiModelLabel'); if(lbl){ const m=getGeminiModel(); lbl.textContent='Powered by Groq · '+(m.includes('/')?m.split('/')[1]:m); }
-  if(!getGeminiKey()){
-    el.innerHTML='<div style="max-width:480px;margin:40px auto;display:flex;flex-direction:column;gap:12px;"><div style="font-family:var(--font-mono);font-size:11px;color:var(--text2);">Groq API Key<br><span style="opacity:.6;font-size:10px;">Free at console.groq.com</span></div><input class="ai-key-input" id="aiKeyInput" type="password" placeholder="gsk_..." style="padding:10px 14px;font-size:12px;" value="'+(getGeminiKey()||'')+'"><div style="font-family:var(--font-mono);font-size:11px;color:var(--text2);">Model<br><span style="opacity:.6;font-size:10px;">Recommended: meta-llama/llama-4-scout-17b-16e-instruct</span></div><input class="ai-key-input" id="aiModelInput" placeholder="meta-llama/llama-4-scout-17b-16e-instruct" style="padding:10px 14px;font-size:12px;" value="'+(getGeminiModel()||'meta-llama/llama-4-scout-17b-16e-instruct')+'"><button class="ai-key-btn" style="padding:10px;font-size:11px;" onclick="saveGeminiKey()">SAVE & START →</button></div>';
-    return;
-  }
-  const SUGGESTIONS=['Which adsets should I scale this week?','Which creatives should I stop?','Where is budget being wasted?','What caused CPL to rise recently?','Give me a performance summary'];
-  const msgsHtml=CHAT.history.map(m=>m.role==='model'?'<div class="ai-msg model"><div class="ai-msg-row"><div class="ai-model-icon">✦</div><div class="ai-bubble">'+formatAIResponse(m.text)+'</div></div></div>':'<div class="ai-msg user"><div class="ai-bubble">'+m.text.replace(/&/g,'&amp;').replace(/</g,'&lt;')+'</div></div>').join('');
-  const typingHtml=CHAT.loading?'<div class="ai-msg model"><div class="ai-msg-row"><div class="ai-model-icon">✦</div><div class="ai-bubble ai-typing"><span></span><span></span><span></span></div></div></div>':'';
-  const suggsHtml=CHAT.history.length===0?'<div style="padding:0 0 12px;"><button onclick="generateDailyReport()" style="width:100%;padding:13px;background:linear-gradient(135deg,#6366f1,#8b5cf6);border:none;border-radius:10px;color:#fff;font-family:var(--font-mono);font-size:11px;font-weight:700;letter-spacing:.08em;cursor:pointer;margin-bottom:10px;">📊 GENERATE DAILY REPORT</button><div class="ai-suggestions">'+SUGGESTIONS.map(s=>'<span class="ai-chip" onclick="sendChip(this)">'+s+'</span>').join('')+'</div></div>':'';
-  const emptyState=CHAT.history.length===0&&!CHAT.loading?`<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:40px 0;"><div style="font-size:28px;margin-bottom:4px;">✦</div><div style="font-family:var(--font-mono);font-size:12px;color:var(--text2);font-weight:600;">Campaign AI</div><div style="font-family:var(--font-mono);font-size:10px;color:var(--text3);text-align:center;max-width:300px;line-height:1.6;">Ask anything about your campaigns,<br>adsets, creatives or budget.</div></div>`:'';
-  el.innerHTML='<div id="aiMsgs" style="flex:1;overflow-y:auto;padding:20px 0 8px;display:flex;flex-direction:column;gap:14px;">'+(CHAT.history.length===0&&!CHAT.loading?emptyState:msgsHtml+typingHtml)+'</div>'+suggsHtml+'<div style="padding:8px 0 16px;display:flex;gap:8px;align-items:flex-end;"><textarea class="ai-input" id="aiInput" rows="1" placeholder="Ask about your campaigns, adsets, creatives, budget..." onkeydown="aiKeyDown(event)" oninput="aiAutoResize(this)" style="flex:1;"></textarea><button class="ai-send" id="aiSendBtn" onclick="sendAI()" '+(CHAT.loading?'disabled':'')+'>↑</button></div>';
-  const msgs=document.getElementById('aiMsgs');
-  if(msgs) msgs.scrollTop=msgs.scrollHeight;
-  if(!CHAT.loading) setTimeout(()=>document.getElementById('aiInput')?.focus(),50);
-}
-
-function saveGeminiKey(){
-  const k=document.getElementById('aiKeyInput')?.value?.trim();
-  const m=document.getElementById('aiModelInput')?.value?.trim()||'meta-llama/llama-4-scout-17b-16e-instruct';
-  if(!k){alert('Please enter a valid API key');return;}
-  localStorage.setItem('gemini_key',k);
-  localStorage.setItem('gemini_model',m);
-  CHAT.history=[];
-  renderChatBody();
-}
 function getGeminiModel(){ return localStorage.getItem('gemini_model')||'meta-llama/llama-4-scout-17b-16e-instruct'; }
-function resetGeminiKey(){ localStorage.removeItem('gemini_key'); localStorage.removeItem('gemini_model'); CHAT.history=[]; renderChatBody(); }
+function resetGeminiKey(){
+  const k=prompt('Enter your Groq API key (leave empty to clear):',getGeminiKey());
+  if(k===null) return;
+  if(k.trim()){ localStorage.setItem('gemini_key',k.trim()); alert('Key saved!'); }
+  else{ localStorage.removeItem('gemini_key'); alert('Key cleared.'); }
+}
 
-async function detectGeminiModels(){
-  const k=document.getElementById('aiKeyInput')?.value?.trim();
-  if(!k){alert('Enter your API key first');return;}
-  const hint=document.getElementById('aiModelHint');
-  hint.textContent='Detecting...';
-  try{
-    const resp=await fetch('https://generativelanguage.googleapis.com/v1beta/models?key='+k);
-    const json=await resp.json();
-    if(json.error){hint.textContent='Error: '+json.error.message;return;}
-    const models=(json.models||[])
-      .filter(m=>m.supportedGenerationMethods?.includes('generateContent'))
-      .map(m=>m.name.replace('models/',''));
-    if(!models.length){hint.textContent='No generateContent models found';return;}
-    // Pick best free model
-    const preferred=['gemini-2.5-flash','gemini-2.5-pro','gemini-2.0-flash','gemini-2.0-flash-lite','gemini-1.5-flash','gemini-pro'];
-    const best=preferred.find(p=>models.includes(p))||models[0];
-    document.getElementById('aiModelInput').value=best;
-    hint.textContent='Available: '+models.slice(0,6).join(', ')+(models.length>6?'...':'')+' → selected: '+best;
-  }catch(e){hint.textContent='Error: '+e.message;}
+function initAITab(){}
+
+function fmtRpt(v){ if(v==null||isNaN(v)) return '--'; return Math.round(v).toLocaleString('en-IN'); }
+function fmtRptF(v,d=1){ if(v==null||isNaN(v)) return '--'; return (Math.round(v*Math.pow(10,d))/Math.pow(10,d)).toFixed(d); }
+function pctChg(a,b){ if(!a||!b||b===0) return null; return Math.round((a-b)/b*1000)/10; }
+function pctStr(v){ if(v==null) return '--'; return (v>0?'+':'')+Math.abs(v)+'%'; }
+function dirStr(v){ if(v==null) return 'unchanged'; return v>0?'increased':'decreased'; }
+
+function computeDailyMetrics(){
+  if(!S.data) return null;
+  const d=S.data;
+  const camps=d.camps.filter(c=>detectCat(c.name)==='14DayYoga'&&!c.name.toLowerCase().includes('experimental'));
+  const allDates=[...new Set(camps.flatMap(c=>Object.keys(c._dailySpend||{})))].sort().filter(dt=>dt<'2099');
+  if(allDates.length<2) return null;
+  const yd=allDates[allDates.length-1];
+  const db=allDates[allDates.length-2];
+
+  function mx(dt,plat){
+    let sp=0,ld=0,im=0,cl=0;
+    camps.forEach(c=>{
+      if(plat&&c.platform!==plat) return;
+      const ds=c._dailySpend?.[dt]||{};
+      const da=c._dailyAtt?.[dt]||{};
+      sp+=ds.spend||0; ld+=da.leads||0; im+=ds.impr||0; cl+=ds.clicks||0;
+    });
+    return {spend:sp,leads:ld,impr:im,clicks:cl,
+      cpl:ld>0?sp/ld:null,
+      ctr:im>0?cl/im*100:null,
+      c2db:cl>0&&ld>0?ld/cl*100:null};
+  }
+  return {date:yd,prev:db,
+    all:{y:mx(yd,null),p:mx(db,null)},
+    meta:{y:mx(yd,'meta'),p:mx(db,'meta')},
+    google:{y:mx(yd,'google'),p:mx(db,'google')}};
+}
+
+async function generateBasicReport(){
+  if(!S.data){alert('Load data first');return;}
+  const btn=document.getElementById('genReportBtn');
+  const out=document.getElementById('reportOutput');
+  btn.textContent='Generating...'; btn.disabled=true;
+  out.textContent='';
+
+  const m=computeDailyMetrics();
+  if(!m){out.textContent='Not enough daily data (need at least 2 days).';btn.textContent='📊 GENERATE REPORT';btn.disabled=false;return;}
+
+  const {all,meta,google}=m;
+  const dateObj=new Date(m.date+'T00:00:00Z');
+  const dateStr=dateObj.toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'short',year:'numeric',timeZone:'UTC'});
+
+  // Metric lines — all computed in JS, no AI
+  const metaCplChg=pctChg(meta.y.cpl,meta.p.cpl);
+  const metaCtrChg=pctChg(meta.y.ctr,meta.p.ctr);
+  const gCplChg=pctChg(google.y.cpl,google.p.cpl);
+  const gCtrChg=pctChg(google.y.ctr,google.p.ctr);
+
+  const report=`Hey Team,
+Yesterday's KW Performance update (${dateStr}):
+━━━━━━━━━━━━━━━━━━━━━━━━
+
+Overall 14dayYoga Performance (Meta + Google):
+> Spends: ₹${fmtRpt(all.y.spend)}
+> DB Leads: ${all.y.leads}
+> DB CPL : ₹${fmtRptF(all.y.cpl)}
+
+Meta 14Day Yoga Performance:
+> Spends: ₹${fmtRpt(meta.y.spend)}
+> DB Leads: ${meta.y.leads}
+> DB CPL : ₹${fmtRptF(meta.y.cpl)}
+Insights:
+> 1. Meta CPL ${dirStr(metaCplChg)} by ${Math.abs(metaCplChg||0)}% (from ₹${fmtRptF(meta.p.cpl)} to ₹${fmtRptF(meta.y.cpl)})
+> 2. CTR ${dirStr(metaCtrChg)} by ${Math.abs(metaCtrChg||0)}% (from ${fmtRptF(meta.p.ctr)}% to ${fmtRptF(meta.y.ctr)}%), Click-to-DB rate: ${fmtRptF(meta.y.c2db)}%
+
+Google 14Day Yoga Performance:
+> Spends: ₹${fmtRpt(google.y.spend)}
+> DB Leads: ${google.y.leads}
+> DB CPL : ₹${fmtRptF(google.y.cpl)}
+Insights:
+> 1. Google CPL ${dirStr(gCplChg)} by ${Math.abs(gCplChg||0)}% (from ₹${fmtRptF(google.p.cpl)} to ₹${fmtRptF(google.y.cpl)})
+> 2. CTR ${dirStr(gCtrChg)} by ${Math.abs(gCtrChg||0)}% (from ${fmtRptF(google.p.ctr)}% to ${fmtRptF(google.y.ctr)}%), Click-to-DB rate: ${fmtRptF(google.y.c2db)}%`;
+
+  out.textContent=report;
+  document.getElementById('copyReportBtn').style.display='';
+  btn.textContent='📊 GENERATE REPORT'; btn.disabled=false;
+}
+
+function copyDailyReport(){
+  const text=document.getElementById('reportOutput').textContent;
+  navigator.clipboard.writeText(text).then(()=>{
+    const btn=document.getElementById('copyReportBtn');
+    btn.textContent='✓ COPIED';
+    setTimeout(()=>btn.textContent='⎘ COPY',2000);
+  });
 }
 
 function aiKeyDown(e){ if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendAI();} }
 function aiAutoResize(el){ el.style.height='auto'; el.style.height=Math.min(el.scrollHeight,100)+'px'; }
-function sendChip(el){ const t=el.textContent; el.closest('.ai-suggestions').remove(); document.getElementById('aiInput').value=t; sendAI(); }
 
 async function sendAI(){
+  if(!getGeminiKey()){alert('Click "AI key" to add your Groq API key first');return;}
   const input=document.getElementById('aiInput');
   const text=(input?.value||'').trim();
   if(!text||CHAT.loading) return;
   input.value=''; input.style.height='auto';
-  CHAT.history.push({role:'user',text});
+  const out=document.getElementById('reportOutput');
+  const prev=out.textContent;
   CHAT.loading=true;
-  renderChatBody();
+  out.textContent=prev+'\n\n[Thinking...]';
   try{
-    const dataCtx=serializeForAI();
-    const contents=CHAT.history.map((m,i)=>({
-      role:m.role==='model'?'model':'user',
-      parts:[{text:i===0&&m.role==='user'?dataCtx+'\n\n---\nQuestion: '+m.text:m.text}]
-    }));
     const resp=await fetch('https://api.groq.com/openai/v1/chat/completions',{
       method:'POST',
       headers:{'Content-Type':'application/json','Authorization':'Bearer '+getGeminiKey()},
-      body:JSON.stringify({
-        model:getGeminiModel(),
-        messages:[
-          {role:'system',content:SYSTEM_PROMPT},
-          ...CHAT.history.slice(0,-1).map(m=>({role:m.role==='model'?'assistant':'user',content:m.text})),
-          {role:'user',content:serializeForAI()+'\n\n---\nQuestion: '+text}
-        ],
-        temperature:0.2,
-        max_tokens:1024
-      })
+      body:JSON.stringify({model:getGeminiModel(),messages:[
+        {role:'system',content:'You are a marketing analyst for KW Karma Wellness 14 Day Yoga campaigns. Answer concisely using exact numbers from the data provided.'},
+        {role:'user',content:serializeForAI()+'\n\n---\nQuestion: '+text}
+      ],temperature:0.2,max_tokens:512})
     });
     const json=await resp.json();
     if(json.error) throw new Error(json.error.error||json.error.message||JSON.stringify(json.error));
-    const reply=json.choices?.[0]?.message?.content||'No response received.';
-    CHAT.history.push({role:'model',text:reply});
-  } catch(e){
-    CHAT.history.push({role:'model',text:'Error: '+e.message+'\n\nCheck your API key or try again.'});
-  }
+    const reply=json.choices?.[0]?.message?.content||'No response.';
+    out.textContent=prev+'\n\n━━━━ AI Answer ━━━━\n'+reply;
+  } catch(e){ out.textContent=prev+'\n\nError: '+e.message; }
   CHAT.loading=false;
-  renderChatBody();
 }
-
 </script>
 
 
