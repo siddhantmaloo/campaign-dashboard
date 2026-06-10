@@ -4932,6 +4932,25 @@ function fmtAI(v,type){
   return String(v);
 }
 
+// Standalone aggregators for AI (use all weeks, no filter dependency)
+function aiAgg(entity){
+  let spend=0,leads=0,clicks=0,impr=0,rev=0,subs=0,d1=0,d3=0,d7=0,d10=0;
+  Object.values(entity.weekly||{}).forEach(wd=>{
+    if(!wd.spend) return;
+    spend+=wd.spend||0; leads+=wd.leads||0; clicks+=wd.clicks||0; impr+=wd.impr||0;
+    rev+=wd.rev||0; subs+=wd.subs||0; d1+=wd.d1||0; d3+=wd.d3||0; d7+=wd.d7||0; d10+=wd.d10||0;
+  });
+  const cpl=leads>0?spend/leads:null;
+  const roas=spend>0&&rev>0?rev/spend:null;
+  const d3cost=d3>0?spend/d3:null;
+  const d7cost=d7>0?spend/d7:null;
+  return {spend,leads,rev,subs,cpl,roas,d3cost,d7cost,
+    d1pct:leads>0?Math.round(d1/leads*100):0,
+    d3pct:leads>0?Math.round(d3/leads*100):0,
+    d7pct:leads>0?Math.round(d7/leads*100):0,
+    paidroas:roas, adjroas:rev>0&&(spend+leads*T.waCost)>0?rev/(spend+leads*T.waCost):null};
+}
+
 function serializeForAI(){
   if(!S.data) return 'No data loaded yet.';
   const d=S.data;
@@ -4941,10 +4960,12 @@ function serializeForAI(){
   lines.push('Total campaigns: '+camps.length);
   lines.push('\n## CAMPAIGNS');
   camps.forEach(c=>{
-    const agg=campAgg(c);
+    const agg=aiAgg(c);
     if(!agg.spend) return;
-    lines.push('\n['+campShort(c.name)+'] '+c.platform.toUpperCase()+' age:'+c.age+'d');
-    lines.push('  Health:'+agg.health+' Action:'+agg.action+' Conf:'+agg.conf);
+    const sh=computeSignalHealth(c,d);
+    const action=getAction(sh.health,sh.conf,c.age,false);
+    lines.push('\n['+campShort(c.name)+'] '+c.platform.toUpperCase()+' age:'+c.age+'d cat:'+detectCat(c.name));
+    lines.push('  Health:'+sh.health+' Action:'+action+' Conf:'+sh.conf);
     lines.push('  Spend:'+fmtAI(agg.spend,'inr')+' Leads:'+(agg.leads||0)+' CPL:'+fmtAI(agg.cpl,'inr')+' D3cost:'+fmtAI(agg.d3cost,'inr')+' D7cost:'+fmtAI(agg.d7cost,'inr'));
     lines.push('  PaidROAS:'+fmtAI(agg.paidroas,'x')+' AdjROAS:'+fmtAI(agg.adjroas,'x')+' D1%:'+fmtAI(agg.d1pct,'pct')+' D3%:'+fmtAI(agg.d3pct,'pct')+' D7%:'+fmtAI(agg.d7pct,'pct'));
     const wkTrend=(d.weeks||[]).filter(w=>c.weekly?.[w.key]?.spend>0).slice(-5).map(w=>{
@@ -4953,13 +4974,19 @@ function serializeForAI(){
     });
     if(wkTrend.length) lines.push('  WeekTrend: '+wkTrend.join(' | '));
     if(c.adsets.length){
-      const asLines=c.adsets.map(a=>{const aa=asAgg(a);return a.name.slice(0,25)+' H:'+aa.health+' '+aa.action+' '+fmtAI(aa.spend,'inr');}).join('; ');
+      const asLines=c.adsets.map(a=>{
+        const aa=aiAgg(a); const ash=computeSignalHealth(a,d);
+        return a.name.slice(0,25)+' H:'+ash.health+' '+getAction(ash.health,ash.conf,a.age||c.age,false)+' '+fmtAI(aa.spend,'inr');
+      }).join('; ');
       lines.push('  Adsets: '+asLines);
     }
   });
-  const allCrs=(d.creatives||[]).filter(cr=>{const agg=crAgg(cr);return agg.spend>0;});
+  const allCrs=(d.creatives||[]).filter(cr=>aiAgg(cr).spend>0);
   if(allCrs.length){
-    const scored=allCrs.map(cr=>{const h=computeSignalHealth(cr,d);const agg=crAgg(cr);return {cr,h:h.health,conf:h.conf,agg};}).sort((a,b)=>b.h-a.h);
+    const scored=allCrs.map(cr=>{
+      const h=computeSignalHealth(cr,d); const agg=aiAgg(cr);
+      return {cr,h:h.health,conf:h.conf,agg};
+    }).sort((a,b)=>b.h-a.h);
     lines.push('\n## TOP 5 CREATIVES');
     scored.slice(0,5).forEach(({cr,h,conf,agg})=>{lines.push(cr.name.slice(0,35)+' H:'+h+' '+getAction(h,conf,cr.age,false)+' Spend:'+fmtAI(agg.spend,'inr')+' CPL:'+fmtAI(agg.cpl,'inr')+' age:'+cr.age+'d');});
     lines.push('## BOTTOM 5 CREATIVES');
