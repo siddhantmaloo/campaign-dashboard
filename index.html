@@ -5055,36 +5055,79 @@ function aiAutoResize(el){ el.style.height='auto'; el.style.height=Math.min(el.s
 function serializeForAI(){
   if(!S.data) return 'No data loaded.';
   const d=S.data;
-  const L=[];
   const camps=d.camps.filter(c=>detectCat(c.name)==='14DayYoga');
-  const wks5=(d.weeks||[]).slice(-5);
-  const latestDt=[...new Set(camps.flatMap(cc=>Object.keys(cc._dailySpend||{})))].sort().filter(dt=>dt<'2099').pop()||'unknown';
-  L.push('KW 14DayYoga Dashboard — Data as of: '+latestDt+' (today is '+new Date().toDateString()+')');
-  const allDates=[...new Set(camps.flatMap(c=>Object.keys(c._dailySpend||{})))].sort().slice(-7);
-  L.push('\nDAILY last 7 days:');
-  allDates.forEach(dt=>{
-    let sp=0,ld=0;camps.forEach(c=>{const ds=c._dailySpend?.[dt]||{};const da=c._dailyAtt?.[dt]||{};sp+=ds.spend||0;ld+=da.leads||0;});
-    if(sp>0) L.push(dt+': spend=Rs'+Math.round(sp)+' leads='+ld+' cpl=Rs'+(ld>0?Math.round(sp/ld):'-'));
-  });
-  const activeCamps=camps.filter(c=>wks5.some(w=>c.weekly?.[w.key]?.spend>0));
-  L.push('\nCAMPAIGNS & ADSETS (last 5 weeks):');
-  activeCamps.forEach(c=>{
-    const sh=computeSignalHealth(c,d);
-    // Use last 2 weeks for recent CPL (not 5-week aggregate)
-    const wks2=wks5.slice(-2);
-    let sp=0,ld=0; wks2.forEach(w=>{const wd=c.weekly?.[w.key];if(wd){sp+=wd.spend||0;ld+=wd.leads||0;}});
-    let sp5=0,ld5=0; wks5.forEach(w=>{const wd=c.weekly?.[w.key];if(wd){sp5+=wd.spend||0;ld5+=wd.leads||0;}});
-    L.push('[CAMP:'+c.name.slice(0,55)+'] '+c.platform+' age:'+c.age+'d H:'+sh.health+' action:'+getAction(sh.health,sh.conf,c.age,false)+' conf:'+sh.conf+' recent_spend=Rs'+Math.round(sp)+' recent_leads='+ld+' recent_cpl=Rs'+(ld>0?Math.round(sp/ld):'-')+' total5wk_spend=Rs'+Math.round(sp5));
-    c.adsets.forEach(a=>{
-      let asp=0,ald=0; wks2.forEach(w=>{const wd=a.weekly?.[w.key];if(wd){asp+=wd.spend||0;ald+=wd.leads||0;}});
-      let asp5=0; wks5.forEach(w=>{const wd=a.weekly?.[w.key];if(wd){asp5+=wd.spend||0;}});
-      if(!asp5) return;
-      const ash=computeSignalHealth(a,d);
-      // Full name to avoid truncation confusion
-      L.push('  [AS:'+a.name+'] camp:['+campShort(c.name)+'] H:'+ash.health+' action:'+getAction(ash.health,ash.conf,c.age,false)+' conf:'+ash.conf+' recent_spend=Rs'+Math.round(asp)+' recent_leads='+ald+' recent_cpl=Rs'+(ald>0?Math.round(asp/ald):'-')+' total5wk_spend=Rs'+Math.round(asp5));
+  const allDates=[...new Set(camps.flatMap(c=>Object.keys(c._dailySpend||{})))].sort().filter(dt=>dt<'2099');
+  if(!allDates.length) return 'No data.';
+  const latestDt=allDates[allDates.length-1];
+  const last14=allDates.slice(-14);
+  const last7=allDates.slice(-7);
+  const R=v=>v!=null&&!isNaN(v)&&v!==0?Math.round(v):'-';
+  const F1=v=>v!=null&&!isNaN(v)&&v!==0?(Math.round(v*10)/10):'-';
+
+  const hdr='date|name|platform|spend|cpm|cpc|ctr%|leads|cpl|d1%|d3%|d7%|d10%|rev|subs';
+
+  // CAMPAIGN LEVEL — last 14 days
+  const campLines=['## CAMPAIGN DAILY (last 14 days)',hdr];
+  camps.forEach(c=>{
+    last14.forEach(dt=>{
+      const ds=c._dailySpend?.[dt]||{}; const da=c._dailyAtt?.[dt]||{};
+      const sp=ds.spend||0; if(!sp) return;
+      const ld=da.leads||0,im=ds.impr||0,cl=ds.clicks||0;
+      const rv=(c._dailyRev?.[dt])||0,sb=(c._dailySubs?.[dt])||0;
+      campLines.push([dt,campShort(c.name),c.platform,
+        R(sp),R(im>0?sp/im*1000:null),R(cl>0?sp/cl:null),F1(im>0?cl/im*100:null),
+        ld,R(ld>0?sp/ld:null),
+        F1(ld>0?(da.d1||0)/ld*100:null),F1(ld>0?(da.d3||0)/ld*100:null),
+        F1(ld>0?(da.d7||0)/ld*100:null),F1(ld>0?(da.d10||0)/ld*100:null),
+        R(rv),sb||0].join('|'));
     });
   });
-  return L.join('\n');
+
+  // ADSET LEVEL — last 7 days, active only
+  const asLines=['\n## ADSET DAILY (last 7 days)',hdr.replace('name','adset')];
+  camps.forEach(c=>{
+    c.adsets.forEach(a=>{
+      let hasSpend=false;
+      last7.forEach(dt=>{if((a._dailySpend?.[dt]?.spend||0)>0)hasSpend=true;});
+      if(!hasSpend) return;
+      last7.forEach(dt=>{
+        const ds=a._dailySpend?.[dt]||{}; const da=a._dailyAtt?.[dt]||{};
+        const sp=ds.spend||0; if(!sp) return;
+        const ld=da.leads||0,im=ds.impr||0,cl=ds.clicks||0;
+        const rv=(a._dailyRev?.[dt])||0,sb=(a._dailySubs?.[dt])||0;
+        asLines.push([dt,a.name.slice(0,40),c.platform,
+          R(sp),R(im>0?sp/im*1000:null),R(cl>0?sp/cl:null),F1(im>0?cl/im*100:null),
+          ld,R(ld>0?sp/ld:null),
+          F1(ld>0?(da.d1||0)/ld*100:null),F1(ld>0?(da.d3||0)/ld*100:null),
+          F1(ld>0?(da.d7||0)/ld*100:null),F1(ld>0?(da.d10||0)/ld*100:null),
+          R(rv),sb||0].join('|'));
+      });
+    });
+  });
+
+  // CREATIVE LEVEL — last 7 days, top 25 by spend
+  const crSpend={};
+  (d.creatives||[]).forEach(cr=>{last7.forEach(dt=>{crSpend[cr.id]=(crSpend[cr.id]||0)+((cr._dailySpend?.[dt]?.spend)||0);});});
+  const topCrs=(d.creatives||[]).filter(cr=>(crSpend[cr.id]||0)>0).sort((a,b)=>(crSpend[b.id]||0)-(crSpend[a.id]||0)).slice(0,25);
+  const crLines=['\n## CREATIVE DAILY (last 7 days, top 25 by spend)','date|creative|adset|platform|spend|cpm|cpc|ctr%|leads|cpl|d1%|d3%|rev'];
+  topCrs.forEach(cr=>{
+    const asName=(d.camps.flatMap(cc=>cc.adsets).find(a=>a.id===cr.adset)?.name||'').slice(0,30);
+    last7.forEach(dt=>{
+      const ds=cr._dailySpend?.[dt]||{}; const da=cr._dailyAtt?.[dt]||{};
+      const sp=ds.spend||0; if(!sp) return;
+      const ld=da.leads||0,im=ds.impr||0,cl=ds.clicks||0,rv=(cr._dailyRev?.[dt])||0;
+      crLines.push([dt,(cr.name||cr.id).slice(0,35),asName,cr.platform,
+        R(sp),R(im>0?sp/im*1000:null),R(cl>0?sp/cl:null),F1(im>0?cl/im*100:null),
+        ld,R(ld>0?sp/ld:null),
+        F1(ld>0?(da.d1||0)/ld*100:null),F1(ld>0?(da.d3||0)/ld*100:null),
+        R(rv)].join('|'));
+    });
+  });
+
+  return 'KW 14DayYoga — latest data: '+latestDt+' | today: '+new Date().toDateString()
+    +'\n'+campLines.join('\n')
+    +'\n'+asLines.join('\n')
+    +'\n'+crLines.join('\n');
 }
 
 async function sendAI(){
