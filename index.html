@@ -4660,12 +4660,13 @@ function loadSample(){
   showToast('Sample data loaded','Week 23 · Meta + Google · 6 campaigns');
 }
 
-// ── Recency-weighted health from last 4 weeks (independent of week filter) ──
+// ── Recency-weighted health from last 5 weeks (independent of week filter) ──
+// W-1:30% W-2:20% W-3:20% W-4:15% W-5:15% — extended to 5 so ROAS (28d gate) from W4/W5 feeds in
 function computeSignalHealth(entity, d){
   const allWks=(d.weeks||[]).map(w=>w.key).sort().reverse();
-  const recentWks=allWks.filter(wk=>entity.weekly?.[wk]?.spend>0).slice(0,4);
+  const recentWks=allWks.filter(wk=>entity.weekly?.[wk]?.spend>0).slice(0,5);
   if(!recentWks.length) return {health:0,conf:'low'};
-  const weights=[0.4,0.3,0.2,0.1];
+  const weights=[0.30,0.20,0.20,0.15,0.15];
   let wH=0,wT=0,sp4=0;
   recentWks.forEach((wk,i)=>{
     const wd=entity.weekly[wk]; if(!wd) return;
