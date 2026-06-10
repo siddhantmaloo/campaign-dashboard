@@ -5036,6 +5036,7 @@ Insights:
 
   out.textContent=report;
   document.getElementById('copyReportBtn').style.display='';
+  CHAT.history=[]; // reset conversation on new report
   btn.textContent='📊 GENERATE REPORT'; btn.disabled=false;
 }
 
@@ -5096,19 +5097,41 @@ async function sendAI(){
   const prev=out.textContent;
   CHAT.loading=true;
   out.textContent=prev+'\n\n[Thinking...]';
+
+  // Build messages with full conversation history
+  const systemMsg={role:'system',content:'You are a data analyst for KW Karma Wellness 14 Day Yoga campaigns. RULES: (1) Answer ONLY using exact numbers from the data. (2) Never give generic marketing advice. (3) Always cite specific campaign/adset names with actual numbers. (4) The daily report context shows YESTERDAY performance. Follow-up questions refer to that report unless stated otherwise. (5) State which date/period numbers are from.'};
+
+  // First message always includes report + data context
+  const firstUserMsg='YESTERDAY REPORT:\n'+document.getElementById('reportOutput').textContent.split('━━━━ AI')[0].trim()+'\n\nFULL CAMPAIGN DATA:\n'+serializeForAI();
+
+  const messages=[systemMsg];
+  if(CHAT.history.length===0){
+    // First question — include full context
+    messages.push({role:'user',content:firstUserMsg+'\n\n---\nQuestion: '+text});
+  } else {
+    // Follow-up — include context in first message, then conversation history
+    messages.push({role:'user',content:firstUserMsg+'\n\n---\nFirst question: '+CHAT.history[0].text});
+    CHAT.history.forEach((m,i)=>{
+      if(i===0) return; // already included above
+      messages.push({role:m.role==='model'?'assistant':'user',content:m.text});
+    });
+    messages.push({role:'user',content:text});
+  }
+
   try{
     const resp=await fetch('https://api.groq.com/openai/v1/chat/completions',{
       method:'POST',
       headers:{'Content-Type':'application/json','Authorization':'Bearer '+getGeminiKey()},
-      body:JSON.stringify({model:getGeminiModel(),messages:[
-        {role:'system',content:'You are a data analyst for KW Karma Wellness 14 Day Yoga campaigns. RULES: (1) Answer ONLY using exact numbers from the data provided. (2) Never give generic marketing advice — only data-driven answers. (3) Always cite specific campaign/adset names with actual numbers. (4) The daily report on screen shows YESTERDAY\u2019s performance. When the user asks follow-up questions like \u201chow to improve CPL\u201d they mean based on YESTERDAY\u2019s data — use the daily totals and compare with previous day. (5) Clearly state which date/period the numbers are from.'},
-        {role:'user',content:'YESTERDAY REPORT CONTEXT:\n'+document.getElementById('reportOutput').textContent+'\n\nFULL DATA:\n'+serializeForAI()+'\n\n---\nQuestion: '+text}
-      ],temperature:0.2,max_tokens:512})
+      body:JSON.stringify({model:getGeminiModel(),messages,temperature:0.2,max_tokens:512})
     });
     const json=await resp.json();
     if(json.error) throw new Error(json.error.error||json.error.message||JSON.stringify(json.error));
     const reply=json.choices?.[0]?.message?.content||'No response.';
-    out.textContent=prev+'\n\n━━━━ AI Answer ━━━━\n'+reply;
+    CHAT.history.push({role:'user',text:text});
+    CHAT.history.push({role:'model',text:reply});
+    // Keep last 6 exchanges to avoid token bloat
+    if(CHAT.history.length>12) CHAT.history=CHAT.history.slice(-12);
+    out.textContent=prev+'\n\n━━━━ AI ━━━━\n'+reply;
   } catch(e){ out.textContent=prev+'\n\nError: '+e.message; }
   CHAT.loading=false;
 }
