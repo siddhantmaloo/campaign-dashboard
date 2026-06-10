@@ -4963,10 +4963,10 @@ Structure your response exactly like this:
 [per campaign and adset: name — ROAS tag — trend]
 
 **RECOMMENDATIONS**
-SCALE → name: reason
+SCALE → name: reason (only if Action=scale or Action=scale-relaunch)
 WATCH → name: what to watch
-CUT BUDGET → name: by how much
-PAUSE → name: reason
+CUT BUDGET → name: by how much (if Action=wind-down or red ROAS + red CPL)
+PAUSE → name: reason (only if Action=drop)
 
 Be concise. Numbers first. No generic advice.`;
 
@@ -5036,12 +5036,13 @@ function serializeForAI(){
       const rT=age>=28&&wd.roas?tagROAS(wd.roas):'na';
       return w.label+'[cpl:'+fmtAI(cpl,'inr')+'('+tagCPL(cpl)+')'+(d3T!='na'?' d3('+d3T+')':'')+(d7T!='na'?' d7('+d7T+')':'')+(rT!='na'?' roas('+rT+')':'')+']';
     }).filter(Boolean).join(' ');
-    L.push('['+campShort(c.name)+'] '+c.platform+' age:'+c.age+'d H:'+sh.health+' '+act+' conf:'+sh.conf);
+    L.push('['+campShort(c.name)+'] '+c.platform+' age:'+c.age+'d | HealthScore:'+sh.health+'/100 | Action:'+act+' | Confidence:'+sh.conf);
     L.push('  weeks: '+wkSig);
     // Adsets >Rs300/day
     const activeAs=c.adsets.filter(a=>{
-      const aa=aiAgg(a);
-      return wks5.some(w=>a.weekly?.[w.key]?.spend>0)&&aa.spend/35>300;
+      const recentSpend=wks5.reduce((s,w)=>s+(a.weekly?.[w.key]?.spend||0),0);
+      const recentDays=Math.max(1,wks5.filter(w=>a.weekly?.[w.key]?.spend>0).length*7);
+      return recentSpend>0 && recentSpend/recentDays>300;
     });
     activeAs.forEach(a=>{
       const ash=computeSignalHealth(a,d);
@@ -5056,7 +5057,7 @@ function serializeForAI(){
         const rT=age>=28&&wd.roas?tagROAS(wd.roas):'na';
         return w.label+'[cpl('+tagCPL(cpl)+')'+(d3T!='na'?' d3('+d3T+')':'')+(d7T!='na'?' d7('+d7T+')':'')+(rT!='na'?' roas('+rT+')':'')+']';
       }).filter(Boolean).join(' ');
-      L.push('  [AS] '+a.name.slice(0,28)+' H:'+ash.health+' '+aact+' conf:'+ash.conf+' spend:'+fmtAI(aa.spend,'inr')+' | '+awkSig);
+      L.push('  [AS] '+a.name.slice(0,28)+' | HealthScore:'+ash.health+'/100 | Action:'+aact+' | Confidence:'+ash.conf+' | TotalSpend:'+fmtAI(aa.spend,'inr')+' | WeeklySignals:'+awkSig);
     });
   });
 
