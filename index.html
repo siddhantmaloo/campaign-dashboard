@@ -1105,7 +1105,7 @@ td:first-child{text-align:left;}
     <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 0 12px;flex-shrink:0;border-bottom:1px solid var(--border);">
       <div>
         <span style="font-family:var(--font-mono);font-size:13px;font-weight:700;color:var(--text);letter-spacing:.05em;">✦ Campaign AI</span>
-        <span style="font-family:var(--font-mono);font-size:9px;color:var(--text3);margin-left:10px;">Powered by Groq · Llama 3.3 70B</span>
+        <span id="aiModelLabel" style="font-family:var(--font-mono);font-size:9px;color:var(--text3);margin-left:10px;">Powered by Groq</span>
       </div>
       <span style="font-family:var(--font-mono);font-size:9px;color:var(--text3);cursor:pointer;text-decoration:underline" onclick="resetGeminiKey()">change key</span>
     </div>
@@ -4933,46 +4933,78 @@ function copyId(el, id){
 const CHAT={open:false,history:[],loading:false};
 const GEMINI_URL='https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=';
 
-const SYSTEM_PROMPT=`You are a daily performance briefing assistant for KW (Karma Wellness) 14 Day Free Yoga campaigns.
+const SYSTEM_PROMPT=`You are a performance marketing analyst for KW (Karma Wellness) 14 Day Free Yoga campaigns.
 
-All data below is pre-computed — health scores, action tags, and metric signals (green/yellow/red) are already calculated. Your job is ONLY to present them clearly as a structured daily briefing.
-
-Rules:
-- Only cover 14 Day Yoga campaigns/adsets. Skip everything else.
+RULES:
+- Only analyse 14 Day Yoga campaigns/adsets. Skip all others.
 - Ignore adsets spending less than Rs300/day.
-- Meta budget decisions = adset level. Google = campaign level.
-- Lead every point with exact numbers from the data.
-- green=good, yellow=caution, red=problem, na/immature=window not closed yet (not a problem).
+- Meta budget decisions = ADSET level. Google = CAMPAIGN level.
+- Use EXACT numbers from the data. Never estimate.
+- Currency: K=thousands (Rs65K=Rs65,000), L=lakhs (Rs1L=Rs100,000). Never confuse K and L.
+- green=good, yellow=caution, red=problem. na/immature=window not closed, NOT a negative signal.
+- Each entity appears in EXACTLY ONE recommendation. No contradictions.
+- Health score trend: compare W-1 H score vs W-2 vs W-3 to determine direction.
 
-The data includes SignalHealth (recency-weighted 5-week aggregate) and per-week H scores.
-Use the weekly H scores to identify trend direction: if H is declining week over week = deteriorating, improving = recovering.
-Always mention the trend direction (e.g. "health declining from H:75 to H:50 this week").
+METRIC THRESHOLDS:
+CPL: green<Rs10 | yellow=Rs10-15 | red>Rs15 (no age gate)
+D3 Cost: green<Rs33 | yellow=Rs33-38 | red>Rs38 (eligible only if age>=14 days)
+D7 Cost: green<Rs66 | yellow=Rs66-95 | red>Rs95 (eligible only if age>=21 days)
+ROAS: green>=1.8x | yellow=1.2-1.8x | red<1.2x (eligible only if age>=28 days)
 
-Structure your response exactly like this:
+DAILY REPORT STRUCTURE — follow exactly:
 
-**YESTERDAY**
-[spend / leads / CPL vs prior 3-day average — flag if CPL is red]
-[which campaigns/adsets drove CPL up or down]
+═══ YESTERDAY ([date]) ═══
+Total: Spend Rs___ | Leads ___ | CPL Rs___(tag) | 3-day avg CPL: Rs___ | [higher/lower/same]
 
-**CPL SIGNAL**
-[per campaign and adset: name — CPL tag — one-line note if red or green]
+Campaign CPL:
+• [name] | CPL Rs___(tag) | W-1: Rs___ W-2: Rs___ W-3: Rs___ | [rising/stable/falling]
 
-**D3 SIGNAL** (only weeks with age>=14d — always cite which week e.g. "W23: red")
-[per campaign and adset: name — W23:D3(red), W22:D3(yellow) — trend direction]
+Adset CPL (>Rs300/day):
+• [name] | CPL Rs___(tag) | W-1: Rs___ W-2: Rs___ | [flag if red]
 
-**D7 SIGNAL** (only weeks with age>=21d — always cite which week)
-[per campaign and adset: name — W23:D7(yellow), W22:D7(green) — trend direction]
+═══ W-1 LAST WEEK ([date range]) ═══
+Total: Leads ___ | CPL Rs___(tag) | D3C Rs___(tag if eligible)
 
-**ROAS SIGNAL** (only weeks with age>=28d — always cite which week)
-[per campaign and adset: name — W23:ROAS(red), W22:ROAS(yellow) — trend direction]
+Campaign:
+• [name] | Leads: ___ | CPL Rs___(tag) vs W-2:Rs___ W-3:Rs___ [trend] | D3C Rs___(tag) vs W-2:Rs___ W-3:Rs___ [trend]
 
-**RECOMMENDATIONS**
-SCALE → name: reason (only if Action=scale or Action=scale-relaunch)
-WATCH → name: what to watch
-CUT BUDGET → name: by how much (if Action=wind-down or red ROAS + red CPL)
-PAUSE → name: reason (only if Action=drop)
+Adset:
+• [name] | CPL Rs___(tag) | D3C Rs___(tag or immature)
 
-Be concise. Numbers first. No generic advice.`;
+═══ W-2 ([date range]) ═══
+Campaign:
+• [name] | D3C Rs___(tag) vs W-3:Rs___ W-4:Rs___ [trend] | D7C Rs___(tag) vs W-3:Rs___ W-4:Rs___ [trend]
+
+Adset:
+• [name] | D3C Rs___(tag) | D7C Rs___(tag or immature)
+
+═══ W-3 ([date range]) ═══
+Campaign:
+• [name] | D3C Rs___(tag) vs W-4:Rs___ [trend] | D7C Rs___(tag) vs W-4:Rs___ [trend]
+
+Adset:
+• [name] | D3C Rs___(tag) | D7C Rs___(tag)
+
+═══ W-4 & W-5 — ROAS ═══
+Campaign:
+• [name] | W-4 ROAS: ___(tag) | W-5 ROAS: ___(tag) | [improving/stable/declining]
+
+Adset:
+• [name] | W-4 ROAS: ___(tag) | W-5 ROAS: ___(tag)
+
+═══ RECOMMENDATIONS ═══
+SCALE (Meta=adset / Google=campaign):
+→ [name]: reason with numbers
+
+WATCH:
+→ [name]: specific metric to monitor
+
+CUT BUDGET 20-30%:
+→ [name]: reason
+
+PAUSE:
+→ [name]: reason
+`;
 
 function fmtAI(v,type){
   if(v==null||v===undefined) return '--';
@@ -5103,10 +5135,22 @@ function toggleChat(){ /* legacy - now uses tab */ }
 
 function getGeminiKey(){ return localStorage.getItem('gemini_key')||''; }
 
+
+function generateDailyReport(){
+  const yesterday=new Date(); yesterday.setDate(yesterday.getDate()-1);
+  const yStr=yesterday.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
+  const input=document.getElementById('aiInput');
+  if(input){
+    input.value='Generate the complete daily report for '+yStr+'. Use the exact report structure. Include all active 14 Day Yoga campaigns and adsets spending >Rs300/day. Show all 5 weeks of data with trend comparisons.';
+    sendAI();
+  }
+}
+
 function initAITab(){ renderChatBody(); }
 function renderChatBody(){
   const el=document.getElementById('aiBody');
   if(!el) return;
+  const lbl=document.getElementById('aiModelLabel'); if(lbl){ const m=getGeminiModel(); lbl.textContent='Powered by Groq · '+(m.includes('/')?m.split('/')[1]:m); }
   if(!getGeminiKey()){
     el.innerHTML='<div style="max-width:480px;margin:40px auto;display:flex;flex-direction:column;gap:12px;"><div style="font-family:var(--font-mono);font-size:11px;color:var(--text2);">Groq API Key<br><span style="opacity:.6;font-size:10px;">Free at console.groq.com</span></div><input class="ai-key-input" id="aiKeyInput" type="password" placeholder="gsk_..." style="padding:10px 14px;font-size:12px;" value="'+(getGeminiKey()||'')+'"><div style="font-family:var(--font-mono);font-size:11px;color:var(--text2);">Model<br><span style="opacity:.6;font-size:10px;">Recommended: meta-llama/llama-4-scout-17b-16e-instruct</span></div><input class="ai-key-input" id="aiModelInput" placeholder="meta-llama/llama-4-scout-17b-16e-instruct" style="padding:10px 14px;font-size:12px;" value="'+(getGeminiModel()||'meta-llama/llama-4-scout-17b-16e-instruct')+'"><button class="ai-key-btn" style="padding:10px;font-size:11px;" onclick="saveGeminiKey()">SAVE & START →</button></div>';
     return;
@@ -5114,7 +5158,7 @@ function renderChatBody(){
   const SUGGESTIONS=['Which adsets should I scale this week?','Which creatives should I stop?','Where is budget being wasted?','What caused CPL to rise recently?','Give me a performance summary'];
   const msgsHtml=CHAT.history.map(m=>m.role==='model'?'<div class="ai-msg model"><div class="ai-msg-row"><div class="ai-model-icon">✦</div><div class="ai-bubble">'+formatAIResponse(m.text)+'</div></div></div>':'<div class="ai-msg user"><div class="ai-bubble">'+m.text.replace(/&/g,'&amp;').replace(/</g,'&lt;')+'</div></div>').join('');
   const typingHtml=CHAT.loading?'<div class="ai-msg model"><div class="ai-msg-row"><div class="ai-model-icon">✦</div><div class="ai-bubble ai-typing"><span></span><span></span><span></span></div></div></div>':'';
-  const suggsHtml=CHAT.history.length===0?'<div class="ai-suggestions">'+SUGGESTIONS.map(s=>'<span class="ai-chip" onclick="sendChip(this)">'+s+'</span>').join('')+'</div>':'';
+  const suggsHtml=CHAT.history.length===0?'<div style="padding:0 0 12px;"><button onclick="generateDailyReport()" style="width:100%;padding:13px;background:linear-gradient(135deg,#6366f1,#8b5cf6);border:none;border-radius:10px;color:#fff;font-family:var(--font-mono);font-size:11px;font-weight:700;letter-spacing:.08em;cursor:pointer;margin-bottom:10px;">📊 GENERATE DAILY REPORT</button><div class="ai-suggestions">'+SUGGESTIONS.map(s=>'<span class="ai-chip" onclick="sendChip(this)">'+s+'</span>').join('')+'</div></div>':'';
   const emptyState=CHAT.history.length===0&&!CHAT.loading?`<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:40px 0;"><div style="font-size:28px;margin-bottom:4px;">✦</div><div style="font-family:var(--font-mono);font-size:12px;color:var(--text2);font-weight:600;">Campaign AI</div><div style="font-family:var(--font-mono);font-size:10px;color:var(--text3);text-align:center;max-width:300px;line-height:1.6;">Ask anything about your campaigns,<br>adsets, creatives or budget.</div></div>`:'';
   el.innerHTML='<div id="aiMsgs" style="flex:1;overflow-y:auto;padding:20px 0 8px;display:flex;flex-direction:column;gap:14px;">'+(CHAT.history.length===0&&!CHAT.loading?emptyState:msgsHtml+typingHtml)+'</div>'+suggsHtml+'<div style="padding:8px 0 16px;display:flex;gap:8px;align-items:flex-end;"><textarea class="ai-input" id="aiInput" rows="1" placeholder="Ask about your campaigns, adsets, creatives, budget..." onkeydown="aiKeyDown(event)" oninput="aiAutoResize(this)" style="flex:1;"></textarea><button class="ai-send" id="aiSendBtn" onclick="sendAI()" '+(CHAT.loading?'disabled':'')+'>↑</button></div>';
   const msgs=document.getElementById('aiMsgs');
