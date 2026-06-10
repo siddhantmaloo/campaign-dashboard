@@ -4907,7 +4907,7 @@ function copyId(el, id){
 // AI CHATBOT — Gemini
 // ═══════════════════════════════════════
 const CHAT={open:false,history:[],loading:false};
-const GEMINI_URL='https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=';
+const GEMINI_URL='https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=';
 
 const SYSTEM_PROMPT=`You are an expert digital marketing analyst for KW (Karma Wellness), a yoga/wellness company.
 You have access to live campaign performance data. Answer concisely with specific numbers. Be direct and actionable.
@@ -5006,7 +5006,7 @@ function getGeminiKey(){ return localStorage.getItem('gemini_key')||''; }
 function renderChatBody(){
   const el=document.getElementById('aiBody');
   if(!getGeminiKey()){
-    el.innerHTML='<div class="ai-key-wrap"><div class="ai-key-label">Enter your Gemini API key to start<br><span style="opacity:.6">Free key at aistudio.google.com — stored only in your browser</span></div><input class="ai-key-input" id="aiKeyInput" type="password" placeholder="AIza..."><button class="ai-key-btn" onclick="saveGeminiKey()">SAVE KEY & START →</button></div>';
+    el.innerHTML='<div class="ai-key-wrap"><div class="ai-key-label">Enter your Gemini API key to start<br><span style="opacity:.6">Free key at aistudio.google.com — stored only in your browser</span></div><input class="ai-key-input" id="aiKeyInput" type="password" placeholder="AIza..." value="'+(getGeminiKey()||'')+'"><div class="ai-key-label" style="margin-top:8px">Model <span style="opacity:.6">(try gemini-1.5-flash if errors)</span></div><input class="ai-key-input" id="aiModelInput" placeholder="gemini-1.5-flash" value="'+(localStorage.getItem('gemini_model')||'gemini-1.5-flash')+'"><button class="ai-key-btn" onclick="saveGeminiKey()">SAVE & START →</button></div>';
     return;
   }
   const SUGGESTIONS=['Which adsets should I scale this week?','Which creatives should I stop?','Where is budget being wasted?','What caused CPL to rise recently?','Give me a performance summary'];
@@ -5021,11 +5021,15 @@ function renderChatBody(){
 
 function saveGeminiKey(){
   const k=document.getElementById('aiKeyInput')?.value?.trim();
+  const m=document.getElementById('aiModelInput')?.value?.trim()||'gemini-1.5-flash';
   if(!k){alert('Please enter a valid API key');return;}
   localStorage.setItem('gemini_key',k);
+  localStorage.setItem('gemini_model',m);
   CHAT.history=[];
   renderChatBody();
 }
+function getGeminiModel(){ return localStorage.getItem('gemini_model')||'gemini-1.5-flash'; }
+function resetGeminiKey(){ localStorage.removeItem('gemini_key'); localStorage.removeItem('gemini_model'); CHAT.history=[]; renderChatBody(); }
 
 function aiKeyDown(e){ if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendAI();} }
 function aiAutoResize(el){ el.style.height='auto'; el.style.height=Math.min(el.scrollHeight,100)+'px'; }
@@ -5045,7 +5049,9 @@ async function sendAI(){
       role:m.role==='model'?'model':'user',
       parts:[{text:i===0&&m.role==='user'?dataCtx+'\n\n---\nQuestion: '+m.text:m.text}]
     }));
-    const resp=await fetch(GEMINI_URL+getGeminiKey(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents,system_instruction:{parts:[{text:SYSTEM_PROMPT}]},generationConfig:{temperature:0.2,maxOutputTokens:1024,topP:0.8}})});
+    const model=getGeminiModel();
+    const url='https://generativelanguage.googleapis.com/v1/models/'+model+':generateContent?key='+getGeminiKey();
+    const resp=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents,system_instruction:{parts:[{text:SYSTEM_PROMPT}]},generationConfig:{temperature:0.2,maxOutputTokens:1024,topP:0.8}})});
     const json=await resp.json();
     if(json.error) throw new Error(json.error.message);
     const reply=json.candidates?.[0]?.content?.parts?.[0]?.text||'No response received.';
@@ -5065,7 +5071,7 @@ async function sendAI(){
   <div class="ai-panel-hdr">
     <div>
       <div class="ai-panel-title">✦ Campaign AI</div>
-      <div class="ai-panel-sub">Powered by Gemini · your data stays in browser</div>
+      <div class="ai-panel-sub">Powered by Gemini · <span style="cursor:pointer;text-decoration:underline" onclick="resetGeminiKey()">change key/model</span></div>
     </div>
     <button class="ai-panel-close" onclick="toggleChat()">✕</button>
   </div>
