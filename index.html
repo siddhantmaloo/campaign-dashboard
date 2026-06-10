@@ -5172,7 +5172,7 @@ function serializeForAI(campDays=7){
       const sp=ds.spend||0; if(!sp) return;
       const ld=da.leads||0,im=ds.impr||0,cl=ds.clicks||0;
       const rv=(c._dailyRev?.[dt])||0,sb=(c._dailySubs?.[dt])||0;
-      lines.push([dt,campShort(c.name),c.platform,
+      lines.push([dt,campShort(c.name)+'(id:'+c.id+')',c.platform,
         R(sp),R(im>0?sp/im*1000:null),R(cl>0?sp/cl:null),F1(im>0?cl/im*100:null),
         ld,R(ld>0?sp/ld:null),
         F1(ld>0?(da.d1||0)/ld*100:null),F1(ld>0?(da.d3||0)/ld*100:null),
