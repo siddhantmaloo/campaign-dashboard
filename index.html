@@ -4944,6 +4944,10 @@ Rules:
 - Lead every point with exact numbers from the data.
 - green=good, yellow=caution, red=problem, na/immature=window not closed yet (not a problem).
 
+The data includes SignalHealth (recency-weighted 5-week aggregate) and per-week H scores.
+Use the weekly H scores to identify trend direction: if H is declining week over week = deteriorating, improving = recovering.
+Always mention the trend direction (e.g. "health declining from H:75 to H:50 this week").
+
 Structure your response exactly like this:
 
 **YESTERDAY**
@@ -5034,9 +5038,10 @@ function serializeForAI(){
       const d3T=age>=14&&wd.d3cost?tagD3(wd.d3cost):'na';
       const d7T=age>=21&&wd.d7cost?tagD7(wd.d7cost):'na';
       const rT=age>=28&&wd.roas?tagROAS(wd.roas):'na';
-      return w.label+'[cpl:'+fmtAI(cpl,'inr')+'('+tagCPL(cpl)+')'+(d3T!='na'?' d3('+d3T+')':'')+(d7T!='na'?' d7('+d7T+')':'')+(rT!='na'?' roas('+rT+')':'')+']';
+      const wkH=healthScore(tagCPL(cpl),d3T,d7T,rT);
+      return w.label+'[H:'+wkH+' cpl:'+fmtAI(cpl,'inr')+'('+tagCPL(cpl)+')'+(d3T!='na'?' d3('+d3T+')':'')+(d7T!='na'?' d7('+d7T+')':'')+(rT!='na'?' roas('+rT+')':'')+']';
     }).filter(Boolean).join(' ');
-    L.push('['+campShort(c.name)+'] '+c.platform+' age:'+c.age+'d | HealthScore:'+sh.health+'/100 | Action:'+act+' | Confidence:'+sh.conf);
+    L.push('['+campShort(c.name)+'] '+c.platform+' age:'+c.age+'d | SignalHealth:'+sh.health+'/100 | Action:'+act+' | Confidence:'+sh.conf);
     L.push('  weeks: '+wkSig);
     // Adsets >Rs300/day
     const activeAs=c.adsets.filter(a=>{
@@ -5055,7 +5060,8 @@ function serializeForAI(){
         const d3T=age>=14&&wd.d3cost?tagD3(wd.d3cost):'na';
         const d7T=age>=21&&wd.d7cost?tagD7(wd.d7cost):'na';
         const rT=age>=28&&wd.roas?tagROAS(wd.roas):'na';
-        return w.label+'[cpl('+tagCPL(cpl)+')'+(d3T!='na'?' d3('+d3T+')':'')+(d7T!='na'?' d7('+d7T+')':'')+(rT!='na'?' roas('+rT+')':'')+']';
+        const wkH=healthScore(tagCPL(cpl),d3T,d7T,rT);
+        return w.label+'[H:'+wkH+' cpl('+tagCPL(cpl)+')'+(d3T!='na'?' d3('+d3T+')':'')+(d7T!='na'?' d7('+d7T+')':'')+(rT!='na'?' roas('+rT+')':'')+']';
       }).filter(Boolean).join(' ');
       L.push('  [AS] '+a.name.slice(0,28)+' | HealthScore:'+ash.health+'/100 | Action:'+aact+' | Confidence:'+ash.conf+' | TotalSpend:'+fmtAI(aa.spend,'inr')+' | WeeklySignals:'+awkSig);
     });
