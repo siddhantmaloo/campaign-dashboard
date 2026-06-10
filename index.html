@@ -5101,8 +5101,8 @@ async function sendAI(){
       method:'POST',
       headers:{'Content-Type':'application/json','Authorization':'Bearer '+getGeminiKey()},
       body:JSON.stringify({model:getGeminiModel(),messages:[
-        {role:'system',content:'You are a data analyst for KW Karma Wellness 14 Day Yoga campaigns. RULES: (1) Answer ONLY using exact numbers from the data provided. (2) Never give generic marketing advice. (3) Always cite specific campaign/adset names with their actual numbers. (4) If asked to rank or filter, use the actual spend/leads/cpl values from the data.'},
-        {role:'user',content:serializeForAI()+'\n\n---\nQuestion: '+text}
+        {role:'system',content:'You are a data analyst for KW Karma Wellness 14 Day Yoga campaigns. RULES: (1) Answer ONLY using exact numbers from the data provided. (2) Never give generic marketing advice — only data-driven answers. (3) Always cite specific campaign/adset names with actual numbers. (4) The daily report on screen shows YESTERDAY\u2019s performance. When the user asks follow-up questions like \u201chow to improve CPL\u201d they mean based on YESTERDAY\u2019s data — use the daily totals and compare with previous day. (5) Clearly state which date/period the numbers are from.'},
+        {role:'user',content:'YESTERDAY REPORT CONTEXT:\n'+document.getElementById('reportOutput').textContent+'\n\nFULL DATA:\n'+serializeForAI()+'\n\n---\nQuestion: '+text}
       ],temperature:0.2,max_tokens:512})
     });
     const json=await resp.json();
