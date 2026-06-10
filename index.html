@@ -4955,42 +4955,38 @@ function serializeForAI(){
   if(!S.data) return 'No data loaded yet.';
   const d=S.data;
   const lines=[];
-  lines.push('=== KW Campaign Dashboard === '+new Date().toDateString());
-  const camps=d.camps.filter(c=>catMatch(c.name));
-  lines.push('Total campaigns: '+camps.length);
-  lines.push('\n## CAMPAIGNS');
+  lines.push('KW Dashboard '+new Date().toDateString());
+
+  // Only active camps (spend in last 4 weeks)
+  const recentWks=(d.weeks||[]).slice(-4).map(w=>w.key);
+  const camps=d.camps.filter(c=>catMatch(c.name)&&recentWks.some(wk=>c.weekly?.[wk]?.spend>0));
+  lines.push('Active campaigns: '+camps.length);
+
   camps.forEach(c=>{
     const agg=aiAgg(c);
-    if(!agg.spend) return;
     const sh=computeSignalHealth(c,d);
-    const action=getAction(sh.health,sh.conf,c.age,false);
-    lines.push('\n['+campShort(c.name)+'] '+c.platform.toUpperCase()+' age:'+c.age+'d cat:'+detectCat(c.name));
-    lines.push('  Health:'+sh.health+' Action:'+action+' Conf:'+sh.conf);
-    lines.push('  Spend:'+fmtAI(agg.spend,'inr')+' Leads:'+(agg.leads||0)+' CPL:'+fmtAI(agg.cpl,'inr')+' D3cost:'+fmtAI(agg.d3cost,'inr')+' D7cost:'+fmtAI(agg.d7cost,'inr'));
-    lines.push('  PaidROAS:'+fmtAI(agg.paidroas,'x')+' AdjROAS:'+fmtAI(agg.adjroas,'x')+' D1%:'+fmtAI(agg.d1pct,'pct')+' D3%:'+fmtAI(agg.d3pct,'pct')+' D7%:'+fmtAI(agg.d7pct,'pct'));
-    const wkTrend=(d.weeks||[]).filter(w=>c.weekly?.[w.key]?.spend>0).slice(-5).map(w=>{
-      const wd=c.weekly[w.key]; const cpl=wd.leads>0?wd.spend/wd.leads:null;
-      return w.label+':spend='+fmtAI(wd.spend,'inr')+',cpl='+fmtAI(cpl,'inr')+',roas='+fmtAI(wd.roas,'x');
-    });
-    if(wkTrend.length) lines.push('  WeekTrend: '+wkTrend.join(' | '));
-    if(c.adsets.length){
-      const asLines=c.adsets.map(a=>{
-        const aa=aiAgg(a); const ash=computeSignalHealth(a,d);
-        return a.name.slice(0,25)+' H:'+ash.health+' '+getAction(ash.health,ash.conf,a.age||c.age,false)+' '+fmtAI(aa.spend,'inr');
-      }).join('; ');
-      lines.push('  Adsets: '+asLines);
+    const act=getAction(sh.health,sh.conf,c.age,false);
+    // Compact single line per campaign
+    lines.push('['+campShort(c.name)+'] '+c.platform+' age:'+c.age+'d H:'+sh.health+' '+act+' conf:'+sh.conf);
+    lines.push(' spend:'+fmtAI(agg.spend,'inr')+' leads:'+agg.leads+' cpl:'+fmtAI(agg.cpl,'inr')+' d3c:'+fmtAI(agg.d3cost,'inr')+' d7c:'+fmtAI(agg.d7cost,'inr')+' roas:'+fmtAI(agg.paidroas,'x')+' d1%:'+fmtAI(agg.d1pct,'pct')+' d3%:'+fmtAI(agg.d3pct,'pct'));
+    // Adsets — compact, only with spend
+    const activeAs=c.adsets.filter(a=>recentWks.some(wk=>a.weekly?.[wk]?.spend>0));
+    if(activeAs.length){
+      lines.push(' adsets: '+activeAs.map(a=>{
+        const aa=aiAgg(a);const ash=computeSignalHealth(a,d);
+        return a.name.slice(0,20)+' H:'+ash.health+' '+getAction(ash.health,ash.conf,c.age,false)+' '+fmtAI(aa.spend,'inr');
+      }).join(' | '));
     }
   });
-  const allCrs=(d.creatives||[]).filter(cr=>aiAgg(cr).spend>0);
+
+  // Creatives — top5 + bottom5 only
+  const allCrs=(d.creatives||[]).filter(cr=>recentWks.some(wk=>cr.weekly?.[wk]?.spend>0));
   if(allCrs.length){
-    const scored=allCrs.map(cr=>{
-      const h=computeSignalHealth(cr,d); const agg=aiAgg(cr);
-      return {cr,h:h.health,conf:h.conf,agg};
-    }).sort((a,b)=>b.h-a.h);
-    lines.push('\n## TOP 5 CREATIVES');
-    scored.slice(0,5).forEach(({cr,h,conf,agg})=>{lines.push(cr.name.slice(0,35)+' H:'+h+' '+getAction(h,conf,cr.age,false)+' Spend:'+fmtAI(agg.spend,'inr')+' CPL:'+fmtAI(agg.cpl,'inr')+' age:'+cr.age+'d');});
-    lines.push('## BOTTOM 5 CREATIVES');
-    scored.slice(-5).reverse().forEach(({cr,h,conf,agg})=>{lines.push(cr.name.slice(0,35)+' H:'+h+' '+getAction(h,conf,cr.age,false)+' Spend:'+fmtAI(agg.spend,'inr')+' CPL:'+fmtAI(agg.cpl,'inr')+' age:'+cr.age+'d');});
+    const scored=allCrs.map(cr=>{const h=computeSignalHealth(cr,d);const agg=aiAgg(cr);return{cr,h:h.health,conf:h.conf,agg};}).sort((a,b)=>b.h-a.h);
+    lines.push('\nTop creatives:');
+    scored.slice(0,5).forEach(({cr,h,conf,agg})=>lines.push(cr.name.slice(0,30)+' H:'+h+' '+getAction(h,conf,cr.age,false)+' '+fmtAI(agg.spend,'inr')+' cpl:'+fmtAI(agg.cpl,'inr')));
+    lines.push('Bottom creatives:');
+    scored.slice(-5).reverse().forEach(({cr,h,conf,agg})=>lines.push(cr.name.slice(0,30)+' H:'+h+' '+getAction(h,conf,cr.age,false)+' '+fmtAI(agg.spend,'inr')+' cpl:'+fmtAI(agg.cpl,'inr')));
   }
   return lines.join('\n');
 }
