@@ -3598,10 +3598,30 @@ function toggleBatch(btn){ /* legacy */ }
 // HELPERS
 // ═══════════════════════════════════════
 function campShort(name){
-  const p=name.split('-');
-  const idx=p.findIndex(x=>['Meta','Google'].includes(x));
-  if(idx>=0&&p.length>idx+3) return p.slice(idx+2,idx+5).join('-');
-  return name.length>32?name.slice(0,30)+'…':name;
+  if(!name) return '';
+  const STRIP = new Set(['KW','KYW','Website']);
+  const CAT_RE = /^(14[Dd]ay[Yy]oga?|14DayYoga|WomenHealth(Yoga)?|FaceYoga|DirectSelling|DailyYoga|Yoga)$/i;
+  const p = name.split('-');
+  const platIdx = p.findIndex(x=>x==='Meta'||x==='Google');
+  if(platIdx<0) return name.length>30?name.slice(0,28)+'…':name;
+  const parts = p.slice(platIdx+1);
+  const kept=[], dates=[];
+  let i=0;
+  while(i<parts.length){
+    const seg=parts[i]||''; i++;
+    if(!seg) continue;
+    if(STRIP.has(seg)) continue;
+    if(CAT_RE.test(seg)) continue;
+    // Meta date DD-MM-YYYY (3 consecutive segments)
+    if(/^\d{2}$/.test(seg)&&/^\d{2}$/.test(parts[i]||'')&&/^\d{4}$/.test(parts[i+1]||'')){
+      dates.push(seg+(parts[i]||'')); i+=2; continue;
+    }
+    if(/^\d{4}$/.test(seg)) continue; // standalone year
+    if(/^\d{6}$/.test(seg)){ dates.push(seg); continue; } // Google DDMMYY
+    kept.push(seg);
+  }
+  const show=[...kept.slice(0,3),...dates.slice(0,1)].join('-');
+  return show.length>34?show.slice(0,32)+'…':show||name.slice(0,28)+'…';
 }
 
 // ═══════════════════════════════════════
