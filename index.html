@@ -5167,7 +5167,24 @@ function generateDailyReport(){
   const yStr=yesterday.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
   const input=document.getElementById('aiInput');
   if(input){
-    input.value='Generate the complete daily report for '+yStr+'. Start with portfolio-level aggregates for each week, then flag specific campaigns/adsets needing attention. Follow the exact report structure.';
+    // Compute 3-day avg to inject into prompt
+const d=S.data;
+const camps14=d?d.camps.filter(cc=>detectCat(cc.name)==='14DayYoga'):[];
+const allDts=[...new Set(camps14.flatMap(cc=>Object.keys(cc._dailySpend||{})))].sort().slice(-7);
+const dtTotals={};
+allDts.forEach(dt=>{let sp=0,ld=0;camps14.forEach(cc=>{const ds=cc._dailySpend?.[dt]||{};const da=cc._dailyAtt?.[dt]||{};sp+=ds.spend||0;ld+=da.leads||0;});if(sp>0)dtTotals[dt]={spend:sp,leads:ld,cpl:ld>0?sp/ld:null};});
+const sdts=Object.keys(dtTotals).sort();
+const prior=sdts.slice(Math.max(0,sdts.length-4),sdts.length-1);
+const p3sp=prior.reduce((s,dt)=>s+dtTotals[dt].spend,0);
+const p3ld=prior.reduce((s,dt)=>s+dtTotals[dt].leads,0);
+const avg3=p3ld>0?Math.round(p3sp/p3ld):null;
+const ytd=sdts[sdts.length-1];
+const ytdData=dtTotals[ytd]||{};
+const ytdCpl=ytdData.cpl?Math.round(ytdData.cpl):null;
+const cplDiff=avg3&&ytdCpl?ytdCpl-avg3:null;
+const avgStr=avg3?'Rs'+avg3:'unknown';
+const diffStr=cplDiff!=null?(cplDiff>0?'+Rs'+cplDiff+' higher':cplDiff<0?'Rs'+Math.abs(cplDiff)+' lower':'same as'):'';
+input.value='Generate the complete daily report for '+yStr+'. IMPORTANT: Yesterday CPL=Rs'+(ytdCpl||'?')+', 3-day-avg-CPL='+avgStr+', difference='+diffStr+' average. Use these exact numbers in the YESTERDAY section header. Start with portfolio-level aggregates for each week, then flag specific campaigns/adsets needing attention. Follow the exact report structure.';
     sendAI();
   }
 }
