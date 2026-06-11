@@ -1130,7 +1130,7 @@ td:first-child{text-align:left;}
     </div>
     <div id="reportOutput" style="flex:1;min-height:0;overflow-y:auto;padding:20px 0 8px;font-family:var(--font-mono);font-size:12px;line-height:2;color:var(--text);white-space:pre-wrap;"></div>
     <div style="border-top:1px solid var(--border);padding:8px 0 10px;flex-shrink:0;display:flex;gap:8px;align-items:flex-end;">
-      <textarea id="aiInput" class="ai-input" rows="1" placeholder="Ask a follow-up question..." onkeydown="aiKeyDown(event)" oninput="aiAutoResize(this)" style="flex:1;"></textarea>
+      <textarea id="aiInput" class="ai-input" rows="1" placeholder="Ask AI Expert — health, confidence & spend trends..." onkeydown="aiKeyDown(event)" oninput="aiAutoResize(this)" style="flex:1;"></textarea>
       <button class="ai-send" onclick="sendAI()" id="aiSendBtn">↑</button>
     </div>
     <div id="aiBody" style="display:none;"></div>
@@ -5192,6 +5192,69 @@ function detectPeriod(q){
   return {camp:7,label:'last 7 days'};
 }
 
+function serializeHealthData(){
+  if(!S.data) return 'No data loaded.';
+  const d=S.data;
+  const camps=d.camps.filter(function(cc){return detectCat(cc.name)==='14DayYoga';});
+  const wks8=(d.weeks||[]).slice(-8);
+  if(!wks8.length) return 'No weekly data.';
+
+  function weeklyRow(entity){
+    return wks8.map(function(w){
+      const wd=entity.weekly?entity.weekly[w.key]:null;
+      if(!wd||!wd.spend) return null;
+      const age=(window._approxAgeMap&&window._approxAgeMap[w.key]!==undefined)?window._approxAgeMap[w.key]:90;
+      const cpl=wd.leads>0?wd.spend/wd.leads:null;
+      const d3T=(age>=14&&wd.d3cost)?tagD3(wd.d3cost):'na';
+      const d7T=(age>=21&&wd.d7cost)?tagD7(wd.d7cost):'na';
+      const rT=(age>=28&&wd.roas)?tagROAS(wd.roas):'na';
+      const wH=healthScore(tagCPL(cpl),d3T,d7T,rT);
+      return w.label+'[H:'+wH+' spend:Rs'+Math.round(wd.spend)+' conf:'+tagConf(wd.spend)+']';
+    }).filter(Boolean).join(' ');
+  }
+
+  const L=['KW 14DayYoga — WEEKLY HEALTH DATA (last 8 weeks) — today: '+new Date().toDateString()];
+  L.push('Week date ranges: '+wks8.map(function(w){return w.label+'='+w.full;}).join(', '));
+  L.push('Format per entity: SignalHealth(0-100, recency-weighted last-5-active-weeks) | Confidence | Action | weekly history: Wxx[H:score spend conf]');
+
+  L.push('\n=== CAMPAIGNS ===');
+  camps.forEach(function(cc){
+    const row=weeklyRow(cc);
+    if(!row) return;
+    const sh=computeSignalHealth(cc,d);
+    L.push('[C] '+campShort(cc.name)+' ('+cc.platform+') SignalH:'+sh.health+' conf:'+sh.conf+' action:'+getAction(sh.health,sh.conf,cc.age,false));
+    L.push('    '+row);
+  });
+
+  L.push('\n=== ADSETS ===');
+  camps.forEach(function(cc){
+    cc.adsets.forEach(function(a){
+      const row=weeklyRow(a);
+      if(!row) return;
+      const ash=computeSignalHealth(a,d);
+      L.push('[A] '+a.name.slice(0,42)+' (camp: '+campShort(cc.name)+', '+cc.platform+') SignalH:'+ash.health+' conf:'+ash.conf+' action:'+getAction(ash.health,ash.conf,cc.age,false));
+      L.push('    '+row);
+    });
+  });
+
+  L.push('\n=== CREATIVES (top 25 by recent spend) ===');
+  const crs=(d.creatives||[]).map(function(cr){
+    let recentSp=0;
+    wks8.slice(-2).forEach(function(w){recentSp+=(cr.weekly&&cr.weekly[w.key]&&cr.weekly[w.key].spend)||0;});
+    return {cr:cr,sp:recentSp};
+  }).filter(function(x){return x.sp>0;}).sort(function(a,b){return b.sp-a.sp;}).slice(0,25);
+  crs.forEach(function(x){
+    const cr=x.cr;
+    const row=weeklyRow(cr);
+    if(!row) return;
+    const csh=computeSignalHealth(cr,d);
+    L.push('[CR] '+(cr.name||cr.id).slice(0,38)+' ('+cr.platform+') SignalH:'+csh.health+' conf:'+csh.conf+' action:'+getAction(csh.health,csh.conf,cr.age,false));
+    L.push('    '+row);
+  });
+
+  return L.join('\n');
+}
+
 async function sendAI(){
   if(!getGeminiKey()){alert('Click "AI key" to add your Groq API key first');return;}
   const input=document.getElementById('aiInput');
@@ -5204,11 +5267,10 @@ async function sendAI(){
   out.textContent=prev+'\n\n[Thinking...]';
 
   // Build messages with full conversation history
-  const systemMsg={role:'system',content:'You are a data analyst for KW Karma Wellness 14 Day Yoga campaigns. RULES: (1) Answer ONLY using exact numbers from the data. (2) Never give generic marketing advice. (3) Always cite specific campaign/adset names with actual numbers. (4) The daily report context shows YESTERDAY performance. Follow-up questions refer to that report unless stated otherwise. (5) State which date/period numbers are from.'};
+  const systemMsg={role:'system',content:'You are a senior performance marketing expert for KW (Karma Wellness) 14 Day Free Yoga campaigns.\n\nYOUR DATA SCOPE (the ONLY data you have):\n- Weekly Health Score (0-100) per campaign, adset, creative — last 8 weeks\n- Weekly Spend and Confidence per entity\n- SignalHealth: recency-weighted aggregate (W1=30% W2=20% W3=20% W4=15% W5=15%)\n- Action tag per entity: scale-relaunch / scale / watch / wind-down / drop / too-early\n\nSCORING MEANING:\n- Health: 80-100 excellent, 60-79 good, 40-59 borderline, 20-39 poor, <20 critical\n- Health = weighted mix of CPL(30%) D3-cost(25%) D7-cost(20%) ROAS(25%) signals; immature metrics excluded\n- Confidence: high(>Rs20K wk spend) / medium(>Rs5K) / low — how reliable the score is\n- Meta budgets are set at ADSET level; Google at CAMPAIGN level\n\nHOW TO ANSWER (like an expert):\n1. Use weekly H trajectory to diagnose: declining 3+ weeks = fatigue/deterioration; rising = working; volatile = unstable\n2. Flag spend-health misalignment: high spend + low/declining health = wasted budget; high health + low spend = scaling opportunity\n3. Always cite entity names, exact H scores, weeks, and spend figures from the data\n4. End with one specific action when relevant\n\nSTRICT SCOPE RULE:\nIf a question requires data you do NOT have (daily CPL, CTR, leads, revenue, ROAS values, campaign IDs, creative content, audience details), reply ONLY: "I can only answer based on weekly health scores, confidence and spend data. For that question, please check the dashboard directly." Never guess or use general knowledge to fill gaps.'};
 
   // First message always includes report + data context
-  const period=detectPeriod(text);
-  const firstUserMsg='YESTERDAY REPORT:\n'+document.getElementById('reportOutput').textContent.split('━━━━ AI')[0].trim()+'\n\nCAMPAIGN DATA ('+period.label+'):\n'+serializeForAI(period.camp);
+  const firstUserMsg='WEEKLY HEALTH DATA:\n'+serializeHealthData();
 
   const messages=[systemMsg];
   if(CHAT.history.length===0){
@@ -5228,7 +5290,7 @@ async function sendAI(){
     const resp=await fetch('https://api.groq.com/openai/v1/chat/completions',{
       method:'POST',
       headers:{'Content-Type':'application/json','Authorization':'Bearer '+getGeminiKey()},
-      body:JSON.stringify({model:getGeminiModel(),messages,temperature:0.2,max_tokens:512})
+      body:JSON.stringify({model:getGeminiModel(),messages,temperature:0.2,max_tokens:768})
     });
     const json=await resp.json();
     if(json.error) throw new Error(json.error.error||json.error.message||JSON.stringify(json.error));
@@ -5237,7 +5299,7 @@ async function sendAI(){
     CHAT.history.push({role:'model',text:reply});
     // Keep last 6 exchanges to avoid token bloat
     if(CHAT.history.length>12) CHAT.history=CHAT.history.slice(-12);
-    out.textContent=prev+'\n\n━━━━ AI ━━━━\n'+reply;
+    out.textContent=prev+'\n\n━━━━ AI EXPERT ━━━━\n'+reply;
   } catch(e){ out.textContent=prev+'\n\nError: '+e.message; }
   CHAT.loading=false;
 }
