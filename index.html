@@ -1052,10 +1052,12 @@ td:first-child{text-align:left;}
           </div>
         </div>
         <div class="tb-sep"></div>
-        <div class="tb-group">
-          <button class="tb-btn" onclick="setCrSort('health',this)">By Health</button>
-          <button class="tb-btn active" onclick="setCrSort('spend',this)">By Spend</button>
-          <button class="tb-btn" onclick="setCrSort('cpl',this)">By CPL</button>
+        <span class="dr-sep">or</span>
+        <div class="dr-wrap">
+          <input type="date" id="crDrFrom" class="dr-input" oninput="applyCrDr()" onchange="applyCrDr()">
+          <span class="dr-sep">&#8594;</span>
+          <input type="date" id="crDrTo" class="dr-input" oninput="applyCrDr()" onchange="applyCrDr()">
+          <span class="dr-clear" id="crDrClear" style="display:none" onclick="clearCrDr()">&#10005;</span>
         </div>
       </div>
       <div style="display:flex;align-items:center;gap:6px">
@@ -2249,6 +2251,22 @@ function isMature(wk, col){
 // ═══════════════════════════════════════
 // RENDER — CAMPAIGNS
 // ═══════════════════════════════════════
+function campSortBy(col){
+  if(TS.sortCol===col) TS.sortDir*=-1;
+  else { TS.sortCol=col; TS.sortDir=-1; }
+  if(S.data) renderCampaigns(S.data);
+}
+function asSortBy(col){
+  if(AS.sort===col) AS.sortDir*=-1;
+  else { AS.sort=col; AS.sortDir=-1; }
+  if(S.data) renderAdsets(S.data);
+}
+function crSortBy(col){
+  if(CR.sort===col) CR.sortDir*=-1;
+  else { CR.sort=col; CR.sortDir=-1; }
+  if(S.data) renderCreatives(S.data);
+}
+
 function renderCampaigns(d){
   renderSignals(d);
   renderTree(d);
@@ -2389,7 +2407,7 @@ function renderSignals(d){
     </div>`).join('');
 }
 // ── TREE STATE ──
-const TS={plat:'all',weeks:null,expanded:{},weekExpanded:{}};
+const TS={plat:'all',weeks:null,expanded:{},weekExpanded:{},sortCol:'spend',sortDir:-1};
 
 function treePlat(p,btn){
   TS.plat=p;
@@ -2631,10 +2649,23 @@ function renderTree(d){
   }
 
   let thCells=`<th style="min-width:240px;text-align:left;padding:7px 10px;background:var(--bg3);border-bottom:1px solid var(--border);position:sticky;left:0;z-index:3;font-family:var(--font-mono);font-size:9px;letter-spacing:.08em;color:var(--text3);text-transform:uppercase">Campaign</th>`;
-  COLS.forEach((col,ci)=>{ thCells+=`<th class="${ci===0?'col-sep':''}">${col.label}</th>`; });
+  COLS.forEach((col,ci)=>{
+    const active=TS.sortCol===col.k;
+    const arrow=active?(TS.sortDir===-1?' ▼':' ▲'):'';
+    thCells+=`<th class="${ci===0?'col-sep':''}" style="cursor:pointer;user-select:none;${active?'color:var(--accent)':''}" onclick="campSortBy('${col.k}')">${col.label}${arrow}</th>`;
+  });
 
-  // Sort campaigns by spend in selected weeks (descending)
-  camps.sort((a,b)=>(weeks.reduce((s,w)=>s+(b.weekly[w.key]?.spend||0),0))-(weeks.reduce((s,w)=>s+(a.weekly[w.key]?.spend||0),0)));
+  // Sort campaigns by selected column
+  const _sortAgg={};
+  camps.forEach(c=>{
+    const _tsDrOn=!!(TS.drFrom&&TS.drTo&&TS.drFrom<=TS.drTo);
+    _sortAgg[c.id]=_tsDrOn?aggByDateRangeCamp(c,TS.drFrom,TS.drTo):campAgg(c);
+  });
+  camps.sort((a,b)=>{
+    const av=_sortAgg[a.id]?.[TS.sortCol]??-Infinity;
+    const bv=_sortAgg[b.id]?.[TS.sortCol]??-Infinity;
+    return TS.sortDir*(bv-av);
+  });
 
   const rows=[];
   camps.forEach(c=>{
@@ -3062,7 +3093,7 @@ function scrollToPivotRow(id){
 // ═══════════════════════════════════════
 // AD SETS TREE STATE
 // ═══════════════════════════════════════
-const AS={plat:'all',weeks:null,expanded:{},filterAdset:null,filterCamp:null,sort:'spend'};
+const AS={plat:'all',weeks:null,expanded:{},filterAdset:null,filterCamp:null,sort:'spend',sortDir:-1};
 const CR_FILTER={adset:null};
 
 // ── DRILL-THROUGH NAVIGATION ──
@@ -3218,10 +3249,14 @@ function renderAdsets(d){
   if(AS.filterAdset) adsets=adsets.filter(a=>a.id===AS.filterAdset.id);
   // Hide adsets with no spend
   adsets=adsets.filter(a=>a.spend>0);
-  // Sort adsets
-  if(AS.sort==='spend') adsets.sort((a,b)=>(asAgg(b).spend||0)-(asAgg(a).spend||0));
-  else if(AS.sort==='health') adsets.sort((a,b)=>(asAgg(b).health||0)-(asAgg(a).health||0));
-  else if(AS.sort==='cpl') adsets.sort((a,b)=>{const ca=asAgg(a).cpl,cb=asAgg(b).cpl;if(!ca)return 1;if(!cb)return -1;return ca-cb;});
+  // Sort adsets by selected column
+  adsets.sort((a,b)=>{
+    const av=asAgg(a)[AS.sort]??-Infinity;
+    const bv=asAgg(b)[AS.sort]??-Infinity;
+    if(av==null||av==='' ) return 1;
+    if(bv==null||bv==='' ) return -1;
+    return AS.sortDir*(bv-av);
+  });
 
   const activeFilter=AS.filterCamp||AS.filterAdset;
   const filterLabel=AS.filterCamp?`Campaign: ${AS.filterCamp.name}`:AS.filterAdset?`Ad Set: ${AS.filterAdset.name}`:null;
@@ -3286,7 +3321,11 @@ function renderAdsets(d){
     Ad Set
     ${filterLabel?`<span class="filter-pill">${filterLabel} <span onclick="clearAsFilter()" style="cursor:pointer;margin-left:4px;opacity:.7">✕</span></span>`:''}
   </th>`;
-  COLS.forEach((col,ci)=>{ thCells+=`<th class="${ci===0?'col-sep':''}">${col.label}</th>`; });
+  COLS.forEach((col,ci)=>{
+    const active=AS.sort===col.k;
+    const arrow=active?(AS.sortDir===-1?' ▼':' ▲'):'';
+    thCells+=`<th class="${ci===0?'col-sep':''}" style="cursor:pointer;user-select:none;${active?'color:var(--accent)':''}" onclick="asSortBy('${col.k}')">${col.label}${arrow}</th>`;
+  });
 
   const rows=[];
   adsets.forEach(a=>{
@@ -3402,10 +3441,64 @@ function renderAdsets(d){
 // ═══════════════════════════════════════
 // CREATIVES TREE STATE
 // ═══════════════════════════════════════
-const CR={plat:'all',weeks:null,expanded:{},sort:'spend'};
+const CR={plat:'all',weeks:null,expanded:{},sort:'spend',sortDir:-1};
 const themeColor={'Date Hook':'blue','Generic':'gray','Problem Statement':'purple','Social Proof':'yellow','AI Creative':'green'};
 
 function crPlat(p,btn){ CR.plat=p; btn.closest('.tb-group').querySelectorAll('.tb-btn').forEach(b=>b.className='tb-btn'); btn.className='tb-btn act-'+p; if(S.data) renderCreatives(S.data); }
+
+CR.drFrom=null; CR.drTo=null;
+
+function aggByDateRangeCr(cr, from, to){
+  const f=from||'0000-01-01', t=to||'9999-12-31';
+  const spDaily=cr._dailySpend||{}, attDaily=cr._dailyAtt||{};
+  const revDaily=cr._dailyRev||{}, subsDaily=cr._dailySubs||{};
+  let spend=0,impr=0,clicks=0,leads=0,d1=0,d3=0,d7=0,d10=0,rev=0,subs=0;
+  Object.entries(spDaily).forEach(function([ds,sp]){
+    if(ds<f||ds>t) return;
+    spend+=sp.spend||0; impr+=sp.impr||0; clicks+=sp.clicks||0;
+    rev+=revDaily[ds]||0; subs+=subsDaily[ds]||0;
+    const att=attDaily[ds]||{};
+    leads+=att.leads||0; d1+=att.d1||0; d3+=att.d3||0; d7+=att.d7||0; d10+=att.d10||0;
+  });
+  const cpl=leads>0&&spend>0?spend/leads:null;
+  const roas=spend>0&&rev>0?rev/spend:null;
+  const cpm=impr>0?spend/impr*1000:null;
+  const cpc=clicks>0?spend/clicks:null;
+  const ctr=impr>0?clicks/impr*100:null;
+  const c2db=clicks>0&&leads>0?leads/clicks*100:null;
+  const d3cost=d3>0&&spend>0?spend/d3:null;
+  const d7cost=d7>0&&spend>0?spend/d7:null;
+  const sh=computeSignalHealth(cr,S.data);
+  const action=getAction(sh.health,sh.conf,cr.age,false);
+  return {health:sh.health,conf:sh.conf,action,spend:spend||null,cpm,cpc,ctr,c2db,
+    leads:leads||null,cpl,subs:subs||null,cps:subs>0&&spend>0?spend/subs:null,
+    rev:rev||null,roas,l2s:leads>0&&subs>0?subs/leads*100:null,
+    d1pct:leads>0?Math.round(d1/leads*100)||null:null,
+    d3pct:leads>0?Math.round(d3/leads*100)||null:null,d3cost,
+    d7pct:leads>0?Math.round(d7/leads*100)||null:null,d7cost,
+    d10pct:leads>0?Math.round(d10/leads*100)||null:null,
+    paidroas:roas||null,
+    adjroas:rev>0&&(spend+(leads||0)*T.waCost)>0?rev/(spend+(leads||0)*T.waCost):null,
+    ltvRoas:computeLtvROAS(rev,0,0,spend)};
+}
+
+function applyCrDr(){
+  CR.drFrom=document.getElementById('crDrFrom').value||null;
+  CR.drTo=document.getElementById('crDrTo').value||null;
+  const on=!!(CR.drFrom&&CR.drTo&&CR.drFrom<=CR.drTo);
+  const clr=document.getElementById('crDrClear'); if(clr) clr.style.display=on?'':'none';
+  const wkBtn=document.getElementById('crWkBtn'); if(wkBtn) wkBtn.classList.toggle('wk-dimmed',on);
+  ['crDrFrom','crDrTo'].forEach(function(id){const el=document.getElementById(id);if(el)el.classList.toggle('active',on);});
+  if(S.data) renderCreatives(S.data);
+}
+
+function clearCrDr(){
+  CR.drFrom=null; CR.drTo=null;
+  ['crDrFrom','crDrTo'].forEach(function(id){const el=document.getElementById(id);if(el){el.value='';el.classList.remove('active');}});
+  const clr=document.getElementById('crDrClear'); if(clr) clr.style.display='none';
+  const wkBtn=document.getElementById('crWkBtn'); if(wkBtn) wkBtn.classList.remove('wk-dimmed');
+  if(S.data) renderCreatives(S.data);
+}
 function toggleCrRow(id){ CR.expanded[id]=!CR.expanded[id]; if(S.data) renderCreatives(S.data); }
 function crExpandAll(){ if(!S.data) return; S.data.creatives.forEach(cr=>CR.expanded[cr.id]=true); renderCreatives(S.data); }
 function crCollapseAll(){ if(!S.data) return; Object.keys(CR.expanded).forEach(k=>CR.expanded[k]=false); renderCreatives(S.data); }
@@ -3448,9 +3541,13 @@ function renderCreatives(d){
     crs=crs.filter(cr=>cr.adset===f.id && (!f.campId||cr.campId===f.campId));
   }
   crs=crs.filter(cr=>cr.spend>0);
-  if(CR.sort==='health') crs.sort((a,b)=>(crAgg(b).health||0)-(crAgg(a).health||0));
-  else if(CR.sort==='cpl') crs.sort((a,b)=>{const ca=crAgg(a).cpl,cb=crAgg(b).cpl;if(!ca)return 1;if(!cb)return -1;return ca-cb;});
-  else crs.sort((a,b)=>(crAgg(b).spend||0)-(crAgg(a).spend||0)); // default: spend
+  crs.sort((a,b)=>{
+    const av=crAgg(a)[CR.sort]??-Infinity;
+    const bv=crAgg(b)[CR.sort]??-Infinity;
+    if(av==null||av==='') return 1;
+    if(bv==null||bv==='') return -1;
+    return CR.sortDir*(bv-av);
+  });
 
   function crAgg(cr){
     const totSpend  = weeks.reduce((s,w)=>s+(cr.weekly?.[w.key]?.spend||0),0);
@@ -3516,12 +3613,17 @@ function renderCreatives(d){
     Creative
     ${CR_FILTER.adset?`<span class="filter-pill">${CR_FILTER.adset.name} <span onclick="clearCrFilter()" style="cursor:pointer;margin-left:4px;opacity:.7">✕</span></span>`:''}
   </th>`;
-  COLS.forEach((col,ci)=>{ thCells+=`<th class="${ci===0?'col-sep':''}">${col.label}</th>`; });
+  COLS.forEach((col,ci)=>{
+    const active=CR.sort===col.k;
+    const arrow=active?(CR.sortDir===-1?' ▼':' ▲'):'';
+    thCells+=`<th class="${ci===0?'col-sep':''}" style="cursor:pointer;user-select:none;${active?'color:var(--accent)':''}" onclick="crSortBy('${col.k}')">${col.label}${arrow}</th>`;
+  });
 
   const rows=[];
+  const _crDrOn=!!(CR.drFrom&&CR.drTo&&CR.drFrom<=CR.drTo);
   crs.forEach(cr=>{
     const isOpen=!!CR.expanded[cr.id];
-    const agg=crAgg(cr);
+    const agg=_crDrOn?aggByDateRangeCr(cr,CR.drFrom,CR.drTo):crAgg(cr);
     if(!agg.spend||agg.spend===0) return; // hide creatives with no spend in selected weeks
     let cc=`<td style="position:sticky;left:0;background:${isOpen?'var(--bg3)':'var(--bg2)'};z-index:1">
       <div class="tree-name tree-indent-1">
