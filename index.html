@@ -5215,7 +5215,7 @@ function serializeHealthData(){
       const d7T=(age>=21&&wd.d7cost)?tagD7(wd.d7cost):'na';
       const rT=(age>=28&&wd.roas)?tagROAS(wd.roas):'na';
       const wH=healthScore(tagCPL(cpl),d3T,d7T,rT);
-      return w.label+'[H:'+wH+' spend:Rs'+Math.round(wd.spend)+' conf:'+tagConf(wd.spend)+']';
+      return w.label+'[wH:'+wH+' spend:Rs'+Math.round(wd.spend)+' conf:'+tagConf(wd.spend)+']';
     }).filter(Boolean).join(' ');
   }
 
@@ -5229,14 +5229,14 @@ function serializeHealthData(){
   const L=['KW 14DayYoga — WEEKLY HEALTH DATA (last 8 weeks) — today: '+new Date().toDateString()];
   L.push('Week date ranges: '+wks8Labels.join(', '));
   L.push('IMPORTANT: The last week in list is the CURRENT in-progress week (partial data). "Last week" in questions means the LAST COMPLETED WEEK, one before current.');
-  L.push('Format per entity: SignalHealth(0-100, recency-weighted last-5-active-weeks) | Confidence | Action | weekly history: Wxx[H:score spend conf]');
+  L.push('Format per entity: SIGNAL_HEALTH(0-100, recency-weighted aggregate of last 5 active weeks — THIS drives the action tag) | conf | action | then weekly history: Wxx[wH:score spend conf] where wH is that single week only — do NOT use wH to justify action tags or misalignment claims.');
 
   L.push('\n=== CAMPAIGNS ===');
   camps.forEach(function(cc){
     const row=weeklyRow(cc);
     if(!row) return;
     const sh=computeSignalHealth(cc,d);
-    L.push('[C] '+cc.name+' ('+cc.platform+') SignalH:'+sh.health+' conf:'+sh.conf+' action:'+getAction(sh.health,sh.conf,cc.age,false));
+    L.push('[C] '+cc.name+' ('+cc.platform+') SIGNAL_HEALTH:'+sh.health+' conf:'+sh.conf+' action:'+getAction(sh.health,sh.conf,cc.age,false));
     L.push('    '+row);
   });
 
@@ -5246,7 +5246,7 @@ function serializeHealthData(){
       const row=weeklyRow(a);
       if(!row) return;
       const ash=computeSignalHealth(a,d);
-      L.push('[A] '+a.name+' (camp: '+cc.name+', '+cc.platform+') SignalH:'+ash.health+' conf:'+ash.conf+' action:'+getAction(ash.health,ash.conf,cc.age,false));
+      L.push('[A] '+a.name+' (camp: '+cc.name+', '+cc.platform+') SIGNAL_HEALTH:'+ash.health+' conf:'+ash.conf+' action:'+getAction(ash.health,ash.conf,cc.age,false));
       L.push('    '+row);
     });
   });
@@ -5265,7 +5265,7 @@ function serializeHealthData(){
     const row=weeklyRow(cr);
     if(!row) return;
     const csh=computeSignalHealth(cr,d);
-    L.push('[CR] '+(cr.name||cr.id)+' ('+cr.platform+') SignalH:'+csh.health+' conf:'+csh.conf+' action:'+getAction(csh.health,csh.conf,cr.age,false));
+    L.push('[CR] '+(cr.name||cr.id)+' ('+cr.platform+') SIGNAL_HEALTH:'+csh.health+' conf:'+csh.conf+' action:'+getAction(csh.health,csh.conf,cr.age,false));
     L.push('    '+row);
   });
 
