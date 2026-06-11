@@ -2098,7 +2098,10 @@ function startColResize(e){
   e.preventDefault(); e.stopPropagation();
   const handle=e.currentTarget;
   handle.classList.add('dragging');
-  const startX=e.clientX, startW=NAME_COL_W;
+  const startX=e.clientX;
+  const thEl=handle.closest('th')||document.querySelector('.tree-table th:first-child');
+  const startW=thEl?thEl.getBoundingClientRect().width:NAME_COL_W;
+  NAME_COL_W=startW;
   function onMove(ev){
     NAME_COL_W=Math.max(140,Math.min(600,startW+(ev.clientX-startX)));
     document.querySelectorAll('.tree-table th:first-child,.tree-table td:first-child')
