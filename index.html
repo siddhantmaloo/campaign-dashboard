@@ -5230,7 +5230,7 @@ function serializeHealthData(){
     const row=weeklyRow(cc);
     if(!row) return;
     const sh=computeSignalHealth(cc,d);
-    L.push('[C] '+cc.name+' | id:'+cc.id+' ('+cc.platform+') SignalH:'+sh.health+' conf:'+sh.conf+' action:'+getAction(sh.health,sh.conf,cc.age,false));
+    L.push('[C] '+cc.name+' ('+cc.platform+') SignalH:'+sh.health+' conf:'+sh.conf+' action:'+getAction(sh.health,sh.conf,cc.age,false));
     L.push('    '+row);
   });
 
@@ -5240,7 +5240,7 @@ function serializeHealthData(){
       const row=weeklyRow(a);
       if(!row) return;
       const ash=computeSignalHealth(a,d);
-      L.push('[A] '+a.name+' | id:'+a.id+' (camp: '+cc.name+', '+cc.platform+') SignalH:'+ash.health+' conf:'+ash.conf+' action:'+getAction(ash.health,ash.conf,cc.age,false));
+      L.push('[A] '+a.name+' (camp: '+cc.name+', '+cc.platform+') SignalH:'+ash.health+' conf:'+ash.conf+' action:'+getAction(ash.health,ash.conf,cc.age,false));
       L.push('    '+row);
     });
   });
@@ -5259,7 +5259,7 @@ function serializeHealthData(){
     const row=weeklyRow(cr);
     if(!row) return;
     const csh=computeSignalHealth(cr,d);
-    L.push('[CR] '+(cr.name||cr.id)+' | id:'+cr.id+' ('+cr.platform+') SignalH:'+csh.health+' conf:'+csh.conf+' action:'+getAction(csh.health,csh.conf,cr.age,false));
+    L.push('[CR] '+(cr.name||cr.id)+' ('+cr.platform+') SignalH:'+csh.health+' conf:'+csh.conf+' action:'+getAction(csh.health,csh.conf,cr.age,false));
     L.push('    '+row);
   });
 
