@@ -4966,7 +4966,12 @@ function resetGeminiKey(){
   else{ localStorage.removeItem('gemini_key'); alert('Key cleared.'); }
 }
 
-function initAITab(){ if(S.data) generateBasicReport(); }
+function initAITab(){
+  if(!S.data) return;
+  const out=document.getElementById('reportOutput');
+  if(!out||out.textContent.trim()) return; // already has content — preserve it
+  generateBasicReport();
+}
 
 function fmtRpt(v){ if(v==null||isNaN(v)) return '--'; return Math.round(v).toLocaleString('en-IN'); }
 function fmtRptF(v,d=1){ if(v==null||isNaN(v)) return '--'; return (Math.round(v*Math.pow(10,d))/Math.pow(10,d)).toFixed(d); }
