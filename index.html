@@ -2253,17 +2253,17 @@ function isMature(wk, col){
 // ═══════════════════════════════════════
 function campSortBy(col){
   if(TS.sortCol===col) TS.sortDir*=-1;
-  else { TS.sortCol=col; TS.sortDir=-1; }
+  else { TS.sortCol=col; TS.sortDir=1; }
   if(S.data) renderCampaigns(S.data);
 }
 function asSortBy(col){
   if(AS.sort===col) AS.sortDir*=-1;
-  else { AS.sort=col; AS.sortDir=-1; }
+  else { AS.sort=col; AS.sortDir=1; }
   if(S.data) renderAdsets(S.data);
 }
 function crSortBy(col){
   if(CR.sort===col) CR.sortDir*=-1;
-  else { CR.sort=col; CR.sortDir=-1; }
+  else { CR.sort=col; CR.sortDir=1; }
   if(S.data) renderCreatives(S.data);
 }
 
@@ -2407,7 +2407,7 @@ function renderSignals(d){
     </div>`).join('');
 }
 // ── TREE STATE ──
-const TS={plat:'all',weeks:null,expanded:{},weekExpanded:{},sortCol:'spend',sortDir:-1};
+const TS={plat:'all',weeks:null,expanded:{},weekExpanded:{},sortCol:'spend',sortDir:1};
 
 function treePlat(p,btn){
   TS.plat=p;
@@ -2651,7 +2651,7 @@ function renderTree(d){
   let thCells=`<th style="min-width:240px;text-align:left;padding:7px 10px;background:var(--bg3);border-bottom:1px solid var(--border);position:sticky;left:0;z-index:3;font-family:var(--font-mono);font-size:9px;letter-spacing:.08em;color:var(--text3);text-transform:uppercase">Campaign</th>`;
   COLS.forEach((col,ci)=>{
     const active=TS.sortCol===col.k;
-    const arrow=active?(TS.sortDir===-1?' ▼':' ▲'):'';
+    const arrow=active?(TS.sortDir===1?' ▼':' ▲'):'';
     thCells+=`<th class="${ci===0?'col-sep':''}" style="cursor:pointer;user-select:none;${active?'color:var(--accent)':''}" onclick="campSortBy('${col.k}')">${col.label}${arrow}</th>`;
   });
 
@@ -3093,7 +3093,7 @@ function scrollToPivotRow(id){
 // ═══════════════════════════════════════
 // AD SETS TREE STATE
 // ═══════════════════════════════════════
-const AS={plat:'all',weeks:null,expanded:{},filterAdset:null,filterCamp:null,sort:'spend',sortDir:-1};
+const AS={plat:'all',weeks:null,expanded:{},filterAdset:null,filterCamp:null,sort:'spend',sortDir:1};
 const CR_FILTER={adset:null};
 
 // ── DRILL-THROUGH NAVIGATION ──
@@ -3323,7 +3323,7 @@ function renderAdsets(d){
   </th>`;
   COLS.forEach((col,ci)=>{
     const active=AS.sort===col.k;
-    const arrow=active?(AS.sortDir===-1?' ▼':' ▲'):'';
+    const arrow=active?(AS.sortDir===1?' ▼':' ▲'):'';
     thCells+=`<th class="${ci===0?'col-sep':''}" style="cursor:pointer;user-select:none;${active?'color:var(--accent)':''}" onclick="asSortBy('${col.k}')">${col.label}${arrow}</th>`;
   });
 
@@ -3441,7 +3441,7 @@ function renderAdsets(d){
 // ═══════════════════════════════════════
 // CREATIVES TREE STATE
 // ═══════════════════════════════════════
-const CR={plat:'all',weeks:null,expanded:{},sort:'spend',sortDir:-1};
+const CR={plat:'all',weeks:null,expanded:{},sort:'spend',sortDir:1};
 const themeColor={'Date Hook':'blue','Generic':'gray','Problem Statement':'purple','Social Proof':'yellow','AI Creative':'green'};
 
 function crPlat(p,btn){ CR.plat=p; btn.closest('.tb-group').querySelectorAll('.tb-btn').forEach(b=>b.className='tb-btn'); btn.className='tb-btn act-'+p; if(S.data) renderCreatives(S.data); }
@@ -3615,7 +3615,7 @@ function renderCreatives(d){
   </th>`;
   COLS.forEach((col,ci)=>{
     const active=CR.sort===col.k;
-    const arrow=active?(CR.sortDir===-1?' ▼':' ▲'):'';
+    const arrow=active?(CR.sortDir===1?' ▼':' ▲'):'';
     thCells+=`<th class="${ci===0?'col-sep':''}" style="cursor:pointer;user-select:none;${active?'color:var(--accent)':''}" onclick="crSortBy('${col.k}')">${col.label}${arrow}</th>`;
   });
 
