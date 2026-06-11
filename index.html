@@ -5213,8 +5213,16 @@ function serializeHealthData(){
     }).filter(Boolean).join(' ');
   }
 
+  // Mark current (in-progress) week and last completed week clearly
+  const currentWkKey=(d.weeks||[]).filter(function(w){return w.now||w.current;}).map(function(w){return w.key;})[0]||'';
+  const wks8Labels=wks8.map(function(w){
+    const tag=w.now||w.current?' (CURRENT — partial, incomplete)':w.key===wks8[wks8.length-2].key?' (LAST COMPLETED WEEK)':'';
+    return w.label+'='+w.full+tag;
+  });
+
   const L=['KW 14DayYoga — WEEKLY HEALTH DATA (last 8 weeks) — today: '+new Date().toDateString()];
-  L.push('Week date ranges: '+wks8.map(function(w){return w.label+'='+w.full;}).join(', '));
+  L.push('Week date ranges: '+wks8Labels.join(', '));
+  L.push('IMPORTANT: The last week in list is the CURRENT in-progress week (partial data). "Last week" in questions means the LAST COMPLETED WEEK, one before current.');
   L.push('Format per entity: SignalHealth(0-100, recency-weighted last-5-active-weeks) | Confidence | Action | weekly history: Wxx[H:score spend conf]');
 
   L.push('\n=== CAMPAIGNS ===');
@@ -5222,7 +5230,7 @@ function serializeHealthData(){
     const row=weeklyRow(cc);
     if(!row) return;
     const sh=computeSignalHealth(cc,d);
-    L.push('[C] '+campShort(cc.name)+' ('+cc.platform+') SignalH:'+sh.health+' conf:'+sh.conf+' action:'+getAction(sh.health,sh.conf,cc.age,false));
+    L.push('[C] '+cc.name+' | id:'+cc.id+' ('+cc.platform+') SignalH:'+sh.health+' conf:'+sh.conf+' action:'+getAction(sh.health,sh.conf,cc.age,false));
     L.push('    '+row);
   });
 
@@ -5232,15 +5240,18 @@ function serializeHealthData(){
       const row=weeklyRow(a);
       if(!row) return;
       const ash=computeSignalHealth(a,d);
-      L.push('[A] '+a.name.slice(0,42)+' (camp: '+campShort(cc.name)+', '+cc.platform+') SignalH:'+ash.health+' conf:'+ash.conf+' action:'+getAction(ash.health,ash.conf,cc.age,false));
+      L.push('[A] '+a.name+' | id:'+a.id+' (camp: '+cc.name+', '+cc.platform+') SignalH:'+ash.health+' conf:'+ash.conf+' action:'+getAction(ash.health,ash.conf,cc.age,false));
       L.push('    '+row);
     });
   });
 
   L.push('\n=== CREATIVES (top 25 by recent spend) ===');
+  // recent spend = last 2 completed weeks (exclude current partial week)
+  const wks8Completed=wks8.filter(function(w){return !w.now&&!w.current;});
+  const recentWks=wks8Completed.slice(-2);
   const crs=(d.creatives||[]).map(function(cr){
     let recentSp=0;
-    wks8.slice(-2).forEach(function(w){recentSp+=(cr.weekly&&cr.weekly[w.key]&&cr.weekly[w.key].spend)||0;});
+    recentWks.forEach(function(w){recentSp+=(cr.weekly&&cr.weekly[w.key]&&cr.weekly[w.key].spend)||0;});
     return {cr:cr,sp:recentSp};
   }).filter(function(x){return x.sp>0;}).sort(function(a,b){return b.sp-a.sp;}).slice(0,25);
   crs.forEach(function(x){
@@ -5248,7 +5259,7 @@ function serializeHealthData(){
     const row=weeklyRow(cr);
     if(!row) return;
     const csh=computeSignalHealth(cr,d);
-    L.push('[CR] '+(cr.name||cr.id).slice(0,38)+' ('+cr.platform+') SignalH:'+csh.health+' conf:'+csh.conf+' action:'+getAction(csh.health,csh.conf,cr.age,false));
+    L.push('[CR] '+(cr.name||cr.id)+' | id:'+cr.id+' ('+cr.platform+') SignalH:'+csh.health+' conf:'+csh.conf+' action:'+getAction(csh.health,csh.conf,cr.age,false));
     L.push('    '+row);
   });
 
