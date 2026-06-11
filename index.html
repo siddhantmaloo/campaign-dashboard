@@ -373,7 +373,8 @@ td:first-child{text-align:left;}
 .tree-scroll{overflow-x:auto;overflow-y:auto;max-height:calc(100vh - 200px);}
 .tree-table{width:100%;border-collapse:collapse;min-width:1400px;}
 .tree-table th{padding:7px 10px;text-align:right;font-family:var(--font-mono);font-size:9px;letter-spacing:.08em;color:var(--text3);text-transform:uppercase;border-bottom:1px solid var(--border);background:var(--bg3);white-space:nowrap;position:sticky;top:0;z-index:2;}
-.tree-table th:first-child{text-align:left;min-width:160px;position:sticky;left:0;z-index:3;background:var(--bg3);}
+.tree-table th:first-child{text-align:left;width:var(--name-col-w,240px);min-width:var(--name-col-w,240px);max-width:var(--name-col-w,240px);position:sticky;left:0;z-index:3;background:var(--bg3);}
+.tree-table td:first-child{width:var(--name-col-w,240px);min-width:var(--name-col-w,240px);max-width:var(--name-col-w,240px);}
 .col-resize-handle{position:absolute;right:0;top:0;bottom:0;width:6px;cursor:col-resize;z-index:10;background:transparent;}
 .col-resize-handle:hover,.col-resize-handle.dragging{background:var(--accent);opacity:.5;}
 .tree-table th.col-sep{border-left:2px solid var(--border2);}
@@ -2104,15 +2105,14 @@ function startColResize(e){
   NAME_COL_W=startW;
   function onMove(ev){
     NAME_COL_W=Math.max(140,Math.min(600,startW+(ev.clientX-startX)));
-    document.querySelectorAll('.tree-table th:first-child,.tree-table td:first-child')
-      .forEach(function(el){el.style.width=NAME_COL_W+'px';el.style.minWidth=NAME_COL_W+'px';el.style.maxWidth=NAME_COL_W+'px';});
+    document.documentElement.style.setProperty('--name-col-w', NAME_COL_W+'px');
   }
   function onUp(){ handle.classList.remove('dragging'); document.removeEventListener('mousemove',onMove); document.removeEventListener('mouseup',onUp); }
   document.addEventListener('mousemove',onMove);
   document.addEventListener('mouseup',onUp);
 }
 function nameColTh(label, extra){
-  return `<th style="width:${NAME_COL_W}px;min-width:${NAME_COL_W}px;max-width:${NAME_COL_W}px;text-align:left;padding:7px 10px;background:var(--bg3);border-bottom:1px solid var(--border);position:sticky;left:0;z-index:3;font-family:var(--font-mono);font-size:9px;letter-spacing:.08em;color:var(--text3);text-transform:uppercase;overflow:hidden;white-space:nowrap;position:sticky;">${label}${extra||''}<div class="col-resize-handle" onmousedown="startColResize(event)"></div></th>`;
+  return `<th style="text-align:left;padding:7px 10px;background:var(--bg3);border-bottom:1px solid var(--border);position:sticky;left:0;z-index:3;font-family:var(--font-mono);font-size:9px;letter-spacing:.08em;color:var(--text3);text-transform:uppercase;overflow:hidden;white-space:nowrap;">${label}${extra||''}<div class="col-resize-handle" onmousedown="startColResize(event)"></div></th>`;
 }
 
 const COLS=[
