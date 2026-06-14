@@ -3630,7 +3630,8 @@ function renderCreatives(d){
     const cpl=wd.leads>0?wd.spend/wd.leads:null;
     const roas=wd.spend>0&&wd.rev>0?wd.rev/wd.spend:null;
     // Use actual age at this week for maturity
-    const approxAgeAtWeek=Math.max(0,cr.age-((S.data?.weeks?.length||0)-(S.data?.weeks?.findIndex(ww=>ww.key===w.key)||0))*7);
+    const _wkIdx=S.data?S.data.weeks.findIndex(ww=>ww.key===w.key):-1;
+    const approxAgeAtWeek=Math.max(0,cr.age-(_wkIdx>=0?S.data.weeks.length-1-_wkIdx:0)*7);
     return {spend:wd.spend,cpm:wd.cpm||null,cpc:wd.cpc||null,ctr:wd.ctr||null,
       c2db:wd.clicks>0&&wd.leads>0?wd.leads/wd.clicks*100:null,
       leads:wd.leads,cpl,subs:wd.subs||0,
