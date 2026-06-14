@@ -3695,7 +3695,7 @@ function renderCreatives(d){
         </div>
       </div></td>`;
     COLS.forEach((col,ci)=>{
-      const val=cellVal(agg,col,isMatureByAge(cr.age,col.k));
+      const val=cellVal(agg,col,weeks.length>0?isMature(weeks[weeks.length-1].key,col.k):false);
       cc+=`<td class="${ci===0?'col-sep':''}">${val}</td>`;
     });
     rows.push(`<tr class="row-camp${isOpen?' open':''}" data-cr-id="${cr.id}"
