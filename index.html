@@ -1867,11 +1867,9 @@ function renderKvStrip(d){
   months.forEach(function(m){
     selectedCamps.forEach(function(c){
       if(plat!=='all'&&c.platform!==plat) return;
-      const _mn=['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
       Object.entries(c._dailySpend||{}).forEach(function([ds,sp]){
         if((sp.spend||0)>0){
-          const dt=new Date(ds+'T00:00:00Z');
-          const mk=_mn[dt.getUTCMonth()]+String(dt.getUTCFullYear()).slice(2);
+          const mk=ds.slice(0,7).replace('-',''); // '2026-06-01' → '202606'
           if(mk===m.key) activeDaysSet.add(ds);
         }
       });
