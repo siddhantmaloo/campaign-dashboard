@@ -1877,7 +1877,14 @@ function renderKvStrip(d){
   });
   const activeDays=activeDaysSet.size;
   const avgDailySpend=activeDays>0?totSpend/activeDays:null;
-  const campCount=selectedCamps.filter(c=>plat==='all'||c.platform===plat).length;
+  const monthKeys=new Set(months.map(m=>m.key));
+  const campCount=selectedCamps.filter(c=>{
+    if(plat!=='all'&&c.platform!==plat) return false;
+    return Object.entries(c._dailySpend||{}).some(([ds,sp])=>{
+      const mk=ds.slice(0,7).replace('-','');
+      return monthKeys.has(mk)&&(sp.spend||0)>0;
+    });
+  }).length;
   const kpis=[
     {l:'Total Spend',      v:fmt.inrK(totSpend),                         t:'neutral'},
     {l:'Total Leads',      v:fmt.numK(totLeads),                          t:'neutral'},
