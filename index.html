@@ -3475,13 +3475,30 @@ function aggByDateRangeCr(cr, from, to){
   const f=from||'0000-01-01', t=to||'9999-12-31';
   const spDaily=cr._dailySpend||{}, attDaily=cr._dailyAtt||{};
   const revDaily=cr._dailyRev||{}, subsDaily=cr._dailySubs||{};
+  const hasAttData=Object.keys(attDaily).length>0;
+  // For Google creatives, _dailyAtt is empty — proportionally attribute from parent adset
+  const parentCamp=S.data?S.data.camps.find(function(c){return c.id===cr.campId;}):null;
+  const parentAdset=parentCamp?parentCamp.adsets.find(function(a){return a.id===cr.adset;}):null;
+  const asSpDaily=parentAdset?parentAdset._dailySpend||{}:{};
+  const asAttDaily=parentAdset?parentAdset._dailyAtt||{}:{};
+  const asRevDaily=parentAdset?parentAdset._dailyRev||{}:{};
+  const asSubsDaily=parentAdset?parentAdset._dailySubs||{}:{};
   let spend=0,impr=0,clicks=0,leads=0,d1=0,d3=0,d7=0,d10=0,rev=0,subs=0;
   Object.entries(spDaily).forEach(function([ds,sp]){
     if(ds<f||ds>t) return;
     spend+=sp.spend||0; impr+=sp.impr||0; clicks+=sp.clicks||0;
-    rev+=revDaily[ds]||0; subs+=subsDaily[ds]||0;
-    const att=attDaily[ds]||{};
-    leads+=att.leads||0; d1+=att.d1||0; d3+=att.d3||0; d7+=att.d7||0; d10+=att.d10||0;
+    if(hasAttData){
+      rev+=revDaily[ds]||0; subs+=subsDaily[ds]||0;
+      const att=attDaily[ds]||{};
+      leads+=att.leads||0; d1+=att.d1||0; d3+=att.d3||0; d7+=att.d7||0; d10+=att.d10||0;
+    } else if(parentAdset){
+      const asSpend=(asSpDaily[ds]?.spend)||1;
+      const ratio=(sp.spend||0)/asSpend;
+      rev+=(asRevDaily[ds]||0)*ratio; subs+=(asSubsDaily[ds]||0)*ratio;
+      const att=asAttDaily[ds]||{};
+      leads+=Math.round((att.leads||0)*ratio); d1+=Math.round((att.d1||0)*ratio);
+      d3+=Math.round((att.d3||0)*ratio); d7+=Math.round((att.d7||0)*ratio); d10+=Math.round((att.d10||0)*ratio);
+    }
   });
   const cpl=leads>0&&spend>0?spend/leads:null;
   const roas=spend>0&&rev>0?rev/spend:null;
