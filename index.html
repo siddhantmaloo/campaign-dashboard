@@ -2953,10 +2953,16 @@ function renderBatch(d){
     const rd=b.revData&&b.revData[c.id]||{rev:0,subs:0};
     return batchMetrics(bd, c.weekly, rd);
   }
+  const filteredCampIds=new Set(camps.map(c=>c.id));
   function batchAgg(b){
-    // Aggregate over all campaigns (active) + other + organic
+    // Aggregate over platform-filtered campaigns + organic
     let totSpend=0,totLeads=0,totImpr=0,totClicks=0,totD1=0,totD3=0,totD7=0,totD10=0,totRev=0,totSubs=0,totOrd31=0,totOrdOt=0;
     Object.entries(b.data).forEach(([key,bd])=>{
+      // Skip campaigns not in platform-filtered set (but always include organic)
+      if(key!=='__organic__'&&BS.plat!=='all'){
+        const dc=d.camps.find(c=>c.id===key);
+        if(!dc||dc.platform!==BS.plat) return;
+      }
       const rd=(b.revData&&b.revData[key])||{rev:0,subs:0};
       const weeklyData = key==='__organic__'||!d.camps.find(c=>c.id===key) ? null : d.camps.find(c=>c.id===key)?.weekly;
       let sp=0,im=0,cl=0;
@@ -3051,6 +3057,7 @@ function renderBatch(d){
         const campNamesMap=d.campNames||{};
         Object.entries(b.data).forEach(([key,bd])=>{
           if(key==='__organic__'||activeCampIds.has(key)) return;
+          if(BS.plat!=='all'){const dc=d.camps.find(c=>c.id===key);if(!dc||dc.platform!==BS.plat) return;}
           if(!bd||bd.leads===0) return;
           const od=batchMetrics(bd,null);
           const cname=campNamesMap[key]?campShort(campNamesMap[key]):(key.slice(0,16)+'…');
