@@ -1877,6 +1877,7 @@ function renderKvStrip(d){
   });
   const activeDays=activeDaysSet.size;
   const avgDailySpend=activeDays>0?totSpend/activeDays:null;
+  const campCount=selectedCamps.filter(c=>plat==='all'||c.platform===plat).length;
   const kpis=[
     {l:'Total Spend',      v:fmt.inrK(totSpend),                         t:'neutral'},
     {l:'Total Leads',      v:fmt.numK(totLeads),                          t:'neutral'},
@@ -1884,7 +1885,7 @@ function renderKvStrip(d){
     {l:'Total Revenue',    v:fmt.inrK(totRev),                            t:'neutral'},
     {l:'Blended ROAS',     v:fmt.roas(roas),                              t:roas?tagROAS(roas):'neutral'},
     {l:'Avg Daily Spend',  v:avgDailySpend?fmt.inrK(avgDailySpend):'—',  t:'neutral'},
-    {l:'Campaigns',        v:'6',                                         t:'neutral'},
+    {l:'Campaigns',        v:String(campCount),                           t:'neutral'},
   ];
   document.getElementById('ovTotals').innerHTML=kpis.map(k=>`
     <div class="kpi-card ${k.t}"><div class="kpi-lbl">${k.l}</div><div class="kpi-val">${k.v}</div></div>`).join('');
