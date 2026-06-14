@@ -3712,8 +3712,8 @@ function renderCreatives(d){
         const wkIdx=S.data?S.data.weeks.findIndex(function(ww){return ww.key===w.key;}):- 1;
         const wksFromNow=wkIdx>=0?S.data.weeks.length-1-wkIdx:0;
         const approxAgeAtWeek = Math.max(0, cr.age - wksFromNow*7);
-        const wCpl=tagCPL(wd.cpl), wD3=isMatureByAge(approxAgeAtWeek,'d3cost')?tagD3(wd.d3cost):'na';
-        const wD7=isMatureByAge(approxAgeAtWeek,'d7cost')?tagD7(wd.d7cost):'na', wR=isMatureByAge(approxAgeAtWeek,'roas')?tagROAS(wd.roas):'na';
+        const wCpl=tagCPL(wd.cpl), wD3=isMature(w.key,'d3cost')?tagD3(wd.d3cost):'na';
+        const wD7=isMature(w.key,'d7cost')?tagD7(wd.d7cost):'na', wR=isMature(w.key,'roas')?tagROAS(wd.roas):'na';
         wd.health=healthScore(wCpl,wD3,wD7,wR); wd.conf=tagConf(wd.spend||0);
         let wc=`<td style="position:sticky;left:0;background:var(--bg);z-index:1">
           <div class="tree-name tree-indent-2">
@@ -3723,7 +3723,7 @@ function renderCreatives(d){
               <div class="tree-name-sub">${maturityLabel(w.key)}</div>
             </div>
           </div></td>`;
-        COLS.forEach((col,ci)=>{ wc+=`<td class="${ci===0?'col-sep':''}" style="background:var(--bg3)">${cellVal(wd,col,isMatureByAge(approxAgeAtWeek,col.k))}</td>`; });
+        COLS.forEach((col,ci)=>{ wc+=`<td class="${ci===0?'col-sep':''}" style="background:var(--bg3)">${cellVal(wd,col,isMature(w.key,col.k))}</td>`; });
         rows.push(`<tr class="row-week" onclick="toggleCrWeekExpand('${wKey}')">${wc}</tr>`);
 
         if(wOpen){
@@ -3748,7 +3748,7 @@ function renderCreatives(d){
               adjroas:(dailyRev[dateStr]||0)>0&&(ds+dl*T.waCost)>0?(dailyRev[dateStr]||0)/(ds+dl*T.waCost):null,
               ltvRoas:computeLtvROAS(dailyRev[dateStr]||0,cr._dailyOrd31[dateStr]||0,cr._dailyOrdOt[dateStr]||0,ds)};
             let dc=`<td style="position:sticky;left:0;background:var(--bg);z-index:1"><div class="tree-name tree-indent-3"><span style="width:14px;display:inline-block;flex-shrink:0;color:var(--text3);font-size:9px">•</span><div class="tree-name-main" style="font-size:10px;color:var(--text3)">${dateStr}</div></div></td>`;
-            COLS.forEach((col,ci)=>{ dc+=`<td class="${ci===0?'col-sep':''}" style="background:var(--bg)">${cellVal(dd,col,isMatureByAge(approxAgeAtWeek,col.k))}</td>`; });
+            COLS.forEach((col,ci)=>{ dc+=`<td class="${ci===0?'col-sep':''}" style="background:var(--bg)">${cellVal(dd,col,isMature(w.key,col.k))}</td>`; });
             rows.push(`<tr class="row-date">${dc}</tr>`);
           });
         }
