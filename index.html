@@ -295,7 +295,7 @@ td:first-child{text-align:left;}
 .batch-note .bn-green{color:var(--green);}
 
 /* ── OVERVIEW TAB ── */
-.ov-totals{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-bottom:18px;}
+.ov-totals{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin-bottom:18px;}
 .kpi-card{background:var(--bg2);border:1px solid var(--border);border-radius:4px;padding:11px 13px;position:relative;overflow:hidden;transition:border-color .15s;}
 .kpi-card:hover{border-color:var(--border2);}
 .kpi-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;}
@@ -1867,10 +1867,11 @@ function renderKvStrip(d){
   months.forEach(function(m){
     selectedCamps.forEach(function(c){
       if(plat!=='all'&&c.platform!==plat) return;
+      const _mn=['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
       Object.entries(c._dailySpend||{}).forEach(function([ds,sp]){
         if((sp.spend||0)>0){
           const dt=new Date(ds+'T00:00:00Z');
-          const mk=(dt.getUTCFullYear()+'-'+(dt.getUTCMonth()+1));
+          const mk=_mn[dt.getUTCMonth()]+String(dt.getUTCFullYear()).slice(2);
           if(mk===m.key) activeDaysSet.add(ds);
         }
       });
