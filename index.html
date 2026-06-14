@@ -3690,7 +3690,9 @@ function renderCreatives(d){
         const wKey=cr.id+'_'+w.key;
         CR.weekExpanded=CR.weekExpanded||{};
         const wOpen=!!CR.weekExpanded[wKey];
-        const approxAgeAtWeek = Math.max(0, cr.age - ({w23:0,w22:7,w21:14,w20:21,w19:28}[w.key]||0));
+        const wkIdx=S.data?S.data.weeks.findIndex(function(ww){return ww.key===w.key;}):- 1;
+        const wksFromNow=wkIdx>=0?S.data.weeks.length-1-wkIdx:0;
+        const approxAgeAtWeek = Math.max(0, cr.age - wksFromNow*7);
         const wCpl=tagCPL(wd.cpl), wD3=isMatureByAge(approxAgeAtWeek,'d3cost')?tagD3(wd.d3cost):'na';
         const wD7=isMatureByAge(approxAgeAtWeek,'d7cost')?tagD7(wd.d7cost):'na', wR=isMatureByAge(approxAgeAtWeek,'roas')?tagROAS(wd.roas):'na';
         wd.health=healthScore(wCpl,wD3,wD7,wR); wd.conf=tagConf(wd.spend||0);
