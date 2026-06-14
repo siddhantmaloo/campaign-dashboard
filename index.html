@@ -1861,13 +1861,31 @@ function renderKvStrip(d){
   const totRev    = months.reduce((s,m)=>s+(src(m).rev||0),0);
   const cpl  = totLeads>0 ? totSpend/totLeads : null;
   const roas = totSpend>0 ? (totRev/1.18)/totSpend : null;
+  // Avg daily spend — count only days with actual spend across selected months
+  const activeDaysSet=new Set();
+  const selectedCamps=d.camps.filter(c=>catMatch(c.name));
+  months.forEach(function(m){
+    selectedCamps.forEach(function(c){
+      if(plat!=='all'&&c.platform!==plat) return;
+      Object.entries(c._dailySpend||{}).forEach(function([ds,sp]){
+        if((sp.spend||0)>0){
+          const dt=new Date(ds+'T00:00:00Z');
+          const mk=(dt.getUTCFullYear()+'-'+(dt.getUTCMonth()+1));
+          if(mk===m.key) activeDaysSet.add(ds);
+        }
+      });
+    });
+  });
+  const activeDays=activeDaysSet.size;
+  const avgDailySpend=activeDays>0?totSpend/activeDays:null;
   const kpis=[
-    {l:'Total Spend',   v:fmt.inrK(totSpend), t:'neutral'},
-    {l:'Total Leads',   v:fmt.numK(totLeads), t:'neutral'},
-    {l:'Blended CPL',   v:fmt.inr(cpl),       t:cpl?tagCPL(cpl):'neutral'},
-    {l:'Total Revenue', v:fmt.inrK(totRev),   t:'neutral'},
-    {l:'Blended ROAS',  v:fmt.roas(roas),     t:roas?tagROAS(roas):'neutral'},
-    {l:'Campaigns',     v:'6',                 t:'neutral'},
+    {l:'Total Spend',      v:fmt.inrK(totSpend),                         t:'neutral'},
+    {l:'Total Leads',      v:fmt.numK(totLeads),                          t:'neutral'},
+    {l:'Blended CPL',      v:fmt.inr(cpl),                               t:cpl?tagCPL(cpl):'neutral'},
+    {l:'Total Revenue',    v:fmt.inrK(totRev),                            t:'neutral'},
+    {l:'Blended ROAS',     v:fmt.roas(roas),                              t:roas?tagROAS(roas):'neutral'},
+    {l:'Avg Daily Spend',  v:avgDailySpend?fmt.inrK(avgDailySpend):'—',  t:'neutral'},
+    {l:'Campaigns',        v:'6',                                         t:'neutral'},
   ];
   document.getElementById('ovTotals').innerHTML=kpis.map(k=>`
     <div class="kpi-card ${k.t}"><div class="kpi-lbl">${k.l}</div><div class="kpi-val">${k.v}</div></div>`).join('');
