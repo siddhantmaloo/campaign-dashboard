@@ -3166,8 +3166,8 @@ function drillCampToAdsets(campId, campName){
   AS.filterCamp={id:campId, name:campName};
   AS.filterAdset=null;
   AS.weeks={}; if(TS.weeks) Object.keys(TS.weeks).forEach(k=>{ AS.weeks[k]=TS.weeks[k]; });
-  // Propagate date range from campaigns
-  if(TS.drFrom&&TS.drTo){ AS.drFrom=TS.drFrom; AS.drTo=TS.drTo; }
+  // Propagate date range from campaigns, or clear if campaigns using week filter
+  AS.drFrom=TS.drFrom||null; AS.drTo=TS.drTo||null;
   switchTab('adsets');
   if(S.data){ buildAsWkItems(S.data); renderAdsets(S.data); }
   dpUpdateBtn('as');
@@ -3184,8 +3184,8 @@ function drillToAdset(adsetId, adsetName){
 function drillToCreatives(adsetId, adsetName, campId){
   CR_FILTER.adset={id:adsetId, name:adsetName, campId:campId||null};
   CR.weeks={}; if(AS.weeks) Object.keys(AS.weeks).forEach(k=>{ CR.weeks[k]=AS.weeks[k]; });
-  // Propagate date range from adsets
-  if(AS.drFrom&&AS.drTo){ CR.drFrom=AS.drFrom; CR.drTo=AS.drTo; }
+  // Propagate date range from adsets, or clear if adsets using week filter
+  CR.drFrom=AS.drFrom||null; CR.drTo=AS.drTo||null;
   switchTab('creatives');
   if(S.data){ buildCrWkItems(S.data); renderCreatives(S.data); }
   dpUpdateBtn('cr');
