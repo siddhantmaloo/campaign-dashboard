@@ -552,15 +552,52 @@ td:first-child{text-align:left;}
 .cat-chip.active{background:rgba(124,106,247,.15);color:var(--accent);border-color:var(--accent);}
 
 /* ── DATE RANGE FILTER ── */
-.dr-wrap{display:flex;align-items:center;gap:5px;}
-.dr-input{width:110px;padding:3px 7px;background:var(--bg3);border:1px solid var(--border2);border-radius:3px;color:var(--text);font-family:var(--font-mono);font-size:10px;outline:none;cursor:pointer;transition:border-color .12s;}
-.dr-input:focus{border-color:var(--accent);}
-.dr-input.active{border-color:var(--accent);background:rgba(124,106,247,.1);}
-.dr-input::-webkit-calendar-picker-indicator{filter:invert(0.6);cursor:pointer;margin-left:2px;}
-.dr-sep{font-family:var(--font-mono);font-size:9px;color:var(--text3);}
-.dr-clear{cursor:pointer;color:var(--text3);font-size:13px;transition:color .12s;line-height:1;}
+.dr-btn{display:flex;align-items:center;gap:6px;padding:4px 10px;background:var(--bg3);border:1px solid var(--border2);border-radius:3px;color:var(--text);font-family:var(--font-mono);font-size:10px;cursor:pointer;transition:border-color .12s;white-space:nowrap;}
+.dr-btn:hover{border-color:var(--accent);}
+.dr-btn.active{border-color:var(--accent);background:rgba(124,106,247,.1);}
+.dr-btn svg{opacity:.5;}
+.dr-clear{cursor:pointer;color:var(--text3);font-size:13px;transition:color .12s;line-height:1;padding:2px;}
 .dr-clear:hover{color:var(--text);}
 .wk-dd-btn.wk-dimmed{opacity:.35;pointer-events:none;}
+/* Meta-style date picker modal */
+.dp-overlay{display:none;position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,.45);}
+.dp-overlay.open{display:flex;align-items:center;justify-content:center;}
+.dp-modal{background:var(--bg2);border:1px solid var(--border2);border-radius:8px;display:flex;flex-direction:column;width:780px;max-width:96vw;box-shadow:0 8px 32px rgba(0,0,0,.6);overflow:hidden;}
+.dp-body{display:flex;flex:1;min-height:0;}
+.dp-presets{width:180px;flex-shrink:0;border-right:1px solid var(--border);padding:12px 0;overflow-y:auto;max-height:480px;}
+.dp-preset{padding:8px 18px;font-family:var(--font-mono);font-size:11px;color:var(--text2);cursor:pointer;transition:background .1s,color .1s;white-space:nowrap;}
+.dp-preset:hover{background:var(--bg3);color:var(--text);}
+.dp-preset.sel{background:rgba(124,106,247,.15);color:var(--accent);}
+.dp-preset-sep{height:1px;background:var(--border);margin:6px 0;}
+.dp-cal-area{flex:1;padding:16px 20px;display:flex;flex-direction:column;gap:12px;}
+.dp-cal-wrap{display:flex;gap:20px;}
+.dp-cal{flex:1;}
+.dp-cal-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+.dp-cal-title{font-family:var(--font-mono);font-size:12px;font-weight:600;color:var(--text);display:flex;gap:6px;align-items:center;}
+.dp-cal-nav{background:none;border:none;color:var(--text3);cursor:pointer;font-size:16px;padding:2px 6px;border-radius:3px;transition:color .1s;}
+.dp-cal-nav:hover{color:var(--text);}
+.dp-cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;}
+.dp-day-label{font-family:var(--font-mono);font-size:9px;color:var(--text3);text-align:center;padding:3px 0;text-transform:uppercase;}
+.dp-day{height:28px;display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-size:11px;color:var(--text2);cursor:pointer;border-radius:3px;transition:background .1s,color .1s;position:relative;}
+.dp-day:hover{background:var(--bg3);color:var(--text);}
+.dp-day.other-month{color:var(--text3);opacity:.4;}
+.dp-day.today{color:var(--accent);font-weight:700;}
+.dp-day.sel-start,.dp-day.sel-end{background:var(--accent)!important;color:#fff!important;border-radius:3px;}
+.dp-day.in-range{background:rgba(124,106,247,.18);color:var(--text);border-radius:0;}
+.dp-day.in-range.sel-start{border-radius:3px 0 0 3px;}
+.dp-day.in-range.sel-end{border-radius:0 3px 3px 0;}
+.dp-day.sel-start.sel-end{border-radius:3px;}
+.dp-day.disabled{opacity:.25;cursor:default;pointer-events:none;}
+.dp-footer{display:flex;align-items:center;justify-content:space-between;padding:12px 20px;border-top:1px solid var(--border);background:var(--bg2);}
+.dp-footer-hint{font-family:var(--font-mono);font-size:9px;color:var(--text3);}
+.dp-footer-btns{display:flex;gap:8px;}
+.dp-cancel{padding:6px 16px;background:none;border:1px solid var(--border2);border-radius:4px;color:var(--text2);font-family:var(--font-mono);font-size:11px;cursor:pointer;transition:border-color .1s;}
+.dp-cancel:hover{border-color:var(--text2);}
+.dp-apply{padding:6px 16px;background:var(--accent);border:none;border-radius:4px;color:#fff;font-family:var(--font-mono);font-size:11px;cursor:pointer;transition:opacity .1s;}
+.dp-apply:hover{opacity:.85;}
+.dp-range-display{display:flex;gap:8px;align-items:center;font-family:var(--font-mono);font-size:11px;color:var(--text2);}
+.dp-range-box{padding:5px 12px;border:1px solid var(--border2);border-radius:3px;min-width:110px;text-align:center;background:var(--bg3);}
+.dp-range-box.picking{border-color:var(--accent);}
 
 .fade-in{animation:fadeIn .28s ease both;}
 @keyframes fadeIn{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:none}}
@@ -946,13 +983,8 @@ td:first-child{text-align:left;}
           </div>
         </div>
         <div class="tb-sep"></div>
-        <span class="dr-sep">or</span>
-        <div class="dr-wrap">
-          <input type="date" id="tsDrFrom" class="dr-input" oninput="applyTsDr()" onchange="applyTsDr()">
-          <span class="dr-sep">&#8594;</span>
-          <input type="date" id="tsDrTo" class="dr-input" oninput="applyTsDr()" onchange="applyTsDr()">
-          <span class="dr-clear" id="tsDrClear" style="display:none" onclick="clearTsDr()">&#10005;</span>
-        </div>
+        <button class="dr-btn" id="tsDrBtn" onclick="dpOpen('ts')"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x="1" y="2" width="10" height="9" rx="1.5" stroke="currentColor" stroke-width="1.2"/><path d="M4 1v2M8 1v2M1 5h10" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg><span class="dp-btn-label">Date Range</span></button>
+        <span class="dr-clear" id="tsdrClear" style="display:none" onclick="dpClearTarget('ts',event)">&#10005;</span>
         <div class="tb-sep"></div>
         <div class="wk-dd-wrap">
           <button class="wk-dd-btn" id="tsActionBtn" onclick="toggleActionDrop(event)" style="min-width:130px">
@@ -1002,13 +1034,8 @@ td:first-child{text-align:left;}
           </div>
         </div>
         <div class="tb-sep"></div>
-        <span class="dr-sep">or</span>
-        <div class="dr-wrap">
-          <input type="date" id="asDrFrom" class="dr-input" oninput="applyAsDr()" onchange="applyAsDr()">
-          <span class="dr-sep">&#8594;</span>
-          <input type="date" id="asDrTo" class="dr-input" oninput="applyAsDr()" onchange="applyAsDr()">
-          <span class="dr-clear" id="asDrClear" style="display:none" onclick="clearAsDr()">&#10005;</span>
-        </div>
+        <button class="dr-btn" id="asDrBtn" onclick="dpOpen('as')"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x="1" y="2" width="10" height="9" rx="1.5" stroke="currentColor" stroke-width="1.2"/><path d="M4 1v2M8 1v2M1 5h10" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg><span class="dp-btn-label">Date Range</span></button>
+        <span class="dr-clear" id="asdrClear" style="display:none" onclick="dpClearTarget('as',event)">&#10005;</span>
         <div class="tb-sep"></div>
         <div class="wk-dd-wrap">
           <button class="wk-dd-btn" id="asActionBtn" onclick="toggleAsActionDrop(event)" style="min-width:130px">
@@ -1056,13 +1083,8 @@ td:first-child{text-align:left;}
           </div>
         </div>
         <div class="tb-sep"></div>
-        <span class="dr-sep">or</span>
-        <div class="dr-wrap">
-          <input type="date" id="crDrFrom" class="dr-input" oninput="applyCrDr()" onchange="applyCrDr()">
-          <span class="dr-sep">&#8594;</span>
-          <input type="date" id="crDrTo" class="dr-input" oninput="applyCrDr()" onchange="applyCrDr()">
-          <span class="dr-clear" id="crDrClear" style="display:none" onclick="clearCrDr()">&#10005;</span>
-        </div>
+        <button class="dr-btn" id="crDrBtn" onclick="dpOpen('cr')"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x="1" y="2" width="10" height="9" rx="1.5" stroke="currentColor" stroke-width="1.2"/><path d="M4 1v2M8 1v2M1 5h10" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg><span class="dp-btn-label">Date Range</span></button>
+        <span class="dr-clear" id="crdrClear" style="display:none" onclick="dpClearTarget('cr',event)">&#10005;</span>
       </div>
       <div style="display:flex;align-items:center;gap:6px">
         <button class="tb-btn" onclick="crExpandAll()">Expand All</button>
@@ -2560,23 +2582,8 @@ function aggByDateRangeCamp(c, from, to){
     ltvRoas:computeLtvROAS(rev,0,0,spend)};
 }
 
-function applyTsDr(){
-  TS.drFrom=document.getElementById('tsDrFrom').value||null;
-  TS.drTo=document.getElementById('tsDrTo').value||null;
-  const on=!!(TS.drFrom&&TS.drTo&&TS.drFrom<=TS.drTo);
-  const clr=document.getElementById('tsDrClear'); if(clr) clr.style.display=on?'':'none';
-  const wkBtn=document.getElementById('tsWkBtn'); if(wkBtn) wkBtn.classList.toggle('wk-dimmed',on);
-  ['tsDrFrom','tsDrTo'].forEach(function(id){const el=document.getElementById(id);if(el)el.classList.toggle('active',on);});
-  if(S.data) renderTree(S.data);
-}
-
-function clearTsDr(){
-  TS.drFrom=null; TS.drTo=null;
-  ['tsDrFrom','tsDrTo'].forEach(function(id){const el=document.getElementById(id);if(el){el.value='';el.classList.remove('active');}});
-  const clr=document.getElementById('tsDrClear'); if(clr) clr.style.display='none';
-  const wkBtn=document.getElementById('tsWkBtn'); if(wkBtn) wkBtn.classList.remove('wk-dimmed');
-  if(S.data) renderTree(S.data);
-}
+function applyTsDr(){ dpUpdateBtn('ts'); if(S.data) renderTree(S.data); }
+function clearTsDr(){ TS.drFrom=null; TS.drTo=null; dpUpdateBtn('ts'); if(S.data) renderTree(S.data); }
 
 // ── ACTION FILTER ──
 const ACTION_FILTER={selected:{'scale-relaunch':true,'scale':true,'watch':true,'wind-down':true,'drop':true,'too-early':true}};
@@ -3253,23 +3260,8 @@ function aggByDateRangeAs(a, from, to){
     ltvRoas:computeLtvROAS(rev,0,0,spend)};
 }
 
-function applyAsDr(){
-  AS.drFrom=document.getElementById('asDrFrom').value||null;
-  AS.drTo=document.getElementById('asDrTo').value||null;
-  const on=!!(AS.drFrom&&AS.drTo&&AS.drFrom<=AS.drTo);
-  const clr=document.getElementById('asDrClear'); if(clr) clr.style.display=on?'':'none';
-  const wkBtn=document.getElementById('asWkBtn'); if(wkBtn) wkBtn.classList.toggle('wk-dimmed',on);
-  ['asDrFrom','asDrTo'].forEach(function(id){const el=document.getElementById(id);if(el)el.classList.toggle('active',on);});
-  if(S.data) renderAdsets(S.data);
-}
-
-function clearAsDr(){
-  AS.drFrom=null; AS.drTo=null;
-  ['asDrFrom','asDrTo'].forEach(function(id){const el=document.getElementById(id);if(el){el.value='';el.classList.remove('active');}});
-  const clr=document.getElementById('asDrClear'); if(clr) clr.style.display='none';
-  const wkBtn=document.getElementById('asWkBtn'); if(wkBtn) wkBtn.classList.remove('wk-dimmed');
-  if(S.data) renderAdsets(S.data);
-}
+function applyAsDr(){ dpUpdateBtn('as'); if(S.data) renderAdsets(S.data); }
+function clearAsDr(){ AS.drFrom=null; AS.drTo=null; dpUpdateBtn('as'); if(S.data) renderAdsets(S.data); }
 
 // ── ADSET ACTION FILTER ──
 const AS_ACTION_FILTER={selected:{'scale-relaunch':true,'scale':true,'watch':true,'wind-down':true,'drop':true,'too-early':true}};
@@ -3554,23 +3546,8 @@ function aggByDateRangeCr(cr, from, to){
     ltvRoas:computeLtvROAS(rev,0,0,spend)};
 }
 
-function applyCrDr(){
-  CR.drFrom=document.getElementById('crDrFrom').value||null;
-  CR.drTo=document.getElementById('crDrTo').value||null;
-  const on=!!(CR.drFrom&&CR.drTo&&CR.drFrom<=CR.drTo);
-  const clr=document.getElementById('crDrClear'); if(clr) clr.style.display=on?'':'none';
-  const wkBtn=document.getElementById('crWkBtn'); if(wkBtn) wkBtn.classList.toggle('wk-dimmed',on);
-  ['crDrFrom','crDrTo'].forEach(function(id){const el=document.getElementById(id);if(el)el.classList.toggle('active',on);});
-  if(S.data) renderCreatives(S.data);
-}
-
-function clearCrDr(){
-  CR.drFrom=null; CR.drTo=null;
-  ['crDrFrom','crDrTo'].forEach(function(id){const el=document.getElementById(id);if(el){el.value='';el.classList.remove('active');}});
-  const clr=document.getElementById('crDrClear'); if(clr) clr.style.display='none';
-  const wkBtn=document.getElementById('crWkBtn'); if(wkBtn) wkBtn.classList.remove('wk-dimmed');
-  if(S.data) renderCreatives(S.data);
-}
+function applyCrDr(){ dpUpdateBtn('cr'); if(S.data) renderCreatives(S.data); }
+function clearCrDr(){ CR.drFrom=null; CR.drTo=null; dpUpdateBtn('cr'); if(S.data) renderCreatives(S.data); }
 function toggleCrRow(id){ CR.expanded[id]=!CR.expanded[id]; if(S.data) renderCreatives(S.data); }
 function crExpandAll(){ if(!S.data) return; S.data.creatives.forEach(cr=>CR.expanded[cr.id]=true); renderCreatives(S.data); }
 function crCollapseAll(){ if(!S.data) return; Object.keys(CR.expanded).forEach(k=>CR.expanded[k]=false); renderCreatives(S.data); }
@@ -5523,7 +5500,274 @@ If a question requires data you do NOT have (daily CPL, CTR, leads, revenue, ROA
 }
 </script>
 
+<!-- ══ META-STYLE DATE PICKER MODAL ══ -->
+<div class="dp-overlay" id="dpOverlay" onclick="dpOverlayClick(event)">
+  <div class="dp-modal" onclick="event.stopPropagation()">
+    <div class="dp-body">
+      <div class="dp-presets" id="dpPresets"></div>
+      <div class="dp-cal-area">
+        <div class="dp-range-display">
+          <div class="dp-range-box" id="dpRangeFrom">—</div>
+          <span style="color:var(--text3);font-size:11px">→</span>
+          <div class="dp-range-box" id="dpRangeTo">—</div>
+        </div>
+        <div class="dp-cal-wrap">
+          <div class="dp-cal" id="dpCal0"></div>
+          <div class="dp-cal" id="dpCal1"></div>
+        </div>
+      </div>
+    </div>
+    <div class="dp-footer">
+      <div class="dp-footer-hint">Click start date, then end date</div>
+      <div class="dp-footer-btns">
+        <button class="dp-cancel" onclick="dpClose()">Cancel</button>
+        <button class="dp-apply" onclick="dpApply()">Update</button>
+      </div>
+    </div>
+  </div>
+</div>
 
+<script>
+// ══ META-STYLE DATE PICKER ══
+const DP={
+  target:null, // 'ts'|'as'|'cr'
+  from:null, to:null,       // committed values (YYYY-MM-DD)
+  picking:null,             // 'from'|'to' — which end being picked
+  hoverDate:null,
+  viewYear:2026, viewMonth:5, // 0-indexed month for left calendar
+  minDate:null, maxDate:null
+};
+const MONTH_NAMES=['January','February','March','April','May','June','July','August','September','October','November','December'];
+const DAY_LABELS=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+function dpFmtDisplay(ymd){
+  if(!ymd) return '—';
+  const [y,m,d]=ymd.split('-');
+  return d+' '+MONTH_NAMES[parseInt(m)-1].slice(0,3)+' '+y;
+}
+
+function dpOpen(target){
+  DP.target=target;
+  // Load current values from TS/AS/CR state
+  const st=target==='ts'?TS:target==='as'?AS:CR;
+  DP.from=st.drFrom||null;
+  DP.to=st.drTo||null;
+  DP.picking='from';
+  // Determine min/max from data
+  if(S.data){
+    const allDates=S.data.camps.flatMap(c=>Object.keys(c._dailySpend||{})).filter(d=>d&&d.length===10).sort();
+    DP.minDate=allDates[0]||null;
+    DP.maxDate=allDates[allDates.length-1]||null;
+  }
+  // Set initial view to month of current 'to' or latest date
+  const ref=DP.to||DP.maxDate||new Date().toISOString().slice(0,10);
+  const [ry,rm]=ref.split('-');
+  // Show previous month on left, current on right
+  let lm=parseInt(rm)-2, ly=parseInt(ry);
+  if(lm<0){lm+=12;ly--;}
+  DP.viewYear=ly; DP.viewMonth=lm;
+  dpRender();
+  document.getElementById('dpOverlay').classList.add('open');
+}
+
+function dpClose(){
+  document.getElementById('dpOverlay').classList.remove('open');
+  DP.hoverDate=null;
+}
+
+function dpOverlayClick(e){
+  if(e.target===document.getElementById('dpOverlay')) dpClose();
+}
+
+function dpApply(){
+  if(!DP.from||!DP.to) return;
+  const target=DP.target;
+  // Set hidden inputs and fire the existing apply functions
+  if(target==='ts'){
+    TS.drFrom=DP.from; TS.drTo=DP.to;
+    if(S.data) renderTree(S.data);
+  } else if(target==='as'){
+    AS.drFrom=DP.from; AS.drTo=DP.to;
+    if(S.data) renderAdsets(S.data);
+  } else {
+    CR.drFrom=DP.from; CR.drTo=DP.to;
+    if(S.data) renderCreatives(S.data);
+  }
+  dpUpdateBtn(target);
+  dpClose();
+}
+
+function dpUpdateBtn(target){
+  const btn=document.getElementById(target+'DrBtn');
+  if(!btn) return;
+  const st=target==='ts'?TS:target==='as'?AS:CR;
+  const from=st.drFrom, to=st.drTo;
+  if(from&&to){
+    btn.querySelector('.dp-btn-label').textContent=dpFmtDisplay(from)+' → '+dpFmtDisplay(to);
+    btn.classList.add('active');
+    const clr=document.getElementById(target+'drClear');
+    if(clr) clr.style.display='';
+    // Dim week picker
+    const wkBtn=document.getElementById(target==='ts'?'tsWkBtn':target==='as'?'asWkBtn':'crWkBtn');
+    if(wkBtn) wkBtn.classList.add('wk-dimmed');
+  } else {
+    btn.querySelector('.dp-btn-label').textContent='Date Range';
+    btn.classList.remove('active');
+    const clr=document.getElementById(target+'drClear');
+    if(clr) clr.style.display='none';
+    const wkBtn=document.getElementById(target==='ts'?'tsWkBtn':target==='as'?'asWkBtn':'crWkBtn');
+    if(wkBtn) wkBtn.classList.remove('wk-dimmed');
+  }
+}
+
+function dpClearTarget(target,e){
+  e.stopPropagation();
+  const st=target==='ts'?TS:target==='as'?AS:CR;
+  st.drFrom=null; st.drTo=null;
+  dpUpdateBtn(target);
+  if(target==='ts'&&S.data) renderTree(S.data);
+  else if(target==='as'&&S.data) renderAdsets(S.data);
+  else if(S.data) renderCreatives(S.data);
+}
+
+function dpDayClick(ymd){
+  if(DP.picking==='from'){
+    DP.from=ymd; DP.to=null; DP.picking='to';
+  } else {
+    if(ymd<DP.from){ DP.to=DP.from; DP.from=ymd; }
+    else { DP.to=ymd; }
+    DP.picking='from';
+  }
+  dpRender();
+}
+
+function dpDayHover(ymd){
+  DP.hoverDate=ymd;
+  dpRenderCalendars();
+}
+
+function dpNavMonth(delta){
+  DP.viewMonth+=delta;
+  if(DP.viewMonth>11){DP.viewMonth=0;DP.viewYear++;}
+  if(DP.viewMonth<0){DP.viewMonth=11;DP.viewYear--;}
+  dpRenderCalendars();
+}
+
+function dpSelectPreset(from,to,label){
+  DP.from=from; DP.to=to; DP.picking='from';
+  // Navigate calendar to show the range
+  if(from){
+    const [fy,fm]=from.split('-');
+    let lm=parseInt(fm)-1, ly=parseInt(fy);
+    // Show from-month on left
+    DP.viewYear=ly; DP.viewMonth=lm-1;
+    if(DP.viewMonth<0){DP.viewMonth=11;DP.viewYear--;}
+  }
+  dpRender();
+}
+
+function dpRender(){
+  dpRenderPresets();
+  dpRenderCalendars();
+  // Update range display
+  const rf=document.getElementById('dpRangeFrom'), rt=document.getElementById('dpRangeTo');
+  if(rf) rf.textContent=DP.from?dpFmtDisplay(DP.from):'Start date';
+  if(rt) rt.textContent=DP.to?dpFmtDisplay(DP.to):'End date';
+  if(rf) rf.className='dp-range-box'+(DP.picking==='from'?' picking':'');
+  if(rt) rt.className='dp-range-box'+(DP.picking==='to'?' picking':'');
+}
+
+function dpGetPresets(){
+  const today=new Date();
+  const todayStr=today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-'+String(today.getDate()).padStart(2,'0');
+  function daysAgo(n){ const d=new Date(today); d.setDate(d.getDate()-n); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+  // This week Mon–today
+  const dow=today.getDay(); // 0=Sun
+  const thisMonStr=daysAgo(dow===0?6:dow-1);
+  // Last week Mon–Sun
+  const lastSunStr=daysAgo(dow===0?7:dow);
+  const lastMonStr=daysAgo(dow===0?13:dow+6);
+  // This month
+  const thisMonthStr=today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-01';
+  // Last month
+  const lm=new Date(today.getFullYear(),today.getMonth()-1,1);
+  const lmEnd=new Date(today.getFullYear(),today.getMonth(),0);
+  const lastMonthFrom=lm.getFullYear()+'-'+String(lm.getMonth()+1).padStart(2,'0')+'-01';
+  const lastMonthTo=lmEnd.getFullYear()+'-'+String(lmEnd.getMonth()+1).padStart(2,'0')+'-'+String(lmEnd.getDate()).padStart(2,'0');
+  const yest=daysAgo(1);
+  return [
+    {label:'Today',        from:todayStr,     to:todayStr},
+    {label:'Yesterday',    from:yest,         to:yest},
+    {label:'Last 7 days',  from:daysAgo(6),   to:todayStr},
+    {label:'Last 14 days', from:daysAgo(13),  to:todayStr},
+    {label:'Last 28 days', from:daysAgo(27),  to:todayStr},
+    {label:'Last 30 days', from:daysAgo(29),  to:todayStr},
+    {sep:true},
+    {label:'This week',    from:thisMonStr,   to:todayStr},
+    {label:'Last week',    from:lastMonStr,   to:lastSunStr},
+    {label:'This month',   from:thisMonthStr, to:todayStr},
+    {label:'Last month',   from:lastMonthFrom,to:lastMonthTo},
+    {sep:true},
+    {label:'Maximum',      from:DP.minDate,   to:DP.maxDate},
+  ];
+}
+
+function dpRenderPresets(){
+  const el=document.getElementById('dpPresets'); if(!el) return;
+  const presets=dpGetPresets();
+  el.innerHTML=presets.map(p=>{
+    if(p.sep) return '<div class="dp-preset-sep"></div>';
+    const isSel=p.from===DP.from&&p.to===DP.to;
+    return `<div class="dp-preset${isSel?' sel':''}" onclick="dpSelectPreset('${p.from}','${p.to}','${p.label}')">${p.label}</div>`;
+  }).join('');
+}
+
+function dpRenderCalendars(){
+  [0,1].forEach(i=>{
+    let m=DP.viewMonth+i, y=DP.viewYear;
+    if(m>11){m-=12;y++;}
+    dpRenderCal(i,y,m);
+  });
+}
+
+function dpRenderCal(idx,year,month){
+  const el=document.getElementById('dpCal'+idx); if(!el) return;
+  // First day of month
+  const firstDay=new Date(year,month,1).getDay(); // 0=Sun
+  const daysInMonth=new Date(year,month+1,0).getDate();
+  // Effective end for hover preview
+  const effTo=DP.picking==='to'&&DP.hoverDate?DP.hoverDate:DP.to;
+  const effFrom=DP.from;
+  const todayStr=(()=>{const t=new Date();return t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0');})();
+  let html=`<div class="dp-cal-hdr">`;
+  if(idx===0) html+=`<button class="dp-cal-nav" onclick="dpNavMonth(-1)">&#8249;</button>`;
+  else html+=`<div style="width:28px"></div>`;
+  html+=`<div class="dp-cal-title">${MONTH_NAMES[month]} ${year}</div>`;
+  if(idx===1) html+=`<button class="dp-cal-nav" onclick="dpNavMonth(1)">&#8250;</button>`;
+  else html+=`<div style="width:28px"></div>`;
+  html+=`</div><div class="dp-cal-grid">`;
+  DAY_LABELS.forEach(d=>{ html+=`<div class="dp-day-label">${d}</div>`; });
+  // Empty cells before first day
+  for(let i=0;i<firstDay;i++) html+=`<div class="dp-day other-month"></div>`;
+  for(let d=1;d<=daysInMonth;d++){
+    const ymd=year+'-'+String(month+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+    const isStart=effFrom&&ymd===effFrom;
+    const isEnd=effTo&&ymd===effTo;
+    const isInRange=effFrom&&effTo&&ymd>Math.min(effFrom,effTo)&&ymd<Math.max(effFrom,effTo);
+    const isToday=ymd===todayStr;
+    const isDisabled=(DP.minDate&&ymd<DP.minDate)||(DP.maxDate&&ymd>DP.maxDate);
+    let cls='dp-day';
+    if(isDisabled) cls+=' disabled';
+    if(isToday) cls+=' today';
+    if(isStart) cls+=' sel-start';
+    if(isEnd&&effTo) cls+=' sel-end';
+    if(isInRange) cls+=' in-range';
+    html+=`<div class="${cls}" onclick="dpDayClick('${ymd}')" onmouseenter="dpDayHover('${ymd}')" onmouseleave="DP.hoverDate=null;dpRenderCalendars()">${d}</div>`;
+  }
+  html+=`</div>`;
+  el.innerHTML=html;
+}
+</script>
 
 </body>
 </html>
