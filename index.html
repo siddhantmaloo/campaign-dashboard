@@ -895,6 +895,9 @@ td:first-child{text-align:left;}
           <button class="tb-btn" onclick="ovmPlat('meta',this)">META</button>
           <button class="tb-btn" onclick="ovmPlat('google',this)">GOOGLE</button>
         </div>
+        <div class="tb-sep"></div>
+        <button class="dr-btn" id="ovDrBtn" onclick="dpOpen('ov')"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x="1" y="2" width="10" height="9" rx="1.5" stroke="currentColor" stroke-width="1.2"/><path d="M4 1v2M8 1v2M1 5h10" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg><span class="dp-btn-label">Date Range</span></button>
+        <span class="dr-clear" id="ovdrClear" style="display:none" onclick="dpClearTarget('ov',event)">&#10005;</span>
       </div>
       <div style="display:flex;align-items:center;gap:6px">
         <button class="tb-btn" onclick="ovExpandAll()">Expand All</button>
@@ -1735,7 +1738,7 @@ function genData(){
 // RENDER — OVERVIEW
 // ═══════════════════════════════════════
 // ── OVERVIEW STATE ──
-const OV={plat:'all', expanded:{}, kvMonth:'all'};
+const OV={plat:'all', expanded:{}, kvMonth:'all', drFrom:null, drTo:null};
 const OVM={plat:'all'}; // Monthly Performance independent platform filter
 
 function ovmPlat(p,btn){ OVM.plat=p; btn.closest('.tb-group').querySelectorAll('.tb-btn').forEach(b=>b.className='tb-btn'); btn.className='tb-btn act-'+p; if(S.data) renderOverview(S.data); }
@@ -1936,20 +1939,44 @@ function renderOverview(d){
 
   const rows=[];
 
+  const ovDrOn=!!(OV.drFrom&&OV.drTo&&OV.drFrom<=OV.drTo);
+  // For total when date filter active: accumulate only filtered days
+  let totSpendDr=0, totLeadsDr=0, totRevDr=0, filteredDayCount=0;
+
   months.forEach(m=>{
+    // Check if this month overlaps the date range at all
+    const mDays=m.days.filter(day=>{
+      if(!ovDrOn) return true;
+      const ds=day.label.slice(0,10);
+      return ds>=OV.drFrom&&ds<=OV.drTo;
+    });
+    if(ovDrOn&&mDays.length===0) return; // skip months with no days in range
+
     const isOpen=OV.expanded[m.key]!==undefined ? OV.expanded[m.key] : m.current;
-    const mr=makeMetricRow(applyPlatMonth(m,OVM.plat));
     const isCurrent=m.current;
+
+    // For month row metrics: use filtered days aggregate when date filter active
+    let displayObj;
+    if(ovDrOn&&mDays.length>0){
+      const p=OVM.plat;
+      const dsp=mDays.reduce((s,d)=>s+(applyPlatDay(d,p).spend||0),0);
+      const dl=mDays.reduce((s,d)=>s+(applyPlatDay(d,p).leads||0),0);
+      const drv=mDays.reduce((s,d)=>s+(applyPlatDay(d,p).rev||0),0);
+      displayObj={spend:dsp,leads:dl,rev:drv};
+      totSpendDr+=dsp; totLeadsDr+=dl; totRevDr+=drv; filteredDayCount+=mDays.length;
+    } else {
+      displayObj=applyPlatMonth(m,OVM.plat);
+    }
+    const mr=makeMetricRow(displayObj);
 
     let mc=`<td style="position:sticky;left:0;background:${isOpen?'var(--bg3)':'var(--bg2)'};z-index:1">
       <div class="tree-name tree-indent-1">
         <span class="tree-toggle${isOpen?' open':''}">›</span>
         <div>
           <div class="tree-name-main">${m.label}${isCurrent?` <span style="color:var(--accent);font-size:9px">← current</span>`:''}</div>
-          <div class="tree-name-sub">${m.days.length} days · ${m.sub}</div>
+          <div class="tree-name-sub">${ovDrOn?mDays.length:m.days.length} days · ${m.sub}</div>
         </div>
       </div></td>`;
-    // Age = days since end of that month (current month uses today)
     const _myr=parseInt(m.key.slice(0,4)), _mmo=parseInt(m.key.slice(4,6)||m.key.slice(5,7));
     const _mend=isCurrent?new Date():new Date(Date.UTC(_myr,_mmo,0));
     const _mage=Math.max(0,Math.round((new Date()-_mend)/86400000));
@@ -1957,11 +1984,10 @@ function renderOverview(d){
     rows.push(`<tr class="row-camp${isOpen?' open':''}" onclick="toggleOvMonth('${m.key}')">${mc}</tr>`);
 
     if(isOpen){
-      m.days.forEach((day,di)=>{
+      (ovDrOn?mDays:m.days).forEach((day)=>{
         const dr=makeMetricRow(applyPlatDay(day,OVM.plat));
         const isToday=day.today||false;
-        // Age = days since this specific date
-        const _dstr=day.label.slice(0,10); // "YYYY-MM-DD"
+        const _dstr=day.label.slice(0,10);
         const _ddate=new Date(_dstr+'T00:00:00Z');
         const dayAge=Math.max(0,Math.round((new Date()-_ddate)/86400000));
         let dc=`<td style="position:sticky;left:0;background:var(--bg);z-index:1">
@@ -1976,15 +2002,15 @@ function renderOverview(d){
   });
 
   // Grand total row
-  const allMonths=months;
-  const totSpend=allMonths.reduce((s,m)=>s+applyPlatMonth(m,OVM.plat).spend,0);
-  const totLeads=allMonths.reduce((s,m)=>s+applyPlatMonth(m,OVM.plat).leads,0);
-  const totRev=allMonths.reduce((s,m)=>s+applyPlatMonth(m,OVM.plat).rev,0);
+  const totSpend=ovDrOn?totSpendDr:months.reduce((s,m)=>s+applyPlatMonth(m,OVM.plat).spend,0);
+  const totLeads=ovDrOn?totLeadsDr:months.reduce((s,m)=>s+applyPlatMonth(m,OVM.plat).leads,0);
+  const totRev=ovDrOn?totRevDr:months.reduce((s,m)=>s+applyPlatMonth(m,OVM.plat).rev,0);
+  const totalLabel=ovDrOn?`TOTAL · ${filteredDayCount} days`:`TOTAL · ${months.length} months`;
   const gt2={spend:totSpend,leads:totLeads,rev:totRev};
   const gtr=makeMetricRow(gt2);
   let gc=`<td style="position:sticky;left:0;background:var(--bg3);z-index:1">
     <div class="tree-name tree-indent-1"><span style="width:14px;display:inline-block"></span>
-      <div class="tree-name-main" style="color:var(--text2)">TOTAL · ${months.length} months</div>
+      <div class="tree-name-main" style="color:var(--text2)">${totalLabel}</div>
     </div></td>`;
   COLS.forEach((col,ci)=>{ gc+=`<td class="${ci===0?'col-sep':''}">${cellVal(gtr,col,true)}</td>`; });
   rows.push(`<tr class="row-total">${gc}</tr>`);
@@ -5554,8 +5580,8 @@ function dpFmtDisplay(ymd){
 
 function dpOpen(target){
   DP.target=target;
-  // Load current values from TS/AS/CR state
-  const st=target==='ts'?TS:target==='as'?AS:CR;
+  // Load current values from state
+  const st=target==='ts'?TS:target==='as'?AS:target==='cr'?CR:OV;
   DP.from=st.drFrom||null;
   DP.to=st.drTo||null;
   DP.picking='from';
@@ -5595,9 +5621,12 @@ function dpApply(){
   } else if(target==='as'){
     AS.drFrom=DP.from; AS.drTo=DP.to;
     if(S.data) renderAdsets(S.data);
-  } else {
+  } else if(target==='cr'){
     CR.drFrom=DP.from; CR.drTo=DP.to;
     if(S.data) renderCreatives(S.data);
+  } else if(target==='ov'){
+    OV.drFrom=DP.from; OV.drTo=DP.to;
+    if(S.data) renderOverview(S.data);
   }
   dpUpdateBtn(target);
   dpClose();
@@ -5606,34 +5635,34 @@ function dpApply(){
 function dpUpdateBtn(target){
   const btn=document.getElementById(target+'DrBtn');
   if(!btn) return;
-  const st=target==='ts'?TS:target==='as'?AS:CR;
+  const st=target==='ts'?TS:target==='as'?AS:target==='cr'?CR:OV;
   const from=st.drFrom, to=st.drTo;
   if(from&&to){
     btn.querySelector('.dp-btn-label').textContent=dpFmtDisplay(from)+' → '+dpFmtDisplay(to);
     btn.classList.add('active');
     const clr=document.getElementById(target+'drClear');
     if(clr) clr.style.display='';
-    // Dim week picker
-    const wkBtn=document.getElementById(target==='ts'?'tsWkBtn':target==='as'?'asWkBtn':'crWkBtn');
+    const wkBtn=document.getElementById(target==='ts'?'tsWkBtn':target==='as'?'asWkBtn':target==='cr'?'crWkBtn':null);
     if(wkBtn) wkBtn.classList.add('wk-dimmed');
   } else {
     btn.querySelector('.dp-btn-label').textContent='Date Range';
     btn.classList.remove('active');
     const clr=document.getElementById(target+'drClear');
     if(clr) clr.style.display='none';
-    const wkBtn=document.getElementById(target==='ts'?'tsWkBtn':target==='as'?'asWkBtn':'crWkBtn');
+    const wkBtn=document.getElementById(target==='ts'?'tsWkBtn':target==='as'?'asWkBtn':target==='cr'?'crWkBtn':null);
     if(wkBtn) wkBtn.classList.remove('wk-dimmed');
   }
 }
 
 function dpClearTarget(target,e){
   e.stopPropagation();
-  const st=target==='ts'?TS:target==='as'?AS:CR;
+  const st=target==='ts'?TS:target==='as'?AS:target==='cr'?CR:OV;
   st.drFrom=null; st.drTo=null;
   dpUpdateBtn(target);
   if(target==='ts'&&S.data) renderTree(S.data);
   else if(target==='as'&&S.data) renderAdsets(S.data);
-  else if(S.data) renderCreatives(S.data);
+  else if(target==='cr'&&S.data) renderCreatives(S.data);
+  else if(S.data) renderOverview(S.data);
 }
 
 function dpDayClick(ymd){
