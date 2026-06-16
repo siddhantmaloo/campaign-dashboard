@@ -5718,7 +5718,7 @@ function dpRenderPresets(){
   el.innerHTML=presets.map(p=>{
     if(p.sep) return '<div class="dp-preset-sep"></div>';
     const isSel=p.from===DP.from&&p.to===DP.to;
-    return `<div class="dp-preset${isSel?' sel':''}" onclick="dpSelectPreset('${p.from}','${p.to}','${p.label}')">${p.label}</div>`;
+    return `<div class="dp-preset${isSel?' sel':''}" onclick="dpSelectPreset('${p.from}','${p.to}','${p.label}')" ondblclick="dpSelectPreset('${p.from}','${p.to}','${p.label}');dpApply()">${p.label}</div>`;
   }).join('');
 }
 
