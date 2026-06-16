@@ -2767,9 +2767,9 @@ function renderTree(d){
           <div class="tree-name-sub">${aTag(agg.action)} · ${c.adsets.length} adsets · <span class="copy-id" onclick="copyId(this,'${c.id}')" title="Click to copy ID">${c.id}</span> <span class="drill-hint">· dbl-click → ad sets</span></div>
         </div>
       </div></td>`;
-    COLS.forEach((col,ci)=>{ 
-      const val=cellVal(agg,col,true);
-      cc+=`<td class="${ci===0?'col-sep':''}">${val}</td>`; 
+    COLS.forEach((col,ci)=>{
+      const val=cellVal(agg,col,weeks.length>0?isMature(weeks[weeks.length-1].key,col.k):false);
+      cc+=`<td class="${ci===0?'col-sep':''}">${val}</td>`;
     });
     rows.push(`<tr class="row-camp${isOpen?' open':''}" data-camp-id="${c.id}"
       onclick="toggleCamp('${c.id}')"
