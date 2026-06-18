@@ -3752,13 +3752,34 @@ function renderCreatives(d){
         if(wOpen){
           const dailyAtt=cr._dailyAtt||{}, dailySpend=cr._dailySpend||{};
           const dailyRev=cr._dailyRev||{}, dailySubs=cr._dailySubs||{};
+          const hasAttData=Object.keys(dailyAtt).length>0;
+          const parentCamp2=S.data?S.data.camps.find(c=>c.id===cr.campId):null;
+          const parentAdset2=parentCamp2?parentCamp2.adsets.find(a=>a.id===cr.adset):null;
+          const asSpDaily2=parentAdset2?parentAdset2._dailySpend||{}:{};
+          const asAttDaily2=parentAdset2?parentAdset2._dailyAtt||{}:{};
+          const asRevDaily2=parentAdset2?parentAdset2._dailyRev||{}:{};
+          const asSubsDaily2=parentAdset2?parentAdset2._dailySubs||{}:{};
           const wkDates=[...new Set(Object.keys(dailySpend))].filter(ds=>{
             if(ds>'2099-12-31') return false;
             return weekKey(new Date(ds+'T00:00:00Z'))===w.isoWk;
           }).sort();
           wkDates.forEach(dateStr=>{
-            const dat=dailyAtt[dateStr]||{leads:0,d1:0,d3:0,d7:0,d10:0};
             const dsp=dailySpend[dateStr]||{spend:0,impr:0,clicks:0};
+            let dat;
+            if(hasAttData){
+              dat=dailyAtt[dateStr]||{leads:0,d1:0,d3:0,d7:0,d10:0};
+            } else if(parentAdset2){
+              const asSpend=(asSpDaily2[dateStr]?.spend)||1;
+              const ratio=(dsp.spend||0)/asSpend;
+              const att=asAttDaily2[dateStr]||{};
+              dat={leads:Math.round((att.leads||0)*ratio),d1:Math.round((att.d1||0)*ratio),
+                d3:Math.round((att.d3||0)*ratio),d7:Math.round((att.d7||0)*ratio),d10:Math.round((att.d10||0)*ratio)};
+              // override rev/subs for Google too
+              dailyRev[dateStr]=(asRevDaily2[dateStr]||0)*ratio;
+              dailySubs[dateStr]=Math.round((asSubsDaily2[dateStr]||0)*ratio);
+            } else {
+              dat={leads:0,d1:0,d3:0,d7:0,d10:0};
+            }
             const dl=dat.leads||0, ds=dsp.spend||0;
             const dcpl=dl>0?ds/dl:null, droas=ds>0&&(dailyRev[dateStr]||0)>0?(dailyRev[dateStr]||0)/ds:null;
             const dd={spend:ds,cpm:dsp.impr>0?ds/dsp.impr*1000:null,cpc:dsp.clicks>0?ds/dsp.clicks:null,ctr:dsp.impr>0?dsp.clicks/dsp.impr*100:null,
