@@ -3363,10 +3363,12 @@ function renderAdsets(d){
   if(AS.filterAdset) adsets=adsets.filter(a=>a.id===AS.filterAdset.id);
   // Hide adsets with no spend
   adsets=adsets.filter(a=>a.spend>0);
-  // Sort adsets by selected column
+  // Sort adsets by selected column (use date-range agg when active)
+  const _asDrOnSort=!!(AS.drFrom&&AS.drTo&&AS.drFrom<=AS.drTo);
   adsets.sort((a,b)=>{
-    const av=asAgg(a)[AS.sort]??-Infinity;
-    const bv=asAgg(b)[AS.sort]??-Infinity;
+    const ag=(x)=>_asDrOnSort?aggByDateRangeAs(x,AS.drFrom,AS.drTo):asAgg(x);
+    const av=ag(a)[AS.sort]??-Infinity;
+    const bv=ag(b)[AS.sort]??-Infinity;
     if(av==null||av==='' ) return 1;
     if(bv==null||bv==='' ) return -1;
     return AS.sortDir*(bv-av);
@@ -3654,9 +3656,11 @@ function renderCreatives(d){
     crs=crs.filter(cr=>cr.adset===f.id && (!f.campId||cr.campId===f.campId));
   }
   crs=crs.filter(cr=>cr.spend>0);
+  const _crDrOnSort=!!(CR.drFrom&&CR.drTo&&CR.drFrom<=CR.drTo);
   crs.sort((a,b)=>{
-    const av=crAgg(a)[CR.sort]??-Infinity;
-    const bv=crAgg(b)[CR.sort]??-Infinity;
+    const ag=(x)=>_crDrOnSort?aggByDateRangeCr(x,CR.drFrom,CR.drTo):crAgg(x);
+    const av=ag(a)[CR.sort]??-Infinity;
+    const bv=ag(b)[CR.sort]??-Infinity;
     if(av==null||av==='') return 1;
     if(bv==null||bv==='') return -1;
     return CR.sortDir*(bv-av);
