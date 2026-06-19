@@ -5874,7 +5874,7 @@ function dpRenderCal(idx,year,month){
     if(isStart) cls+=' sel-start';
     if(isEnd&&effTo) cls+=' sel-end';
     if(isInRange) cls+=' in-range';
-    html+=`<div class="${cls}" onclick="dpDayClick('${ymd}')" onmouseenter="dpDayHover('${ymd}')" onmouseleave="DP.hoverDate=null;dpRenderCalendars()">${d}</div>`;
+    html+=`<div class="${cls}" onclick="dpDayClick('${ymd}')" onmouseenter="dpDayHover('${ymd}')" onmouseleave="DP.hoverDate=null">${d}</div>`;
   }
   html+=`</div>`;
   el.innerHTML=html;
