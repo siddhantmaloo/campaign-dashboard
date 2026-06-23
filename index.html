@@ -1488,7 +1488,7 @@ const fmt={
   pct:  v=>v==null?'—':(Math.round(v*10)/10)+'%',
 };
 
-const mTag = (tag,val,fmtFn) => tag==='na'?`<span class="tag gray">N/A</span>`:`<span class="tag ${tag}">${fmtFn(val)}</span>`;
+const mTag = (tag,val,fmtFn) => tag==='na'?`<span class="tag gray">N/A</span>`:`<span class="tag ${tag}" title="₹${Number(val).toFixed(2)}">${fmtFn(val)}</span>`;
 const aTag = a => `<span class="action-tag ${a}">${actionLabel(a)}</span>`;
 const hBar = score => {
   const c=score>=70?'var(--green)':score>=40?'var(--yellow)':'var(--red)';
