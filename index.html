@@ -4168,7 +4168,8 @@ async function loadFromGSheets(){
     } else { showToast('Parse error','No data returned'); loadSample(); }
   } catch(e){
     console.error('GSheets load error:',e);
-    showToast('Load failed — using sample',e.message);
+    console.error('GSheets load stack:',e.stack);
+    showToast('Load failed — using sample',e.message+' | '+e.stack?.split('\n')[1]?.trim());
     loadSample();
   } finally {
     if(btn){ btn.disabled=false; btn.innerHTML='<span class="udot" id="xlsxDot"></span>↺ RELOAD'; }
