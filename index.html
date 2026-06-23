@@ -4167,6 +4167,7 @@ async function loadFromGSheets(){
       showToast('Data loaded ✓',`${parsed.camps.length} campaigns · ${parsed.creatives.length} creatives`);
     } else { showToast('Parse error','No data returned'); loadSample(); }
   } catch(e){
+    window._loadErr=e;
     console.error('GSheets load error:',e);
     console.error('GSheets load stack:',e.stack);
     showToast('Load failed — using sample',e.message+' | '+e.stack?.split('\n')[1]?.trim());
