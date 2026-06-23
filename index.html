@@ -5979,5 +5979,36 @@ function dpRenderCal(idx,year,month){
 }
 </script>
 
+<!-- Mobile name popup -->
+<div id="mobileNamePopup" style="display:none;position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:10px 16px;font-family:var(--font-mono);font-size:12px;color:var(--text);max-width:88vw;word-break:break-word;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,.4);text-align:center"></div>
+<script>
+(function(){
+  var popup=document.getElementById('mobileNamePopup');
+  var _dismiss=null, _longpress=null, _active=null;
+  function show(name){
+    clearTimeout(_dismiss);
+    popup.textContent=name;
+    popup.style.display='block';
+    _dismiss=setTimeout(function(){ popup.style.display='none'; },2500);
+  }
+  document.addEventListener('touchstart',function(e){
+    var el=e.target.closest('.tree-name-main');
+    if(el&&el.title){
+      _active=el;
+      _longpress=setTimeout(function(){
+        _active=null;
+        show(el.title);
+        // prevent the tap-through click from firing
+        el.addEventListener('click',function stop(ev){ ev.stopPropagation(); el.removeEventListener('click',stop,true); },true);
+      },500);
+    } else {
+      if(popup.style.display!=='none'&&!popup.contains(e.target)){ clearTimeout(_dismiss); popup.style.display='none'; }
+    }
+  },{passive:true});
+  document.addEventListener('touchend',function(){ clearTimeout(_longpress); _active=null; },{passive:true});
+  document.addEventListener('touchmove',function(){ clearTimeout(_longpress); _active=null; },{passive:true});
+})();
+</script>
+
 </body>
 </html>
