@@ -4081,7 +4081,9 @@ const GS_URLS={
   attend:  'https://d3rkzwjrymf7oz.cloudfront.net/Ads_managment/attendance_data.csv',
   payment: 'https://d3rkzwjrymf7oz.cloudfront.net/Ads_managment/payment_data.csv', // "revenue"
 };
-const GS_URL=key=>GS_URLS[key];
+// Cache-bust per 30 min so CloudFront always serves a fresh response with CORS headers
+const _cb=Math.floor(Date.now()/1800000);
+const GS_URL=key=>GS_URLS[key]+'?_='+_cb;
 
 function parseCsvLine(line){
   const result=[]; let cur='',inQ=false;
