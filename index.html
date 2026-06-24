@@ -1981,7 +1981,29 @@ function filteredOvData(d){
       platAgg[p].ord31+=_fOrd31; platAgg[p].ordOt+=_fOrdOt;
     });
     function mkWk(pa){ return {spend:pa.spend||null,leads:pa.leads||null,rev:pa.rev||null,subs:pa.subs||null,clicks:pa.clicks,impr:pa.impr,ord31:pa.ord31||0,ordOt:pa.ordOt||0,cpm:pa.impr>0?pa.spend/pa.impr*1000:null,cpc:pa.clicks>0?pa.spend/pa.clicks:null,ctr:pa.impr>0?pa.clicks/pa.impr*100:null,c2db:null,d1pct:pa.leads>0?Math.round(pa.d1/pa.leads*100)||null:null,d3pct:pa.leads>0?Math.round(pa.d3/pa.leads*100)||null:null,d3cost:pa.d3>0&&pa.spend>0?pa.spend/pa.d3:null,d7pct:pa.leads>0?Math.round(pa.d7/pa.leads*100)||null:null,d7cost:pa.d7>0&&pa.spend>0?pa.spend/pa.d7:null,d10pct:pa.leads>0?Math.round(pa.d10/pa.leads*100)||null:null,ltvRoas:computeLtvROAS(pa.rev||0,pa.ord31||0,pa.ordOt||0,pa.spend||0)}; }
-    return {...w, ...mkWk(platAgg.all), meta:mkWk(platAgg.meta), google:mkWk(platAgg.google), metaDays:w.metaDays, googleDays:w.googleDays, days:w.days};
+    // Rebuild daily rows from filtered camps (same logic as parseSheets)
+    const dayMap2={all:{},meta:{},google:{}};
+    const _dn2=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    const _tod2=localDateStr(new Date());
+    camps.forEach(c=>{
+      const p2=c.platform==='meta'?'meta':'google';
+      const spD=c._dailySpend||{},atD=c._dailyAtt||{},rvD=c._dailyRev||{},sbD=c._dailySubs||{};
+      [...new Set([...Object.keys(spD),...Object.keys(atD)])].forEach(ds=>{
+        if(weekKey(new Date(ds+'T00:00:00Z'))!==w.key) return;
+        ['all',p2].forEach(bk=>{
+          if(!dayMap2[bk][ds]) dayMap2[bk][ds]={spend:0,leads:0,rev:0,subs:0,clicks:0,impr:0,d1:0,d3:0,d7:0,d10:0,ord31:0,ordOt:0};
+          const sp=spD[ds]||{},at=atD[ds]||{};
+          dayMap2[bk][ds].spend+=sp.spend||0; dayMap2[bk][ds].clicks+=sp.clicks||0; dayMap2[bk][ds].impr+=sp.impr||0;
+          dayMap2[bk][ds].leads+=at.leads||0; dayMap2[bk][ds].d1+=at.d1||0; dayMap2[bk][ds].d3+=at.d3||0;
+          dayMap2[bk][ds].d7+=at.d7||0; dayMap2[bk][ds].d10+=at.d10||0;
+          dayMap2[bk][ds].rev+=rvD[ds]||0; dayMap2[bk][ds].subs+=sbD[ds]||0;
+          dayMap2[bk][ds].ord31+=(c._dailyOrd31&&c._dailyOrd31[ds])||0;
+          dayMap2[bk][ds].ordOt+=(c._dailyOrdOt&&c._dailyOrdOt[ds])||0;
+        });
+      });
+    });
+    function mkDays2(bk){ return Object.entries(dayMap2[bk]).sort(([a],[b])=>a<b?-1:1).map(([ds,d])=>{ const dt=new Date(ds+'T00:00:00Z'); return {label:`${ds} ${_dn2[dt.getUTCDay()]}`,today:ds===_tod2,spend:d.spend,leads:d.leads,rev:d.rev,subs:d.subs,clicks:d.clicks,impr:d.impr,d1pct:d.leads>0?Math.round(d.d1/d.leads*100):0,d3pct:d.leads>0?Math.round(d.d3/d.leads*100):0,d3cost:d.d3>0?d.spend/d.d3:null,d7pct:d.leads>0?Math.round(d.d7/d.leads*100):0,d7cost:d.d7>0?d.spend/d.d7:null,d10pct:d.leads>0?Math.round(d.d10/d.leads*100):0,ord31:d.ord31||0,ordOt:d.ordOt||0,ltvRoas:computeLtvROAS(d.rev||0,d.ord31||0,d.ordOt||0,d.spend||0)}; }); }
+    return {...w, ...mkWk(platAgg.all), meta:mkWk(platAgg.meta), google:mkWk(platAgg.google), days:mkDays2('all'), metaDays:mkDays2('meta'), googleDays:mkDays2('google')};
   }).filter(w=>w.spend);
 
   return {...d, months, weeklyOv};
