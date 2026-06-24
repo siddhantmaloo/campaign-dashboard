@@ -364,9 +364,12 @@ td:first-child{text-align:left;}
   .tbl-hdr{flex-wrap:wrap;gap:6px;padding:8px 10px;}
   .tbl-hdr>div{flex-wrap:wrap;gap:6px;}
 
-  /* Tables — horizontal scroll already works via .tree-scroll, just reduce name col */
+  /* Tables — horizontal scroll */
   :root{--name-col-w:160px;}
   .tree-table{min-width:1100px;}
+  /* Batch diagnostic — constrain to viewport so tree-scroll can scroll */
+  .tree-scroll{max-width:calc(100vw - 20px);}
+  .batch-wrap{overflow:hidden;}
 
   /* Date picker — bottom sheet on mobile */
   .dp-overlay{align-items:flex-end;padding:0;}
