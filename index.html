@@ -2738,7 +2738,8 @@ function aggByDateRangeCamp(c, from, to){
     d10pct:leads>0?Math.round(d10/leads*100)||null:null,
     paidroas:roas||null,
     adjroas:rev>0&&(spend+(leads||0)*T.waCost)>0?rev/(spend+(leads||0)*T.waCost):null,
-    ltvRoas:computeLtvROAS(rev,0,0,spend)};
+    ltvRoas:computeLtvROAS(rev,0,0,spend),
+    _raw:{spend,leads,clicks,impr,rev,subs,d1,d3,d7,d10}};
 }
 
 function applyTsDr(){ dpUpdateBtn('ts'); if(S.data) renderTree(S.data); }
@@ -2829,18 +2830,21 @@ function renderTree(d){
   }
 
   function grandAgg(){
-    const totSpend  = camps.reduce((s,c)=>s+weeks.reduce((ss,w)=>ss+(c.weekly[w.key]?.spend||0),0),0);
-    const totLeads  = camps.reduce((s,c)=>s+weeks.reduce((ss,w)=>{const wd=c.weekly[w.key];return ss+(wd?.spend>0?wd.leads||0:0);},0),0);
-    const totClicks = camps.reduce((s,c)=>s+weeks.reduce((ss,w)=>ss+(c.weekly[w.key]?.clicks||0),0),0);
-    const totImpr   = camps.reduce((s,c)=>s+weeks.reduce((ss,w)=>ss+(c.weekly[w.key]?.impr||0),0),0);
-    const totRev    = camps.reduce((s,c)=>s+weeks.reduce((ss,w)=>ss+(c.weekly[w.key]?.rev||0),0),0);
-    const totSubs   = camps.reduce((s,c)=>s+weeks.reduce((ss,w)=>ss+(c.weekly[w.key]?.subs||0),0),0);
-    const totD3att  = camps.reduce((s,c)=>s+weeks.reduce((ss,w)=>ss+(c.weekly[w.key]?.d3||0),0),0);
-    const totD7att  = camps.reduce((s,c)=>s+weeks.reduce((ss,w)=>ss+(c.weekly[w.key]?.d7||0),0),0);
-    const totD1att  = camps.reduce((s,c)=>s+weeks.reduce((ss,w)=>ss+(c.weekly[w.key]?.d1||0),0),0);
-    const totD10att = camps.reduce((s,c)=>s+weeks.reduce((ss,w)=>ss+(c.weekly[w.key]?.d10||0),0),0);
-    const totOrd31  = camps.reduce((s,c)=>s+(c.spend>0?(c.totOrd31||0)*weeks.reduce((ss,w)=>ss+(c.weekly[w.key]?.spend||0),0)/c.spend:0),0);
-    const totOrdOt  = camps.reduce((s,c)=>s+(c.spend>0?(c.totOrdOt||0)*weeks.reduce((ss,w)=>ss+(c.weekly[w.key]?.spend||0),0)/c.spend:0),0);
+    const _drOn=!!(TS.drFrom&&TS.drTo&&TS.drFrom<=TS.drTo);
+    const _aggs=_drOn?camps.map(c=>aggByDateRangeCamp(c,TS.drFrom,TS.drTo)):null;
+    const _r=i=>_aggs?_aggs[i]._raw:null;
+    const totSpend  = camps.reduce((s,c,i)=>{ const r=_r(i); return s+(r?r.spend:weeks.reduce((ss,w)=>ss+(c.weekly[w.key]?.spend||0),0)); },0);
+    const totLeads  = camps.reduce((s,c,i)=>{ const r=_r(i); return s+(r?r.leads:weeks.reduce((ss,w)=>{const wd=c.weekly[w.key];return ss+(wd?.spend>0?wd.leads||0:0);},0)); },0);
+    const totClicks = camps.reduce((s,c,i)=>{ const r=_r(i); return s+(r?r.clicks:weeks.reduce((ss,w)=>ss+(c.weekly[w.key]?.clicks||0),0)); },0);
+    const totImpr   = camps.reduce((s,c,i)=>{ const r=_r(i); return s+(r?r.impr:weeks.reduce((ss,w)=>ss+(c.weekly[w.key]?.impr||0),0)); },0);
+    const totRev    = camps.reduce((s,c,i)=>{ const r=_r(i); return s+(r?r.rev:weeks.reduce((ss,w)=>ss+(c.weekly[w.key]?.rev||0),0)); },0);
+    const totSubs   = camps.reduce((s,c,i)=>{ const r=_r(i); return s+(r?r.subs:weeks.reduce((ss,w)=>ss+(c.weekly[w.key]?.subs||0),0)); },0);
+    const totD3att  = camps.reduce((s,c,i)=>{ const r=_r(i); return s+(r?r.d3:weeks.reduce((ss,w)=>ss+(c.weekly[w.key]?.d3||0),0)); },0);
+    const totD7att  = camps.reduce((s,c,i)=>{ const r=_r(i); return s+(r?r.d7:weeks.reduce((ss,w)=>ss+(c.weekly[w.key]?.d7||0),0)); },0);
+    const totD1att  = camps.reduce((s,c,i)=>{ const r=_r(i); return s+(r?r.d1:weeks.reduce((ss,w)=>ss+(c.weekly[w.key]?.d1||0),0)); },0);
+    const totD10att = camps.reduce((s,c,i)=>{ const r=_r(i); return s+(r?r.d10:weeks.reduce((ss,w)=>ss+(c.weekly[w.key]?.d10||0),0)); },0);
+    const totOrd31  = camps.reduce((s,c,i)=>{ const r=_r(i); return s+(r?0:(c.spend>0?(c.totOrd31||0)*weeks.reduce((ss,w)=>ss+(c.weekly[w.key]?.spend||0),0)/c.spend:0)); },0);
+    const totOrdOt  = camps.reduce((s,c,i)=>{ const r=_r(i); return s+(r?0:(c.spend>0?(c.totOrdOt||0)*weeks.reduce((ss,w)=>ss+(c.weekly[w.key]?.spend||0),0)/c.spend:0)); },0);
     const cpl=totLeads>0?totSpend/totLeads:null;
     const roas=totSpend>0&&totRev>0?totRev/totSpend:null;
     const cpm=totImpr>0?totSpend/totImpr*1000:null;
@@ -3616,8 +3620,9 @@ function renderAdsets(d){
     }
   });
 
-  // Totals — aggregate from asAgg (which already gates on spend>0)
-  const _aggs=adsets.map(a=>asAgg(a));
+  // Totals — use date-range agg when active, else week-based asAgg
+  const _asDrOnTot=!!(AS.drFrom&&AS.drTo&&AS.drFrom<=AS.drTo);
+  const _aggs=adsets.map(a=>_asDrOnTot?aggByDateRangeAs(a,AS.drFrom,AS.drTo):asAgg(a));
   const totSpend  = _aggs.reduce((s,ag)=>s+(ag.spend||0),0);
   const totLeads  = _aggs.reduce((s,ag)=>s+(ag.leads||0),0);
   const totClicks = adsets.reduce((s,a)=>s+weeks.reduce((ss,w)=>ss+(a.weekly?.[w.key]?.clicks||0),0),0);
@@ -3935,8 +3940,9 @@ function renderCreatives(d){
     }
   });
 
-  // Creatives total row
-  const _crAggs=crs.map(cr=>crAgg(cr));
+  // Creatives total row — use date-range agg when active
+  const _crDrOnTot=!!(CR.drFrom&&CR.drTo&&CR.drFrom<=CR.drTo);
+  const _crAggs=crs.map(cr=>_crDrOnTot?aggByDateRangeCr(cr,CR.drFrom,CR.drTo):crAgg(cr));
   const crTotSpend =_crAggs.reduce((s,ag)=>s+(ag.spend||0),0);
   const crTotLeads =_crAggs.reduce((s,ag)=>s+(ag.leads||0),0);
   const crTotRev   =_crAggs.reduce((s,ag)=>s+(ag.rev||0),0);
