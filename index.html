@@ -370,6 +370,8 @@ td:first-child{text-align:left;}
   /* Batch diagnostic — constrain to viewport so tree-scroll can scroll */
   .tree-scroll{max-width:calc(100vw - 20px);}
   .batch-wrap{overflow:hidden;}
+  /* Allow sticky first column to show — overflow:hidden clips it on mobile Safari */
+  .tbl-wrap{overflow:visible;}
 
   /* Date picker — bottom sheet on mobile */
   .dp-overlay{align-items:flex-end;padding:0;}
