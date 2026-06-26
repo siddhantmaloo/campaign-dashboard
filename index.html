@@ -370,6 +370,8 @@ td:first-child{text-align:left;}
   /* Batch diagnostic — constrain to viewport so tree-scroll can scroll */
   .tree-scroll{max-width:calc(100vw - 20px);}
   .batch-wrap{overflow:hidden;}
+  /* Constrain batch first column to same width as campaign name column */
+  .btbl th:first-child,.btbl td:first-child{width:var(--name-col-w);min-width:var(--name-col-w);max-width:var(--name-col-w);}
   /* Allow sticky first column to show — overflow:hidden clips it on mobile Safari */
   .tbl-wrap{overflow:visible;}
 
