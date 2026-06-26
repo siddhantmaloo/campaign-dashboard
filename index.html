@@ -371,7 +371,8 @@ td:first-child{text-align:left;}
   .tree-scroll{max-width:calc(100vw - 20px);}
   .batch-wrap{overflow:hidden;}
   /* Constrain batch first column to same width as campaign name column */
-  .btbl th:first-child,.btbl td:first-child{width:var(--name-col-w);min-width:var(--name-col-w);max-width:var(--name-col-w);}
+  .btbl{table-layout:fixed;}
+  .btbl th:first-child,.btbl td:first-child{width:var(--name-col-w);min-width:var(--name-col-w);max-width:var(--name-col-w);overflow:hidden;}
   /* Allow sticky first column to show — overflow:hidden clips it on mobile Safari */
   .tbl-wrap{overflow:visible;}
 
