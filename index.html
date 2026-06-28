@@ -3091,14 +3091,21 @@ function renderBatch(d){
   const batches=d.batches.filter(b=>BS.selected[b.id]!==false);
 
   // Build metrics from batch attendance object + actual spend from registration weeks
-  function batchMetrics(bd, weeklyData, rd){
+  function batchMetrics(bd, weeklyData, rd, campDailySpend, campDailyAtt){
     const bLeads=bd.leads||0, d1=bd.d1||0, d3=bd.d3||0, d7=bd.d7||0, d10=bd.d10||0;
-    // Sum spend/impr/clicks from weeks when these leads registered
+    // Sum spend/impr/clicks — day-level attribution when available, week-level fallback
     let spend=0, impr=0, clicks=0;
-    if(weeklyData && bd.wkLeads){
+    if(campDailySpend && bd.dayLeads){
+      // Day-level: batch_leads_this_day / total_campaign_leads_this_day × day_spend
+      Object.entries(bd.dayLeads).forEach(([ds,batchDayLeads])=>{
+        const sp=campDailySpend[ds]; if(!sp||!sp.spend) return;
+        const totalDayLeads=(campDailyAtt&&campDailyAtt[ds]&&campDailyAtt[ds].leads)||1;
+        const share=Math.min(1, batchDayLeads/totalDayLeads);
+        spend+=sp.spend*share; impr+=(sp.impr||0)*share; clicks+=(sp.clicks||0)*share;
+      });
+    } else if(weeklyData && bd.wkLeads){
       Object.entries(bd.wkLeads).forEach(([wk,batchWkLeads])=>{
         const wd=weeklyData[wk]; if(!wd||!wd.spend) return;
-        // Proportional allocation: batch's share = batch_leads_this_week / total_campaign_leads_this_week
         const totalWkLeads=wd.leads||1;
         const share=Math.min(1, batchWkLeads/totalWkLeads);
         spend+=wd.spend*share; impr+=(wd.impr||0)*share; clicks+=(wd.clicks||0)*share;
@@ -3129,9 +3136,9 @@ function renderBatch(d){
       ltvRoas:computeLtvROAS(rev,rd?rd.ord31:0,rd?rd.ordOt:0,spend)};
   }
   function batchCampData(b,c){
-    const bd=b.data[c.id]||{leads:0,d1:0,d3:0,d7:0,d10:0,wkLeads:{}};
+    const bd=b.data[c.id]||{leads:0,d1:0,d3:0,d7:0,d10:0,wkLeads:{},dayLeads:{}};
     const rd=b.revData&&b.revData[c.id]||{rev:0,subs:0};
-    return batchMetrics(bd, c.weekly, rd);
+    return batchMetrics(bd, c.weekly, rd, c._dailySpend||null, c._dailyAtt||null);
   }
   const filteredCampIds=new Set(camps.map(c=>c.id));
   function batchAgg(b){
@@ -3144,9 +3151,19 @@ function renderBatch(d){
         if(!dc||dc.platform!==BS.plat) return;
       }
       const rd=(b.revData&&b.revData[key])||{rev:0,subs:0};
-      const weeklyData = key==='__organic__'||!d.camps.find(c=>c.id===key) ? null : d.camps.find(c=>c.id===key)?.weekly;
+      const campObj=key==='__organic__'?null:d.camps.find(c=>c.id===key)||null;
+      const weeklyData=campObj?campObj.weekly:null;
+      const campDailySpend=campObj?campObj._dailySpend||null:null;
       let sp=0,im=0,cl=0;
-      if(weeklyData&&bd.wkLeads){
+      const campDailyAtt=campObj?campObj._dailyAtt||null:null;
+      if(campDailySpend&&bd.dayLeads){
+        Object.entries(bd.dayLeads).forEach(([ds,batchDayLeads])=>{
+          const dsp=campDailySpend[ds]; if(!dsp||!dsp.spend) return;
+          const totalDayLeads=(campDailyAtt&&campDailyAtt[ds]&&campDailyAtt[ds].leads)||1;
+          const share=Math.min(1,batchDayLeads/totalDayLeads);
+          sp+=dsp.spend*share; im+=(dsp.impr||0)*share; cl+=(dsp.clicks||0)*share;
+        });
+      } else if(weeklyData&&bd.wkLeads){
         Object.entries(bd.wkLeads).forEach(([wk,batchWkLeads])=>{
           const wd=weeklyData[wk]; if(!wd||!wd.spend) return;
           const share=Math.min(1,batchWkLeads/(wd.leads||1));
@@ -4392,10 +4409,12 @@ function parseSheets(names, spend, attend, payment){
     if(bid){
       const bk=cid||'__organic__';
       if(!attByBatch[bid]) attByBatch[bid]={};
-      if(!attByBatch[bid][bk]) attByBatch[bid][bk]={leads:0,d1:0,d3:0,d7:0,d10:0,wkLeads:{}};
+      if(!attByBatch[bid][bk]) attByBatch[bid][bk]={leads:0,d1:0,d3:0,d7:0,d10:0,wkLeads:{},dayLeads:{}};
       attByBatch[bid][bk].leads+=leads; attByBatch[bid][bk].d1+=d1;
       attByBatch[bid][bk].d3+=d3; attByBatch[bid][bk].d7+=d7; attByBatch[bid][bk].d10+=d10;
-      attByBatch[bid][bk].wkLeads[wk]=(attByBatch[bid][bk].wkLeads[wk]||0)+leads; // leads per week for proportional spend
+      attByBatch[bid][bk].wkLeads[wk]=(attByBatch[bid][bk].wkLeads[wk]||0)+leads;
+      const _ds=localDateStr(dt);
+      attByBatch[bid][bk].dayLeads[_ds]=(attByBatch[bid][bk].dayLeads[_ds]||0)+leads;
     }
 
     // Campaign/adset/creative — only if spend exists
