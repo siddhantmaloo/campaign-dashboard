@@ -72,6 +72,7 @@ input[type=file]{display:none;}
 .tb-btn.act-all{background:var(--bg4);color:var(--text);border-color:var(--border2);}
 .tb-btn.act-meta{background:var(--meta-dim);color:var(--meta);border-color:var(--meta);}
 .tb-btn.act-google{background:var(--google-dim);color:var(--google);border-color:var(--google);}
+.tb-btn.act-both{background:rgba(139,92,246,.15);color:#a78bfa;border-color:#a78bfa;}
 .tb-sep{width:1px;height:18px;background:var(--border);}
 
 /* ── MAIN ── */
@@ -1233,6 +1234,7 @@ td:first-child{text-align:left;}
       <div style="display:flex;align-items:center;gap:10px">
         <div class="tb-group">
           <button class="tb-btn act-all" onclick="batchPlat('all',this)">ALL</button>
+          <button class="tb-btn" onclick="batchPlat('both',this)">BOTH</button>
           <button class="tb-btn" onclick="batchPlat('meta',this)">META</button>
           <button class="tb-btn" onclick="batchPlat('google',this)">GOOGLE</button>
         </div>
@@ -3087,7 +3089,7 @@ function batchCollapseAll(){ if(!S.data) return; Object.keys(BS.expanded).forEac
 function renderBatch(d){
   let camps=[...d.camps];
   camps=camps.filter(c=>catMatch(c.name));
-  if(BS.plat!=='all') camps=camps.filter(c=>c.platform===BS.plat);
+  if(BS.plat!=='all'&&BS.plat!=='both') camps=camps.filter(c=>c.platform===BS.plat);
   const batches=d.batches.filter(b=>BS.selected[b.id]!==false);
 
   // Build metrics from batch attendance object + actual spend from registration weeks
@@ -3151,7 +3153,7 @@ function renderBatch(d){
         if(BS.plat!=='all') return;
       } else {
         if(!filteredCampIds.has(key)) return;
-        if(BS.plat!=='all'){
+        if(BS.plat!=='all'&&BS.plat!=='both'){
           const dc=d.camps.find(c=>c.id===key);
           if(!dc||dc.platform!==BS.plat) return;
         }
