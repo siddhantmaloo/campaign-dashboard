@@ -3051,7 +3051,7 @@ function renderTree(d){
 }
 
 // ── BATCH DROPDOWN + STATE ──
-const BS={selected:{},expanded:{},plat:'all'};
+const BS={selected:{},expanded:{},expandedCamp:{},plat:'all'};
 function batchPlat(p,btn){ BS.plat=p; btn.closest('.tb-group').querySelectorAll('.tb-btn').forEach(b=>b.className='tb-btn'); btn.className='tb-btn act-'+p; if(S.data) renderBatch(S.data); }
 
 function toggleBatchDrop(e){
@@ -3082,6 +3082,7 @@ function toggleBatchChk(id,checked){ BS.selected[id]=checked; if(S.data){updateB
 function batchSelectAll(){ if(!S.data) return; S.data.batches.forEach(b=>BS.selected[b.id]=true); document.querySelectorAll('#batchDropItems input').forEach(cb=>cb.checked=true); updateBatchLabel(S.data); renderBatch(S.data); }
 function batchSelectNone(){ if(!S.data) return; S.data.batches.forEach(b=>BS.selected[b.id]=false); document.querySelectorAll('#batchDropItems input').forEach(cb=>cb.checked=false); updateBatchLabel(S.data); renderBatch(S.data); }
 function toggleBatchRow(id){ BS.expanded[id]=!BS.expanded[id]; if(S.data) renderBatch(S.data); }
+function toggleBatchCampRow(bid,cid,e){ e.stopPropagation(); const k=bid+'_'+cid; BS.expandedCamp[k]=!BS.expandedCamp[k]; if(S.data) renderBatch(S.data); }
 function batchExpandAll(){ if(!S.data) return; S.data.batches.forEach(b=>BS.expanded[b.id]=true); renderBatch(S.data); }
 function batchCollapseAll(){ if(!S.data) return; Object.keys(BS.expanded).forEach(k=>BS.expanded[k]=false); renderBatch(S.data); }
 
@@ -3141,6 +3142,38 @@ function renderBatch(d){
     const bd=b.data[c.id]||{leads:0,d1:0,d3:0,d7:0,d10:0,wkLeads:{},dayLeads:{}};
     const rd=b.revData&&b.revData[c.id]||{rev:0,subs:0};
     return batchMetrics(bd, c.weekly, rd, c._dailySpend||null, c._dailyAtt||null);
+  }
+  function batchAdsetData(b,a){
+    const ak=a.campId+'_'+a.id;
+    const bd=b.adsetData&&b.adsetData[ak];
+    if(!bd||bd.leads===0) return null;
+    const bLeads=bd.leads||0,d1=bd.d1||0,d3=bd.d3||0,d7=bd.d7||0,d10=bd.d10||0;
+    let spend=0,impr=0,clicks=0;
+    const adDailySp=a._dailySpend||{}, adDailyAt=a._dailyAtt||{};
+    if(bd.dayLeads){
+      Object.entries(bd.dayLeads).forEach(([ds,batchDayLeads])=>{
+        const dsp=adDailySp[ds]; if(!dsp||!dsp.spend) return;
+        const totalDayLeads=(adDailyAt[ds]&&adDailyAt[ds].leads)||1;
+        const share=Math.min(1,batchDayLeads/totalDayLeads);
+        spend+=dsp.spend*share; impr+=(dsp.impr||0)*share; clicks+=(dsp.clicks||0)*share;
+      });
+    }
+    const cpl=bLeads>0&&spend>0?spend/bLeads:null;
+    const d3cost=d3>0&&spend>0?spend/d3:null;
+    const d7cost=d7>0&&spend>0?spend/d7:null;
+    const cpm=impr>0?spend/impr*1000:null;
+    const cpc=clicks>0?spend/clicks:null;
+    const ctr=impr>0?clicks/impr*100:null;
+    const c2db=clicks>0&&bLeads>0?bLeads/clicks*100:null;
+    const roas=null;
+    const health=healthScore(tagCPL(cpl),d3cost?tagD3(d3cost):'na',d7cost?tagD7(d7cost):'na','na');
+    const conf=tagConf(spend);
+    return {health,conf,spend:spend||null,cpm,cpc,ctr,c2db,leads:bLeads||null,cpl,
+      d1pct:bLeads>0?Math.round(d1/bLeads*100)||null:null,
+      d3pct:bLeads>0?Math.round(d3/bLeads*100)||null:null,d3cost,
+      d7pct:bLeads>0?Math.round(d7/bLeads*100)||null:null,d7cost,
+      d10pct:bLeads>0?Math.round(d10/bLeads*100)||null:null,
+      subs:null,rev:null,roas,paidroas:null,adjroas:null,ltvRoas:null};
   }
   const filteredCampIds=new Set(camps.map(c=>c.id));
   function batchAgg(b){
@@ -3243,10 +3276,14 @@ function renderBatch(d){
           const bd=b.data[c.id];
           if(!bd||bd.leads===0) return;
           const cd=batchCampData(b,c);
+          const campKey=b.id+'_'+c.id;
+          const campOpen=!!BS.expandedCamp[campKey];
+          // Check if this campaign has adset data for this batch
+          const hasAdsets=b.adsetData&&c.adsets&&c.adsets.some(a=>b.adsetData[c.id+'_'+a.id]);
           campRows.push({spend:cd.spend||0, leads:cd.leads||0, html:()=>{
             let cc=`<td style="position:sticky;left:0;background:var(--bg);z-index:1">
               <div class="tree-name tree-indent-2">
-                <span style="width:14px;display:inline-block;flex-shrink:0"></span>
+                ${hasAdsets?`<span class="tree-toggle${campOpen?' open':''}" onclick="toggleBatchCampRow('${b.id}','${c.id}',event)" style="cursor:pointer">›</span>`:`<span style="width:14px;display:inline-block;flex-shrink:0"></span>`}
                 <span class="plat-dot ${c.platform}"></span>
                 <div>
                   <div class="tree-name-main" style="font-size:10px;color:var(--text2)">${campShort(c.name)}</div>
@@ -3254,7 +3291,25 @@ function renderBatch(d){
                 </div>
               </div></td>`;
             COLS.forEach((col,ci)=>{ cc+=`<td class="${ci===0?'col-sep':''}" style="background:var(--bg3)">${cellVal(cd,col,bMature(b.id,col.k))}</td>`; });
-            return `<tr class="row-week">${cc}</tr>`;
+            let html=`<tr class="row-week${campOpen?' open':''}" style="cursor:${hasAdsets?'pointer':'default'}">${cc}</tr>`;
+            if(campOpen&&hasAdsets){
+              c.adsets.forEach(a=>{
+                const ad=batchAdsetData(b,a);
+                if(!ad) return;
+                let ac=`<td style="position:sticky;left:0;background:var(--bg);z-index:1">
+                  <div class="tree-name tree-indent-3">
+                    <span style="width:14px;display:inline-block;flex-shrink:0"></span>
+                    <span class="plat-dot ${c.platform}"></span>
+                    <div>
+                      <div class="tree-name-main" style="font-size:10px;color:var(--text3)">${campShort(a.name||a.id)}</div>
+                      <div class="tree-name-sub">${confH(a.conf)}</div>
+                    </div>
+                  </div></td>`;
+                COLS.forEach((col,ci)=>{ ac+=`<td class="${ci===0?'col-sep':''}" style="background:var(--bg2)">${cellVal(ad,col,bMature(b.id,col.k))}</td>`; });
+                html+=`<tr class="row-day">${ac}</tr>`;
+              });
+            }
+            return html;
           }});
         });
 
@@ -4396,6 +4451,7 @@ function parseSheets(names, spend, attend, payment){
   // camp→weekKey→{leads,d1,d3,d7,d10}; also batch→camp→{leads,d1,d3,d7,d10}
   const attByCamp={}; // campId→weekKey→{leads,d1,d3,d7,d10}
   const attByBatch={}; // batchId→campId→{leads,d1,d3,d7,d10} (includes organic)
+  const attByBatchAdset={}; // batchId→adsetKey(campId_adsetId)→{leads,d1,d3,d7,d10,dayLeads}
   const attByCampBatch={}; // campId→batchId→{...}
   const attByAdset={};
   const attByCr={};
@@ -4423,6 +4479,15 @@ function parseSheets(names, spend, attend, payment){
       attByBatch[bid][bk].wkLeads[wk]=(attByBatch[bid][bk].wkLeads[wk]||0)+leads;
       const _ds=localDateStr(dt);
       attByBatch[bid][bk].dayLeads[_ds]=(attByBatch[bid][bk].dayLeads[_ds]||0)+leads;
+      // Batch×adset level
+      if(cid&&aid){
+        const ak=cid+'_'+aid;
+        if(!attByBatchAdset[bid]) attByBatchAdset[bid]={};
+        if(!attByBatchAdset[bid][ak]) attByBatchAdset[bid][ak]={leads:0,d1:0,d3:0,d7:0,d10:0,dayLeads:{}};
+        attByBatchAdset[bid][ak].leads+=leads; attByBatchAdset[bid][ak].d1+=d1;
+        attByBatchAdset[bid][ak].d3+=d3; attByBatchAdset[bid][ak].d7+=d7; attByBatchAdset[bid][ak].d10+=d10;
+        attByBatchAdset[bid][ak].dayLeads[_ds]=(attByBatchAdset[bid][ak].dayLeads[_ds]||0)+leads;
+      }
     }
 
     // Campaign/adset/creative — only if spend exists
@@ -4904,6 +4969,7 @@ function parseSheets(names, spend, attend, payment){
   const batches=batchIds.slice(0,10).map(bid=>({
     id:bid, label:`Batch ${bid}`, sub:'',
     data:attByBatch[bid]||{},
+    adsetData:attByBatchAdset[bid]||{},
     revData:revByBatch[bid]||{}
   }));
 
