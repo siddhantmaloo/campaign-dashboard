@@ -371,9 +371,6 @@ td:first-child{text-align:left;}
   /* Batch diagnostic — constrain to viewport so tree-scroll can scroll */
   .tree-scroll{max-width:calc(100vw - 20px);}
   .batch-wrap{overflow:hidden;}
-  /* Constrain batch first column to same width as campaign name column */
-  .btbl{table-layout:fixed;}
-  .btbl th:first-child,.btbl td:first-child{width:var(--name-col-w);min-width:var(--name-col-w);max-width:var(--name-col-w);overflow:hidden;}
   /* Allow sticky first column to show — overflow:hidden clips it on mobile Safari */
   .tbl-wrap{overflow:visible;}
 
@@ -3243,7 +3240,7 @@ function renderBatch(d){
     return true;
   }
 
-  let thCells=`<th style="min-width:240px;text-align:left;padding:7px 10px;background:var(--bg3);border-bottom:1px solid var(--border);position:sticky;left:0;z-index:3;font-family:var(--font-mono);font-size:9px;letter-spacing:.08em;color:var(--text3);text-transform:uppercase">Cohort Batch / Campaign</th>`;
+  let thCells=nameColTh('Cohort Batch / Campaign');
   COLS.forEach((col,ci)=>{ thCells+=`<th class="${ci===0?'col-sep':''}">${col.label}</th>`; });
 
   const rows=[];
