@@ -3145,11 +3145,8 @@ function renderBatch(d){
     // Aggregate over platform-filtered campaigns + organic
     let totSpend=0,totLeads=0,totImpr=0,totClicks=0,totD1=0,totD3=0,totD7=0,totD10=0,totRev=0,totSubs=0,totOrd31=0,totOrdOt=0;
     Object.entries(b.data).forEach(([key,bd])=>{
-      // Skip campaigns not in category+platform filtered set
-      // Organic: always show row but exclude from CPL when platform filter is active
-      if(key==='__organic__'){
-        if(BS.plat!=='all') return;
-      } else {
+      // Skip campaigns not in category+platform filtered set (organic passes through)
+      if(key!=='__organic__'){
         if(!filteredCampIds.has(key)) return;
         if(BS.plat!=='all'){
           const dc=d.camps.find(c=>c.id===key);
@@ -3176,6 +3173,8 @@ function renderBatch(d){
           sp+=wd.spend*share; im+=(wd.impr||0)*share; cl+=(wd.clicks||0)*share;
         });
       }
+      // Only include leads in CPL denominator if spend > 0
+      if(sp===0) return;
       totSpend+=sp; totImpr+=im; totClicks+=cl;
       totLeads+=bd.leads||0; totD1+=bd.d1||0; totD3+=bd.d3||0; totD7+=bd.d7||0; totD10+=bd.d10||0;
       totRev+=rd.rev||0; totSubs+=rd.subs||0;
