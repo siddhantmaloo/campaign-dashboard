@@ -3145,10 +3145,13 @@ function renderBatch(d){
     // Aggregate over platform-filtered campaigns + organic
     let totSpend=0,totLeads=0,totImpr=0,totClicks=0,totD1=0,totD3=0,totD7=0,totD10=0,totRev=0,totSubs=0,totOrd31=0,totOrdOt=0;
     Object.entries(b.data).forEach(([key,bd])=>{
-      // Skip campaigns not in platform-filtered set (but always include organic)
-      if(key!=='__organic__'&&BS.plat!=='all'){
-        const dc=d.camps.find(c=>c.id===key);
-        if(!dc||dc.platform!==BS.plat) return;
+      // Skip campaigns not in category+platform filtered set (but always include organic)
+      if(key!=='__organic__'){
+        if(!filteredCampIds.has(key)) return;
+        if(BS.plat!=='all'){
+          const dc=d.camps.find(c=>c.id===key);
+          if(!dc||dc.platform!==BS.plat) return;
+        }
       }
       const rd=(b.revData&&b.revData[key])||{rev:0,subs:0};
       const campObj=key==='__organic__'?null:d.camps.find(c=>c.id===key)||null;
