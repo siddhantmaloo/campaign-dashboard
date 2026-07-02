@@ -376,7 +376,8 @@ td:first-child{text-align:left;}
   /* Wider touch target for column resize handle on mobile */
   .col-resize-handle{width:18px;right:-6px;}
   /* Name column — pan whole column as one unit */
-  .tree-table td:first-child .tree-name{transform:translateX(var(--name-col-offset,0px));will-change:transform;}
+  .tree-table td:first-child{touch-action:pan-y;overflow:hidden;}
+  .tree-table td:first-child .tree-name{transform:translateX(var(--name-col-offset,0px));will-change:transform;white-space:nowrap;display:inline-block;min-width:100%;}
 
   /* Date picker — bottom sheet on mobile */
   .dp-overlay{align-items:flex-end;padding:0;}
@@ -2334,31 +2335,25 @@ function startColResize(e){
   document.addEventListener('touchmove',onMove,{passive:false});
   document.addEventListener('touchend',onUp);
 }
-// Pan name column as one unit on mobile swipe
+// Pan name column as one unit on mobile swipe (touch-action:pan-y lets us own horizontal)
 (function(){
-  var sx=0,sy=0,sOff=0,active=false,decided=false,horiz=false;
+  var sx=0,sOff=0,active=false;
   function getOff(){return parseFloat(document.documentElement.style.getPropertyValue('--name-col-offset')||'0')||0;}
-  function getNameW(){return parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--name-col-w'))||240;}
+  function inNameCol(e){
+    var td=e.target.closest('.tree-table td:first-child');
+    return !!td;
+  }
   document.addEventListener('touchstart',function(e){
-    var el=e.target.closest('.tree-scroll');
-    if(!el)return;
-    var rect=el.getBoundingClientRect();
-    if(e.touches[0].clientX-rect.left>getNameW())return;
-    sx=e.touches[0].clientX;sy=e.touches[0].clientY;
-    sOff=getOff();active=true;decided=false;horiz=false;
+    if(!inNameCol(e))return;
+    sx=e.touches[0].clientX;
+    sOff=getOff();active=true;
   },{passive:true});
   document.addEventListener('touchmove',function(e){
     if(!active)return;
-    var dx=e.touches[0].clientX-sx,dy=e.touches[0].clientY-sy;
-    if(!decided){
-      if(Math.abs(dx)<5&&Math.abs(dy)<5)return;
-      horiz=Math.abs(dx)>Math.abs(dy);decided=true;
-    }
-    if(!horiz){active=false;return;}
-    e.preventDefault();
+    var dx=e.touches[0].clientX-sx;
     var newOff=Math.min(0,Math.max(-500,sOff+dx));
     document.documentElement.style.setProperty('--name-col-offset',newOff+'px');
-  },{passive:false});
+  },{passive:true});
   document.addEventListener('touchend',function(){active=false;},{passive:true});
   document.addEventListener('touchcancel',function(){active=false;},{passive:true});
 })();
