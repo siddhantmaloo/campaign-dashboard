@@ -2339,6 +2339,16 @@ function startColResize(e){
   document.addEventListener('touchend',onUp);
 }
 
+// Sync name column scroll — when one cell scrolls, all others follow
+document.addEventListener('scroll',function(e){
+  var td=e.target.closest&&e.target.closest('.tree-table td:first-child');
+  if(!td)return;
+  var sl=td.scrollLeft;
+  document.querySelectorAll('.tree-table td:first-child').forEach(function(c){
+    if(c!==td)c.scrollLeft=sl;
+  });
+},true);
+
 function nameColTh(label, extra){
   return `<th style="text-align:left;padding:7px 10px;background:var(--bg3);border-bottom:1px solid var(--border);position:sticky;left:0;z-index:3;font-family:var(--font-mono);font-size:9px;letter-spacing:.08em;color:var(--text3);text-transform:uppercase;overflow:hidden;white-space:nowrap;">${label}${extra||''}<div class="col-resize-handle" onmousedown="startColResize(event)" ontouchstart="startColResize(event)"></div></th>`;
 }
