@@ -375,6 +375,12 @@ td:first-child{text-align:left;}
   .tbl-wrap{overflow:visible;}
   /* Wider touch target for column resize handle on mobile */
   .col-resize-handle{width:18px;right:-6px;}
+  /* Name column cells — swipe within cell to read full name */
+  .tree-table td:first-child{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+  .tree-table td:first-child .tree-name{overflow:visible;}
+  .tree-table td:first-child .tree-name>div{overflow:visible;}
+  .tree-table td:first-child .tree-name-main{overflow:visible;text-overflow:clip;}
+  .tree-table td:first-child .tree-name-sub{overflow:visible;text-overflow:clip;}
 
   /* Date picker — bottom sheet on mobile */
   .dp-overlay{align-items:flex-end;padding:0;}
@@ -464,7 +470,6 @@ td:first-child{text-align:left;}
 .tree-table th{padding:7px 10px;text-align:right;font-family:var(--font-mono);font-size:9px;letter-spacing:.08em;color:var(--text3);text-transform:uppercase;border-bottom:1px solid var(--border);background:var(--bg3);white-space:nowrap;position:sticky;top:0;z-index:2;}
 .tree-table th:first-child{text-align:left;width:var(--name-col-w,240px);min-width:var(--name-col-w,240px);max-width:var(--name-col-w,240px);position:sticky;left:0;z-index:3;background:var(--bg3);}
 .tree-table td:first-child{width:var(--name-col-w,240px);min-width:var(--name-col-w,240px);max-width:var(--name-col-w,240px);}
-.tree-table td:first-child .tree-name{transform:translateX(var(--name-col-offset,0px));will-change:transform;}
 .col-resize-handle{position:absolute;right:0;top:0;bottom:0;width:6px;cursor:col-resize;z-index:10;background:transparent;}
 .col-resize-handle:hover,.col-resize-handle.dragging{background:var(--accent);opacity:.5;}
 .tree-table th.col-sep{border-left:2px solid var(--border2);}
@@ -6148,46 +6153,6 @@ function dpRenderCal(idx,year,month){
 })();
 </script>
 
-<script>
-// Name column pan — swipe left/right on the frozen name column to read full names
-(function(){
-  var startX=0, startOff=0, active=false;
-  function getOff(){ return parseFloat(document.documentElement.style.getPropertyValue('--name-col-offset')||'0')||0; }
-  function getNameW(){ return parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--name-col-w'))||200; }
-  function onStart(clientX, target){
-    var scrollEl=target.closest('.tree-scroll');
-    if(!scrollEl) return;
-    var rect=scrollEl.getBoundingClientRect();
-    if(clientX-rect.left>getNameW()) return;
-    startX=clientX; startOff=getOff(); active=true;
-  }
-  function onMove(clientX){
-    if(!active) return;
-    var newOff=Math.min(0,Math.max(-400,startOff+(clientX-startX)));
-    document.documentElement.style.setProperty('--name-col-offset',newOff+'px');
-  }
-  function onEnd(){ active=false; }
-  // Touch — mobile swipe
-  document.addEventListener('touchstart',function(e){ onStart(e.touches[0].clientX,e.target); },{passive:true});
-  document.addEventListener('touchmove',function(e){ onMove(e.touches[0].clientX); },{passive:true});
-  document.addEventListener('touchend',onEnd,{passive:true});
-  // Wheel — desktop preview: scroll on name zone shifts names
-  document.addEventListener('wheel',function(e){
-    var scrollEl=e.target.closest('.tree-scroll');
-    if(!scrollEl) return;
-    var rect=scrollEl.getBoundingClientRect();
-    if(e.clientX-rect.left>getNameW()) return;
-    var cur=getOff();
-    var newOff=Math.min(0,Math.max(-400,cur-e.deltaY*0.5));
-    document.documentElement.style.setProperty('--name-col-offset',newOff+'px');
-    e.preventDefault();
-  },{passive:false});
-  // Reset offset when switching tabs
-  document.querySelectorAll('.nav-tab').forEach(function(t){
-    t.addEventListener('click',function(){ document.documentElement.style.setProperty('--name-col-offset','0px'); });
-  });
-})();
-</script>
 
 </body>
 </html>
