@@ -375,12 +375,8 @@ td:first-child{text-align:left;}
   .tbl-wrap{overflow:visible;}
   /* Wider touch target for column resize handle on mobile */
   .col-resize-handle{width:18px;right:-6px;}
-  /* Name column — swipe horizontally within cell to read full name */
-  .tree-table td:first-child{overflow-x:auto;-webkit-overflow-scrolling:touch;}
-  .tree-table td:first-child .tree-name{overflow:visible;}
-  .tree-table td:first-child .tree-name>div{overflow:visible;}
-  .tree-table td:first-child .tree-name-main{overflow:visible;text-overflow:clip;}
-  .tree-table td:first-child .tree-name-sub{overflow:visible;text-overflow:clip;}
+  /* Name column — swipe left on name zone to shift all names together as one unit */
+  .tree-table td:first-child .tree-name{transform:translateX(var(--name-col-offset,0px));will-change:transform;}
 
   /* Date picker — bottom sheet on mobile */
   .dp-overlay{align-items:flex-end;padding:0;}
@@ -6150,6 +6146,38 @@ function dpRenderCal(idx,year,month){
   },{passive:true});
   document.addEventListener('touchend',function(){ clearTimeout(_longpress); _active=null; },{passive:true});
   document.addEventListener('touchmove',function(){ clearTimeout(_longpress); _active=null; },{passive:true});
+})();
+</script>
+
+<script>
+// Name column pan — swipe left/right on the frozen name column to read full names
+(function(){
+  if(window.innerWidth>768) return;
+  var startX=0, startOff=0, active=false;
+  function getOff(){ return parseFloat(document.documentElement.style.getPropertyValue('--name-col-offset')||'0')||0; }
+  function getNameW(){ return parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--name-col-w'))||200; }
+  document.addEventListener('touchstart',function(e){
+    if(window.innerWidth>768) return;
+    var scrollEl=e.target.closest('.tree-scroll');
+    if(!scrollEl) return;
+    var rect=scrollEl.getBoundingClientRect();
+    var tx=e.touches[0].clientX-rect.left;
+    if(tx>getNameW()) return; // only activate in name column zone
+    startX=e.touches[0].clientX;
+    startOff=getOff();
+    active=true;
+  },{passive:true});
+  document.addEventListener('touchmove',function(e){
+    if(!active) return;
+    var dx=e.touches[0].clientX-startX;
+    var newOff=Math.min(0,Math.max(-400,startOff+dx));
+    document.documentElement.style.setProperty('--name-col-offset',newOff+'px');
+  },{passive:true});
+  document.addEventListener('touchend',function(){ active=false; },{passive:true});
+  // Reset offset when switching tabs
+  document.querySelectorAll('.nav-tab').forEach(function(t){
+    t.addEventListener('click',function(){ document.documentElement.style.setProperty('--name-col-offset','0px'); });
+  });
 })();
 </script>
 
