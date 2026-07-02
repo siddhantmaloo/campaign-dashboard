@@ -6167,12 +6167,21 @@ function dpRenderCal(idx,year,month){
     document.documentElement.style.setProperty('--name-col-offset',newOff+'px');
   }
   function onEnd(){ active=false; }
+  // Touch — mobile swipe
   document.addEventListener('touchstart',function(e){ onStart(e.touches[0].clientX,e.target); },{passive:true});
   document.addEventListener('touchmove',function(e){ onMove(e.touches[0].clientX); },{passive:true});
   document.addEventListener('touchend',onEnd,{passive:true});
-  document.addEventListener('mousedown',function(e){ onStart(e.clientX,e.target); });
-  document.addEventListener('mousemove',function(e){ onMove(e.clientX); });
-  document.addEventListener('mouseup',onEnd);
+  // Wheel — desktop preview: scroll on name zone shifts names
+  document.addEventListener('wheel',function(e){
+    var scrollEl=e.target.closest('.tree-scroll');
+    if(!scrollEl) return;
+    var rect=scrollEl.getBoundingClientRect();
+    if(e.clientX-rect.left>getNameW()) return;
+    var cur=getOff();
+    var newOff=Math.min(0,Math.max(-400,cur-e.deltaY*0.5));
+    document.documentElement.style.setProperty('--name-col-offset',newOff+'px');
+    e.preventDefault();
+  },{passive:false});
   // Reset offset when switching tabs
   document.querySelectorAll('.nav-tab').forEach(function(t){
     t.addEventListener('click',function(){ document.documentElement.style.setProperty('--name-col-offset','0px'); });
