@@ -373,14 +373,8 @@ td:first-child{text-align:left;}
   .batch-wrap{overflow:hidden;}
   /* Allow sticky first column to show — overflow:hidden clips it on mobile Safari */
   .tbl-wrap{overflow:visible;}
-  /* Mobile split-pane layout (Google Sheets style) */
-  .tree-scroll.ms-active{overflow:hidden;}
-  .ms-wrap{display:flex;height:100%;}
-  .ms-left{width:var(--name-col-w);min-width:var(--name-col-w);flex-shrink:0;overflow-x:hidden;overflow-y:auto;border-right:1px solid var(--border2);scrollbar-width:none;}
-  .ms-left::-webkit-scrollbar{display:none;}
-  .ms-right{flex:1;min-width:0;overflow-x:auto;overflow-y:auto;}
-  .ms-left table{width:100%;border-collapse:collapse;}
-  .ms-right table{border-collapse:collapse;min-width:900px;}
+  /* Wider touch target for column resize handle on mobile */
+  .col-resize-handle{width:18px;right:-6px;}
 
   /* Date picker — bottom sheet on mobile */
   .dp-overlay{align-items:flex-end;padding:0;}
@@ -2314,102 +2308,32 @@ function makeOvMetricRow(obj){
 }
 
 // ═══════════════════════════════════════
-// MOBILE SPLIT-PANE (Google Sheets style)
-// ═══════════════════════════════════════
-function makeMobileSplit(tableId){
-  if(window.innerWidth>768) return;
-  const container=document.getElementById(tableId);
-  if(!container) return;
-  const table=container.querySelector('table');
-  if(!table) return;
-
-  // Build left (first col) and right (rest) tables
-  const lTable=document.createElement('table');
-  lTable.className=table.className;
-  const rTable=document.createElement('table');
-  rTable.className=table.className;
-
-  Array.from(table.children).forEach(section=>{
-    const lSec=document.createElement(section.tagName);
-    const rSec=document.createElement(section.tagName);
-    Array.from(section.children).forEach(row=>{
-      const lRow=document.createElement('tr');
-      const rRow=document.createElement('tr');
-      lRow.className=row.className;
-      rRow.className=row.className;
-      ['onclick','ondblclick','style'].forEach(a=>{ const v=row.getAttribute(a); if(v){lRow.setAttribute(a,v);rRow.setAttribute(a,v);} });
-      Array.from(row.children).forEach((cell,i)=>{
-        const c=cell.cloneNode(true);
-        c.style.position=''; c.style.left=''; c.style.zIndex='';
-        if(i===0) lRow.appendChild(c);
-        else rRow.appendChild(c);
-      });
-      lSec.appendChild(lRow);
-      rSec.appendChild(rRow);
-    });
-    lTable.appendChild(lSec);
-    rTable.appendChild(rSec);
-  });
-
-  const lPane=document.createElement('div');
-  lPane.className='ms-left';
-  lPane.appendChild(lTable);
-
-  const rPane=document.createElement('div');
-  rPane.className='ms-right';
-  rPane.appendChild(rTable);
-
-  const wrap=document.createElement('div');
-  wrap.className='ms-wrap';
-  wrap.appendChild(lPane);
-  wrap.appendChild(rPane);
-
-  container.innerHTML='';
-  container.appendChild(wrap);
-
-  // Mark scroll container so overflow is hidden
-  const scrollEl=container.closest('.tree-scroll');
-  if(scrollEl) scrollEl.classList.add('ms-active');
-
-  // Sync row heights after layout paint
-  requestAnimationFrame(()=>requestAnimationFrame(()=>{
-    const lr=Array.from(lTable.querySelectorAll('tr'));
-    const rr=Array.from(rTable.querySelectorAll('tr'));
-    for(let i=0;i<Math.min(lr.length,rr.length);i++){
-      const h=Math.max(lr[i].offsetHeight,rr[i].offsetHeight);
-      if(h>0){lr[i].style.height=h+'px';rr[i].style.height=h+'px';}
-    }
-  }));
-
-  // Sync vertical scroll without infinite loop
-  let _sync=false;
-  lPane.addEventListener('scroll',()=>{ if(!_sync){_sync=true;rPane.scrollTop=lPane.scrollTop;requestAnimationFrame(()=>_sync=false);} });
-  rPane.addEventListener('scroll',()=>{ if(!_sync){_sync=true;lPane.scrollTop=rPane.scrollTop;requestAnimationFrame(()=>_sync=false);} });
-}
-
-// ═══════════════════════════════════════
 // SHARED COLUMN DEFS (outer scope — used by renderTree + renderBatch)
 // ═══════════════════════════════════════
-// ── NAME COLUMN RESIZE ──
+// ── NAME COLUMN RESIZE (mouse + touch) ──
 let NAME_COL_W = 240;
 function startColResize(e){
   e.preventDefault(); e.stopPropagation();
   const handle=e.currentTarget;
   handle.classList.add('dragging');
-  const startX=e.clientX;
+  const isTouch=e.touches&&e.touches.length>0;
+  const startX=isTouch?e.touches[0].clientX:e.clientX;
   const thEl=handle.closest('th')||document.querySelector('.tree-table th:first-child');
   const startW=thEl?thEl.getBoundingClientRect().width:NAME_COL_W;
   NAME_COL_W=startW;
   function onMove(ev){
-    NAME_COL_W=Math.max(140,Math.min(600,startW+(ev.clientX-startX)));
+    const x=ev.touches?ev.touches[0].clientX:ev.clientX;
+    NAME_COL_W=Math.max(120,Math.min(600,startW+(x-startX)));
     document.documentElement.style.setProperty('--name-col-w', NAME_COL_W+'px');
   }
-  function onUp(){ handle.classList.remove('dragging'); document.removeEventListener('mousemove',onMove); document.removeEventListener('mouseup',onUp); }
+  function onUp(){ handle.classList.remove('dragging'); document.removeEventListener('mousemove',onMove); document.removeEventListener('mouseup',onUp); document.removeEventListener('touchmove',onMove); document.removeEventListener('touchend',onUp); }
   document.addEventListener('mousemove',onMove);
   document.addEventListener('mouseup',onUp);
+  document.addEventListener('touchmove',onMove,{passive:false});
+  document.addEventListener('touchend',onUp);
 }
 function nameColTh(label, extra){
-  return `<th style="text-align:left;padding:7px 10px;background:var(--bg3);border-bottom:1px solid var(--border);position:sticky;left:0;z-index:3;font-family:var(--font-mono);font-size:9px;letter-spacing:.08em;color:var(--text3);text-transform:uppercase;overflow:hidden;white-space:nowrap;">${label}${extra||''}<div class="col-resize-handle" onmousedown="startColResize(event)"></div></th>`;
+  return `<th style="text-align:left;padding:7px 10px;background:var(--bg3);border-bottom:1px solid var(--border);position:sticky;left:0;z-index:3;font-family:var(--font-mono);font-size:9px;letter-spacing:.08em;color:var(--text3);text-transform:uppercase;overflow:hidden;white-space:nowrap;">${label}${extra||''}<div class="col-resize-handle" onmousedown="startColResize(event)" ontouchstart="startColResize(event)"></div></th>`;
 }
 
 const COLS=[
@@ -3126,7 +3050,6 @@ function renderTree(d){
   rows.push(`<tr class="row-total">${gc}</tr>`);
 
   document.getElementById('treeTable').innerHTML=`<table class="tree-table"><thead><tr>${thCells}</tr></thead><tbody>${rows.join('')}</tbody></table>`;
-  makeMobileSplit('treeTable');
   document.getElementById('treeWeekLabel').textContent=`${weeks.length} week${weeks.length!==1?'s':''} · Click row to expand`;
 }
 
@@ -3440,7 +3363,6 @@ function renderBatch(d){
   }
 
   document.getElementById('batchTable').innerHTML=`<table class="tree-table"><thead><tr>${thCells}</tr></thead><tbody>${rows.join('')}</tbody></table>`;
-  makeMobileSplit('batchTable');
   document.getElementById('batchWeekLabel').textContent=`${batches.length} batch${batches.length!==1?'es':''} · click to expand`;
 }
 
@@ -3826,7 +3748,6 @@ function renderAdsets(d){
   rows.push(`<tr class="row-total">${gc}</tr>`);
 
   document.getElementById('adsetTable').innerHTML=`<table class="tree-table"><thead><tr>${thCells}</tr></thead><tbody>${rows.join('')}</tbody></table>`;
-  makeMobileSplit('adsetTable');
 }
 
 // ═══════════════════════════════════════
@@ -4145,7 +4066,6 @@ function renderCreatives(d){
   rows.push(`<tr class="row-total">${crGc}</tr>`);
 
   document.getElementById('creativeTable').innerHTML=`<table class="tree-table"><thead><tr>${thCells}</tr></thead><tbody>${rows.join('')}</tbody></table>`;
-  makeMobileSplit('creativeTable');
 }
 
 // ═══════════════════════════════════════
