@@ -375,6 +375,12 @@ td:first-child{text-align:left;}
   .tbl-wrap{overflow:visible;}
   /* Wider touch target for column resize handle on mobile */
   .col-resize-handle{width:18px;right:-6px;}
+  /* Name column — swipe horizontally within cell to read full name */
+  .tree-table td:first-child{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+  .tree-table td:first-child .tree-name{overflow:visible;}
+  .tree-table td:first-child .tree-name>div{overflow:visible;}
+  .tree-table td:first-child .tree-name-main{overflow:visible;text-overflow:clip;}
+  .tree-table td:first-child .tree-name-sub{overflow:visible;text-overflow:clip;}
 
   /* Date picker — bottom sheet on mobile */
   .dp-overlay{align-items:flex-end;padding:0;}
