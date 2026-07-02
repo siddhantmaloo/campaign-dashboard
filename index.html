@@ -376,7 +376,8 @@ td:first-child{text-align:left;}
   /* Wider touch target for column resize handle on mobile */
   .col-resize-handle{width:18px;right:-6px;}
   /* Name column cells — swipe within cell to read full name */
-  .tree-table td:first-child{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+  .tree-table td:first-child{overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+  .tree-table td:first-child::-webkit-scrollbar{display:none;}
   .tree-table td:first-child .tree-name{overflow:visible;}
   .tree-table td:first-child .tree-name>div{overflow:visible;}
   .tree-table td:first-child .tree-name-main{overflow:visible;text-overflow:clip;}
