@@ -3320,9 +3320,8 @@ function renderBatch(d){
             COLS.forEach((col,ci)=>{ cc+=`<td class="${ci===0?'col-sep':''}" style="background:var(--bg3)">${cellVal(cd,col,bMature(b.id,col.k))}</td>`; });
             let html=`<tr class="row-week${campOpen?' open':''}" style="cursor:${hasAdsets?'pointer':'default'}">${cc}</tr>`;
             if(campOpen&&hasAdsets){
-              c.adsets.forEach(a=>{
-                const ad=batchAdsetData(b,a,c.id);
-                if(!ad) return;
+              const sortedAdsets=[...c.adsets].map(a=>({a,ad:batchAdsetData(b,a,c.id)})).filter(x=>x.ad).sort((x,y)=>(y.ad.spend||0)-(x.ad.spend||0));
+              sortedAdsets.forEach(({a,ad})=>{
                 let ac=`<td style="position:sticky;left:0;background:var(--bg);z-index:1">
                   <div class="tree-name tree-indent-3">
                     <span style="width:14px;display:inline-block;flex-shrink:0"></span>
