@@ -3169,16 +3169,19 @@ function renderBatch(d){
     const bd=b.adsetData&&b.adsetData[ak];
     if(!bd||bd.leads===0) return null;
     const bLeads=bd.leads||0,d1=bd.d1||0,d3=bd.d3||0,d7=bd.d7||0,d10=bd.d10||0;
-    let spend=0,impr=0,clicks=0;
+    let spend=0,impr=0,clicks=0,rev=0,subs=0;
     const adDailySp=a._dailySpend||{}, adDailyAt=a._dailyAtt||{};
+    const adDailyRev=a._dailyRev||{}, adDailySubs=a._dailySubs||{};
     if(bd.dayLeads){
       Object.entries(bd.dayLeads).forEach(([ds,batchDayLeads])=>{
         const dsp=adDailySp[ds]; if(!dsp||!dsp.spend) return;
         const totalDayLeads=(adDailyAt[ds]&&adDailyAt[ds].leads)||1;
         const share=Math.min(1,batchDayLeads/totalDayLeads);
         spend+=dsp.spend*share; impr+=(dsp.impr||0)*share; clicks+=(dsp.clicks||0)*share;
+        rev+=(adDailyRev[ds]||0)*share; subs+=(adDailySubs[ds]||0)*share;
       });
     }
+    subs=Math.round(subs);
     const cpl=bLeads>0&&spend>0?spend/bLeads:null;
     const d3cost=d3>0&&spend>0?spend/d3:null;
     const d7cost=d7>0&&spend>0?spend/d7:null;
@@ -3186,15 +3189,18 @@ function renderBatch(d){
     const cpc=clicks>0?spend/clicks:null;
     const ctr=impr>0?clicks/impr*100:null;
     const c2db=clicks>0&&bLeads>0?bLeads/clicks*100:null;
-    const roas=null;
-    const health=healthScore(tagCPL(cpl),d3cost?tagD3(d3cost):'na',d7cost?tagD7(d7cost):'na','na');
+    const roas=spend>0&&rev>0?rev/spend:null;
+    const health=healthScore(tagCPL(cpl),d3cost?tagD3(d3cost):'na',d7cost?tagD7(d7cost):'na',roas?tagROAS(roas):'na');
     const conf=tagConf(spend);
     return {health,conf,spend:spend||null,cpm,cpc,ctr,c2db,leads:bLeads||null,cpl,
+      subs:subs||null,cps:subs>0&&spend>0?spend/subs:null,
+      rev:rev||null,roas,paidroas:roas||null,
+      l2s:bLeads>0&&subs>0?subs/bLeads*100:null,
       d1pct:bLeads>0?Math.round(d1/bLeads*100)||null:null,
       d3pct:bLeads>0?Math.round(d3/bLeads*100)||null:null,d3cost,
       d7pct:bLeads>0?Math.round(d7/bLeads*100)||null:null,d7cost,
       d10pct:bLeads>0?Math.round(d10/bLeads*100)||null:null,
-      subs:null,rev:null,roas,paidroas:null,adjroas:null,ltvRoas:null};
+      adjroas:null,ltvRoas:null};
   }
   const filteredCampIds=new Set(camps.map(c=>c.id));
   function batchAgg(b){
